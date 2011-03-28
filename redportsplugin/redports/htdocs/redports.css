@@ -1,0 +1,21 @@
+#queue_list {
+    max-width: 800px;
+}
+
+.status-committed {
+}
+
+.status-building {
+}
+
+.status-warning {
+    background: yellow;
+}
+
+.status-error {
+    background: red;
+}
+
+.status-ok {
+    background: green;
+}

@@ -1,0 +1,62 @@
+#!/bin/sh
+
+#
+# RedPorts User creation script
+#
+# Date:    2011-03-25 13:00
+# Author:  Bernhard Froehlich <decke@FreeBSD.org>
+#
+
+HTPASSWD=/var/db/trac/redports/conf/htpasswd
+SVNACCESS=/var/db/trac/redports/conf/svnaccess
+TMP=/tmp/redportsrepo
+
+USER=$1
+REPOSITORY=redports
+SVNUSER=redports
+
+if ! egrep "^${USER}:" ${HTPASSWD} >/dev/null ; then
+   echo "User ${USER} doest not exist"
+   exit 1
+fi
+
+# create svn folder for user
+rm -rf ${TMP}
+svn checkout --username ${SVNUSER}--non-interactive --non-recursive file:///var/subversion/${REPOSITORY} ${TMP} >/dev/null && \
+svn update --non-interactive ${TMP}/${USER} >/dev/null
+
+if [ $? != 0 ]; then
+   echo "Repository checkout failed"
+   exit 1
+fi
+
+if [ ! -d "${TMP}/${USER}" ]; then
+   mkdir ${TMP}/${USER} && \
+   svn add ${TMP}/${USER} >/dev/null && \
+   svn commit --username ${SVNUSER} --non-interactive --message "Welcome ${USER}!" ${TMP}/${USER} >/dev/null
+
+   if [ $? != 0 ]; then
+      echo "Failed creating SVN directory"
+      exit 1
+   fi
+else
+   echo "SVN directory already exists"
+fi
+
+rm -rf ${TMP}
+
+
+# grant permissions on it
+if ! egrep "^\[${REPOSITORY}:/${USER}\]" ${SVNACCESS} >/dev/null ; then
+   echo "Granting svn permissions for home path"
+   
+   echo "[${REPOSITORY}:/${USER}]" >> ${SVNACCESS}
+   echo "${USER} = rw" >> ${SVNACCESS}
+   echo "" >> ${SVNACCESS}
+else
+   echo "SVN permissions already granted"
+fi
+
+echo "Success."
+
+exit 0
