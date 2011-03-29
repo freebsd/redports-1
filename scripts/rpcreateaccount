@@ -3,8 +3,7 @@
 #
 # RedPorts User creation script
 #
-# Date:    2011-03-25 13:00
-# Author:  Bernhard Froehlich <decke@FreeBSD.org>
+# $Id$
 #
 
 HTPASSWD=/var/db/trac/redports/conf/htpasswd
