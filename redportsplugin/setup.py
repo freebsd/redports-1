@@ -8,7 +8,7 @@ setup(
     name=PACKAGE,
     description='Plugin which integrates an automatic FreeBSD package buildfarm',
     keywords='trac plugin freebsd tinderbox redports',
-    version='0.1',
+    version='0.2',
     url='http://www.bluelife.at/',
     license='http://www.opensource.org/licenses/mit-license.php',
     author='Bernhard Froehlich',

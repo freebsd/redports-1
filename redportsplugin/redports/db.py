@@ -9,13 +9,32 @@ class RedportsEnvironment(Component):
         self.schema = [
             Table('buildqueue', key=('id'))[
                 Column('id', type='int', auto_increment=True),
-                Column('owner'),
-                Column('repository'),
+                Column('owner', type='varchar(30)', size=30),
+                Column('repository', type='varchar(255)', size=255),
                 Column('revision', type='int'),
-                Column('portname'),
-                Column('status'),
+                Column('portname', type='varchar(50)', size=50),
+                Column('status', type='int'),
                 Column('startdate', type='bigint'),
                 Column('enddate', type='bigint')
+            ],
+            Table('builds', key=('id'))[
+                Column('id', type='int', auto_increment=True),
+                Column('queueid', type='int'),
+                Column('group', type='varchar(15)', size=15),
+                Column('status', type='int'),
+                Column('buildstatus', type='int'),
+                Column('backend', type='varchar(20)', size=20),
+                Column('startdate', type='bigint'),
+                Column('enddate', type='bigint')
+            ],
+            Table('backends', key=('name'))[
+                Column('name', type='varchar(20)', size=20),
+                Column('description', type='varchar(255)', size=255),
+                Column('group', type='varchar(15)', size=15),
+                Column('priority', type='int'),
+                Column('type', type='varchar(20)', size=20),
+                Column('maxbuilds', type='int'),
+                Column('status', type='int')
             ],
         ]
 
