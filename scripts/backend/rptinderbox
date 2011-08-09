@@ -1,0 +1,184 @@
+#!/bin/sh
+
+# RedPorts tinderbox backend
+#
+# $Id$
+#
+# /tmp/rptinderbox/<build>/.lock      Build lock including shellscript variables
+# /tmp/rptinderbox/<build>/.checkout  Checkout done
+# /tmp/rptinderbox/<build>/.build     Build started
+# /tmp/rptinderbox/<build>/.finished  Build finished
+# /tmp/rptinderbox/<build>/ports/     Portstree overlay
+#
+# /usr/local/tinderbox/portstrees/<portstree>/ports/   Tinderbox portstree
+# 
+
+REPOBASE=http://svn.redports.org/
+ZFSROOT=zroot/usr/local/tinderbox/portstrees
+
+WRKBASE=/tmp/rptinderbox
+LOG=${WRKBASE}/rptinderbox.log
+TINDERBOX=/usr/local/tinderbox
+
+checkout()
+{
+  REPOSITORY=$1
+  REVISION=$2
+  BUILD=$3
+
+  LOCK=${WRKBASE}/${BUILD}/.lock
+
+  if [ -f "${LOCK}" ]; then
+    echo "Lock ${LOCK} exists." >> ${LOG}
+    return 1
+  fi
+
+  if [ ! -d "${WRKBASE}/${BUILD}" ]; then
+    mkdir -p ${WRKBASE}/${BUILD}
+  fi
+
+  # create build lock
+  touch ${LOCK}
+
+  PORTSTREE=`${TINDERBOX}/scripts/tc getPortsTreeForBuild -b ${BUILD} 2>/dev/null`
+
+  if [ -z "${PORTSTREE}" ]; then
+    echo "Unknown portstree for build ${BUILD}" >> ${LOG}
+    return 1
+  fi
+
+  # populate lock
+  echo "REPOSITORY=\"${REPOSITORY}\"" >> ${LOCK}
+  echo "REVISION=\"${REVISION}\"" >> ${LOCK}
+  echo "BUILD=\"${BUILD}\"" >> ${LOCK}
+  echo "PORTSTREE=\"${PORTSTREE}\"" >> ${LOCK}
+  echo "LOCK=\"${LOCK}\"" >> ${LOCK}
+
+  # checkout overlay ports
+  svn export --non-interactive --revision ${REVISION} ${REPOBASE}${REPOSITORY} ${WRKBASE}/${BUILD}/ports >> ${LOG}
+
+  # create snapshot of original tree
+  zfs snapshot ${ZFSROOT}/${PORTSTREE}@work
+
+  # Todo: apply overlay ports
+  
+  # checkout finished
+  touch ${WRKBASE}/${BUILD}/.checkout
+  
+  return $?
+}
+
+clean()
+{
+  BUILD=$1
+  LOCK=${WRKBASE}/${BUILD}/.lock
+
+  if [ ! -f "${LOCK}" ]; then
+    echo "No lock for build ${BUILD}" >> ${LOG}
+    return 1
+  fi
+
+  . ${LOCK}
+
+  if [ ! -f "${WRKBASE}/${BUILD}/.finished" ]; then
+    ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -b ${BUILD} -d ${PORT} >> ${LOG}
+  fi
+
+  zfs rollback ${ZFSROOT}/${PORTSTREE}@work || return 1
+
+  # Todo: buildlogs wegkopieren
+  # Todo: package wegkopieren
+  # Todo: affected packages loeschen
+
+  rm -rf ${WRKBASE}/${BUILD} || return 1
+
+  return $?
+}
+
+build()
+{
+  PORT=$1
+  BUILD=$2
+  PRIORITY=$3
+  LOCK=${WRKBASE}/${BUILD}/.lock
+
+  if [ ! -f "${LOCK}" ]; then
+    echo "No lock for build ${BUILD}" >> ${LOG}
+    return 1
+  fi
+
+  . ${LOCK}
+
+  if [ ! -f "${WRKBASE}/${BUILD}/.checkout" ]; then
+    echo "No checkout for build ${BUILD}" >> ${LOG}
+    return 1
+  fi
+
+  if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
+    echo "Build already running" >> ${LOG}
+    return 1
+  fi
+
+  if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
+    echo "Build already finished" >> ${LOG}
+    return 1
+  fi
+
+  echo "PORT=\"${PORT}\"" >> ${LOCK}
+  echo "PRIORITY=\"${PRIORITY}\"" >> ${LOCK}
+
+  ${TINDERBOX}/scripts/tc addBuildPortsQueueEntry -b ${BUILD} -d ${PORT} -p ${PRIORITY} 2>/dev/null
+
+  touch ${WRKBASE}/${BUILD}/.build
+
+  return $?
+}
+
+status()
+{
+  BUILD=$1
+
+  if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
+    echo "finished"
+    return 1
+  fi
+
+  if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
+    echo "building"
+    return 1
+  fi
+
+  if [ -f "${WRKBASE}/${BUILD}/.lock" ]; then
+    echo "used"
+    return 1
+  fi
+
+  echo "idle"
+  return 0
+}
+
+
+case "$1" in
+'build')
+  build $2
+  return $?
+;;
+'checkout')
+  checkout $2 $3
+  return $?
+;;
+'clean')
+  clean
+  return $?
+;;
+'status')
+  status
+  return $?
+;;
+*)
+  echo "Usage: $0 [build|checkout|clean] param"
+  exit 1
+;;
+esac
+
+exit 0
