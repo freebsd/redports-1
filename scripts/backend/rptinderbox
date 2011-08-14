@@ -68,7 +68,9 @@ checkout()
   ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
   zfs snapshot ${ZFSVOLUME}@work || return 3
 
-  # Todo: apply overlay ports
+  # apply overlay ports
+  find ${WRKBASE}/${BUILD}/ports -type d -d 2 | sed -e "s|^${WRKBASE}/${BUILD}/ports/|${TINDERBOX}/portstrees/${PORTSTREE}/ports/|" | xargs rm -Rf || return 1
+  cp -pr ${WRKBASE}/${BUILD}/ports/* ${TINDERBOX}/portstrees/${PORTSTREE}/ports/
   
   # checkout finished
   touch ${WRKBASE}/${BUILD}/.checkout || return 1
