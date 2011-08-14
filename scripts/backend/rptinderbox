@@ -4,6 +4,7 @@
 #
 # $Id$
 #
+# /tmp/rptinderbox/.lock              Global lock for maintenance
 # /tmp/rptinderbox/<build>/.lock      Build lock including shellscript variables
 # /tmp/rptinderbox/<build>/.checkout  Checkout done
 # /tmp/rptinderbox/<build>/.build     Build started
@@ -13,8 +14,9 @@
 # /usr/local/tinderbox/portstrees/<portstree>/ports/   Tinderbox portstree
 # 
 
-REPOBASE=http://svn.redports.org/
-ZFSROOT=zroot/usr/local/tinderbox/portstrees
+#REPOBASE=http://svn.redports.org/
+REPOBASE=https://svn.bluelife.at/
+ZFSROOT="zroot/tinderbox/%s/portstree"
 
 WRKBASE=/tmp/rptinderbox
 LOG=${WRKBASE}/rptinderbox.log
@@ -26,6 +28,11 @@ checkout()
   REVISION=$2
   BUILD=$3
 
+  if [ -f "${WRKBASE}/.lock" ]; then
+    echo "Maintenance lock exists." >> ${LOG}
+    return 1
+  fi
+
   LOCK=${WRKBASE}/${BUILD}/.lock
 
   if [ -f "${LOCK}" ]; then
@@ -34,11 +41,11 @@ checkout()
   fi
 
   if [ ! -d "${WRKBASE}/${BUILD}" ]; then
-    mkdir -p ${WRKBASE}/${BUILD}
+    mkdir -p ${WRKBASE}/${BUILD} || return 1
   fi
 
   # create build lock
-  touch ${LOCK}
+  touch ${LOCK} || return 1
 
   PORTSTREE=`${TINDERBOX}/scripts/tc getPortsTreeForBuild -b ${BUILD} 2>/dev/null`
 
@@ -55,17 +62,18 @@ checkout()
   echo "LOCK=\"${LOCK}\"" >> ${LOCK}
 
   # checkout overlay ports
-  svn export --non-interactive --revision ${REVISION} ${REPOBASE}${REPOSITORY} ${WRKBASE}/${BUILD}/ports >> ${LOG}
+  svn export --non-interactive --revision ${REVISION} ${REPOBASE}${REPOSITORY} ${WRKBASE}/${BUILD}/ports >> ${LOG} || return 2
 
   # create snapshot of original tree
-  zfs snapshot ${ZFSROOT}/${PORTSTREE}@work
+  ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
+  zfs snapshot ${ZFSVOLUME}@work || return 3
 
   # Todo: apply overlay ports
   
   # checkout finished
-  touch ${WRKBASE}/${BUILD}/.checkout
+  touch ${WRKBASE}/${BUILD}/.checkout || return 1
   
-  return $?
+  return 0
 }
 
 clean()
@@ -80,19 +88,34 @@ clean()
 
   . ${LOCK}
 
-  if [ ! -f "${WRKBASE}/${BUILD}/.finished" ]; then
-    ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -b ${BUILD} -d ${PORT} >> ${LOG}
+  if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
+      if [ ! -f "${WRKBASE}/${BUILD}/.finished" ]; then
+        ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -b ${BUILD} -d ${PORT} >> ${LOG}
+      fi
   fi
 
-  zfs rollback ${ZFSROOT}/${PORTSTREE}@work || return 1
+  ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
+  zfs rollback ${ZFSVOLUME}@work
+  zfs destroy ${ZFSVOLUME}@work
 
   # Todo: buildlogs wegkopieren
   # Todo: package wegkopieren
-  # Todo: affected packages loeschen
+
+  # port von package feststellen: pkg_info -oq paket.tbz
+
+  # cleanroom modus:
+  # Todo: alle packages aelter als gemerktes "latest package" pruefen
+  #       und falls port in overlay tree vorhanden dann package loeschen
+
+  # standard modus:
+  # Todo: alle packages aelter als gemerktes "latest package" pruefen
+  #       und falls package unser port dann vorhandenes package loeschen
+  #       nicht reinraum modus aber gut fuer grosse trees wie KDE, Qt, Xorg
+  #       weil dependencies im eigenen tree nicht geloescht werden
 
   rm -rf ${WRKBASE}/${BUILD} || return 1
 
-  return $?
+  return 0
 }
 
 build()
@@ -101,6 +124,11 @@ build()
   BUILD=$2
   PRIORITY=$3
   LOCK=${WRKBASE}/${BUILD}/.lock
+
+  if [ -f "${WRKBASE}/.lock" ]; then
+    echo "Maintenance lock exists." >> ${LOG}
+    return 1
+  fi
 
   if [ ! -f "${LOCK}" ]; then
     echo "No lock for build ${BUILD}" >> ${LOG}
@@ -123,6 +151,14 @@ build()
     echo "Build already finished" >> ${LOG}
     return 1
   fi
+
+  # Todo: aktuellstes package von build merken
+  # creation time des aktuellstes package:
+  # OLDESTFILE=`ls -tr /usr/local/tinderbox/packages/9-FreeBSD/All | tail -1`
+  # OLDESTDATE=`stat -f %m ${OLDESTFILE}`
+  # OLDESTDATE=`date -r ${OLDESTDATE} "+%Y-%m-%d %H:%M:%S"`
+  # echo $OLDESTDATE
+  # NEWFILES=`find /usr/local/tinderbox/packages/9-FreeBSD/All/ -type f -newermt "${OLDESTDATE}" -print
 
   echo "PORT=\"${PORT}\"" >> ${LOCK}
   echo "PRIORITY=\"${PRIORITY}\"" >> ${LOCK}
@@ -164,11 +200,11 @@ case "$1" in
   return $?
 ;;
 'checkout')
-  checkout $2 $3
+  checkout $2 $3 $4
   return $?
 ;;
 'clean')
-  clean
+  clean $2
   return $?
 ;;
 'status')
