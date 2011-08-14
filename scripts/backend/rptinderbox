@@ -103,17 +103,26 @@ clean()
   # Todo: buildlogs wegkopieren
   # Todo: package wegkopieren
 
-  # port von package feststellen: pkg_info -oq paket.tbz
+  if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
+    NEWPACKAGES=`find ${TINDERBOX}/packages/${PORTSTREE}/All/ -type f -newermt "${LASTPACKAGEDATE}" -print
 
-  # cleanroom modus:
-  # Todo: alle packages aelter als gemerktes "latest package" pruefen
-  #       und falls port in overlay tree vorhanden dann package loeschen
-
-  # standard modus:
-  # Todo: alle packages aelter als gemerktes "latest package" pruefen
-  #       und falls package unser port dann vorhandenes package loeschen
-  #       nicht reinraum modus aber gut fuer grosse trees wie KDE, Qt, Xorg
-  #       weil dependencies im eigenen tree nicht geloescht werden
+    for package in ${NEWPACKAGES}
+    do
+      PKGPORT=`pkg_info -oq ${TINDERBOX}/packages/${PORTSTREE}/All/${package}`
+        
+      if [ ! -z "${CLEANROOM_MODE}" ]; then
+        if [ -d "${WRKBASE}/${BUILD}/ports/${PKGPORT}" ]; then
+          rm ${TINDERBOX}/packages/${PORTSTREE}/${PKGPORT%${PKGPORT##*/}}/${package}
+          rm ${TINDERBOX}/packages/${PORTSTREE}/All/${package}
+        fi
+      else
+        if [ "${PKGPORT}" = "${PORT}" ]; then
+          rm ${TINDERBOX}/packages/${PORTSTREE}/${PKGPORT%${PKGPORT##*/}}/${package}
+          rm ${TINDERBOX}/packages/${PORTSTREE}/All/${package}
+        fi
+      fi
+    done
+  fi
 
   rm -rf ${WRKBASE}/${BUILD} || return 1
 
@@ -154,22 +163,21 @@ build()
     return 1
   fi
 
-  # Todo: aktuellstes package von build merken
-  # creation time des aktuellstes package:
-  # OLDESTFILE=`ls -tr /usr/local/tinderbox/packages/9-FreeBSD/All | tail -1`
-  # OLDESTDATE=`stat -f %m ${OLDESTFILE}`
-  # OLDESTDATE=`date -r ${OLDESTDATE} "+%Y-%m-%d %H:%M:%S"`
-  # echo $OLDESTDATE
-  # NEWFILES=`find /usr/local/tinderbox/packages/9-FreeBSD/All/ -type f -newermt "${OLDESTDATE}" -print
+  # aktuellstes package von build merken
+  LASTPACKAGE=`ls -tr ${TINDERBOX}/packages/${BUILD}/All | tail -1`
+  LASTPACKAGEDATE=`stat -f %m ${LASTPACKAGE}`
+  LASTPACKAGEDATE=`date -r ${LASTPACKAGEDATE} "+%Y-%m-%d %H:%M:%S"`
 
   echo "PORT=\"${PORT}\"" >> ${LOCK}
   echo "PRIORITY=\"${PRIORITY}\"" >> ${LOCK}
+  echo "LASTPACKAGE=\"${LASTPACKAGE}\"" >> ${LOCK}
+  echo "LASTPACKAGEDATE=\"${LASTPACKAGEDATE}\"" >> ${LOCK}
 
-  ${TINDERBOX}/scripts/tc addBuildPortsQueueEntry -b ${BUILD} -d ${PORT} -p ${PRIORITY} 2>/dev/null
+  ${TINDERBOX}/scripts/tc addBuildPortsQueueEntry -b ${BUILD} -d ${PORT} -p ${PRIORITY} 2>/dev/null || return 1
 
-  touch ${WRKBASE}/${BUILD}/.build
+  touch ${WRKBASE}/${BUILD}/.build || return 1
 
-  return $?
+  return 0
 }
 
 status()
