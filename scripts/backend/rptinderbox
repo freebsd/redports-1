@@ -104,7 +104,7 @@ clean()
   # Todo: package wegkopieren
 
   if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
-    NEWPACKAGES=`find ${TINDERBOX}/packages/${PORTSTREE}/All/ -type f -newermt "${LASTPACKAGEDATE}" -print
+    NEWPACKAGES=`find ${TINDERBOX}/packages/${PORTSTREE}/All/ -type f -newermt "${LASTPACKAGEDATE}" -print`
 
     for package in ${NEWPACKAGES}
     do
@@ -164,9 +164,14 @@ build()
   fi
 
   # aktuellstes package von build merken
-  LASTPACKAGE=`ls -tr ${TINDERBOX}/packages/${BUILD}/All | tail -1`
-  LASTPACKAGEDATE=`stat -f %m ${LASTPACKAGE}`
-  LASTPACKAGEDATE=`date -r ${LASTPACKAGEDATE} "+%Y-%m-%d %H:%M:%S"`
+  if [ -d "${TINDERBOX}/packages/${BUILD}/All" ]; then
+    LASTPACKAGE=`ls -tr ${TINDERBOX}/packages/${BUILD}/All | tail -1`
+    LASTPACKAGEDATE=`stat -f %m ${TINDERBOX}/packages/${BUILD}/All/${LASTPACKAGE}`
+    LASTPACKAGEDATE=`date -r ${LASTPACKAGEDATE} "+%Y-%m-%d %H:%M:%S"`
+  else
+    LASTPACKAGE=""
+    LASTPACKAGEDATE=`date "+%Y-%m-%d %H:%M:%S"`
+  fi
 
   echo "PORT=\"${PORT}\"" >> ${LOCK}
   echo "PRIORITY=\"${PRIORITY}\"" >> ${LOCK}
@@ -206,7 +211,7 @@ status()
 
 case "$1" in
 'build')
-  build $2
+  build $2 $3 $4
   return $?
 ;;
 'checkout')
@@ -218,7 +223,7 @@ case "$1" in
   return $?
 ;;
 'status')
-  status
+  status $2
   return $?
 ;;
 *)
