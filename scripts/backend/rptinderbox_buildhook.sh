@@ -20,7 +20,7 @@ compress_wrkdir () {
   cd ${PB}/${BUILD}/a/ports/${PORTDIR} && objdir=$(make -V WRKDIR) && \
   objdir=`echo ${objdir} | sed "s,${PB}/${BUILD}/,${PB}/${BUILD}/work/,"` && \
   tar cfjC ${PB}/wrkdirs/${BUILD}/${PACKAGE_NAME}.tbz ${objdir}/.. work && \
-  echo "WRKDIR=\"${PB}/wrkdirs/${BUILD}/${PACKAGE_NAME}.tbz\"" >> ${FINISHED}
+  echo "WRKDIR=\"/wrkdirs/${BUILD}/${PACKAGE_NAME}.tbz\"" >> ${FINISHED}
   return 0
 }
 
@@ -37,6 +37,7 @@ if [ -f "${LOCK}" ]; then
 fi
 
 if [ "${STATUS}" = "SUCCESS" ]; then
+  echo "BUILDLOG=\"/logs/${BUILD}/${PACKAGE_NAME}.log\"" >> ${FINISHED}
   if [ -n "${DELETE_OLD}" ]; then
     rm ${PB}/wrkdirs/${BUILD}/${PACKAGE_NAME}.tbz
   fi
@@ -44,5 +45,6 @@ if [ "${STATUS}" = "SUCCESS" ]; then
     compress_wrkdir
   fi
 elif [ "${STATUS}" != "DUD" ]; then
+  echo "BUILDLOG=\"/errors/${BUILD}/${PACKAGE_NAME}.log\"" >> ${FINISHED}
   compress_wrkdir
 fi

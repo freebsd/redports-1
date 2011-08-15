@@ -191,6 +191,19 @@ status()
 
   if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
     echo "finished"
+    . ${WRKBASE}/${BUILD}/.finished
+
+    echo "STATUS=${STATUS}"
+
+    if [ -n "${FAIL_REASON}" ]; then
+      echo "FAIL_REASON=${FAIL_REASON}"
+    fi
+
+    echo "BUILDLOG=${BUILDLOG}"
+
+    if [ -n "${WRKDIR}" ]; then
+      echo "WRKDIR=${WRKDIR}"
+    fi
     return 1
   fi
 
