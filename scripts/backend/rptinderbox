@@ -100,9 +100,6 @@ clean()
   zfs rollback ${ZFSVOLUME}@work
   zfs destroy ${ZFSVOLUME}@work
 
-  # Todo: buildlogs wegkopieren
-  # Todo: package wegkopieren
-
   if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
     NEWPACKAGES=`find ${TINDERBOX}/packages/${PORTSTREE}/All/ -type f -newermt "${LASTPACKAGEDATE}" -print`
 
