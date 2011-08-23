@@ -14,6 +14,11 @@ USER=$1
 REPOSITORY=redports
 SVNUSER=redports
 
+if [ -z "$USER" ]; then
+   echo "Usage: rpcreateaccount <username>"
+   exit 1
+fi
+
 if ! egrep "^${USER}:" ${HTPASSWD} >/dev/null ; then
    echo "User ${USER} doest not exist"
    exit 1
@@ -47,15 +52,11 @@ rm -rf ${TMP}
 
 # grant permissions on it
 if ! egrep "^\[${REPOSITORY}:/${USER}\]" ${SVNACCESS} >/dev/null ; then
-   echo "Granting svn permissions for home path"
-   
    echo "[${REPOSITORY}:/${USER}]" >> ${SVNACCESS}
    echo "${USER} = rw" >> ${SVNACCESS}
    echo "" >> ${SVNACCESS}
 else
    echo "SVN permissions already granted"
 fi
-
-echo "Success."
 
 exit 0
