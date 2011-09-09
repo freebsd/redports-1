@@ -40,7 +40,7 @@ do
     RAND=`hexdump -n2 -e\"%u\" /dev/random`
     BUILDID=${BUILDDATE}-${RAND}
 
-    echo "INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES (\"${BUILDID}\", \"${USER}\", \"${REPOSITORYBASE}\", ${REV}, \"${PORT}\", 0, ${START}, 0);" | mysql -u ${DBUSER} ${DBNAME}
+    echo "INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES (\"${BUILDID}\", \"${USER}\", \"${REPOSITORYBASE}\", ${REV}, \"${PORT}\", 10, ${START}, 0);" | mysql -u ${DBUSER} ${DBNAME}
     if [ $? != 0 ]; then
         echo "ERROR: Failed adding ${PORT} with r${REV} to buildqueue"
     else
