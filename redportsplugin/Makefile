@@ -12,6 +12,6 @@ rollout:
 	cp -p dist/*.egg /var/db/trac/redports/plugins/
 
 restart:
-	killall python2.6 || true
+	/usr/local/etc/rc.d/tracd stop && sleep 3
 	trac-admin /var/db/trac/redports upgrade
-	sh /etc/rc.local
+	/usr/local/etc/rc.d/tracd start

@@ -8,8 +8,8 @@ class RedportsEnvironment(Component):
     def __init__(self):
         self.schema = [
             Table('buildqueue', key=('id'))[
-                Column('id', type='int', auto_increment=True),
-                Column('owner', type='varchar(30)', size=30),
+                Column('id', type='varchar(25)', size=25),
+                Column('owner', type='varchar(50)', size=50),
                 Column('repository', type='varchar(255)', size=255),
                 Column('revision', type='int'),
                 Column('portname', type='varchar(50)', size=50),
@@ -19,22 +19,43 @@ class RedportsEnvironment(Component):
             ],
             Table('builds', key=('id'))[
                 Column('id', type='int', auto_increment=True),
-                Column('queueid', type='int'),
-                Column('group', type='varchar(15)', size=15),
+                Column('queueid', type='varchar(25)', size=25),
+                Column('group', type='varchar(50)', size=50),
                 Column('status', type='int'),
                 Column('buildstatus', type='int'),
-                Column('backend', type='varchar(20)', size=20),
+                Column('backendid', type='int'),
                 Column('startdate', type='bigint'),
                 Column('enddate', type='bigint')
             ],
-            Table('backends', key=('name'))[
-                Column('name', type='varchar(20)', size=20),
-                Column('description', type='varchar(255)', size=255),
-                Column('group', type='varchar(15)', size=15),
+            Table('backends', key=('id'))[
+                Column('id', type='int', auto_increment=True),
+                Column('host', type='varchar(50)', size=50),
+                Column('protocol', type='varchar(10)', size=10),
+                Column('uri', type='varchar(25)', size=25),
+                Column('credentials', type='varchar(50)', size=50),
+                Column('maxparallel', type='int'),
+                Column('status', type='int'),
+                Column('type', type='varchar(25)', size=25)
+            ],
+            Table('backendbuilds', key=('id'))[
+                Column('id', type='int', auto_increment=True),
+                Column('buildgroup', type='varchar(25)', size=25),
+                Column('backendid', type='int'),
                 Column('priority', type='int'),
-                Column('type', type='varchar(20)', size=20),
-                Column('maxbuilds', type='int'),
-                Column('status', type='int')
+                Column('status', type='int'),
+                Column('buildname', type='varchar(25)', size=25)
+            ],
+            Table('buildgroups', key=('name'))[
+                Column('name', type='varchar(50)', size=50),
+                Column('version', type='varchar(25)', size=25),
+                Column('arch', type='varchar(10)', size=10),
+                Column('type', type='varchar(25)', size=25),
+                Column('description', type='varchar(255)', size=255),
+            ],
+            Table('automaticbuildgroups', key=('username'))[
+                Column('username', type='varchar(50)', size=50),
+                Column('buildgroup', type='varchar(25)', size=25),
+                Column('priority', type='int'),
             ],
         ]
 
