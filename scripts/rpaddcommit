@@ -8,13 +8,13 @@
 
 PATH=${PATH}:/usr/local/bin
 
+REPOSITORY=https://svn.redports.org/
 DBNAME=trac
 DBUSER=root
 LOG=/var/log/redports.log
 
 REPOS=$1
 REV=$2
-REPOSITORY=${REPOS%${REPOS##*/}}
 USER=`svnlook author -r ${REV} ${REPOS}`
 
 # add affected ports to buildqueue
