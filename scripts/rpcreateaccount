@@ -26,7 +26,7 @@ fi
 
 # create svn folder for user
 rm -rf ${TMP}
-svn checkout --username ${SVNUSER}--non-interactive --non-recursive file:///var/subversion/${REPOSITORY} ${TMP} >/dev/null && \
+svn checkout --username ${SVNUSER} --non-interactive --non-recursive file:///var/subversion/${REPOSITORY} ${TMP} >/dev/null && \
 svn update --non-interactive ${TMP}/${USER} >/dev/null
 
 if [ $? != 0 ]; then
@@ -51,8 +51,8 @@ rm -rf ${TMP}
 
 
 # grant permissions on it
-if ! egrep "^\[${REPOSITORY}:/${USER}\]" ${SVNACCESS} >/dev/null ; then
-   echo "[${REPOSITORY}:/${USER}]" >> ${SVNACCESS}
+if ! egrep "^\[/${USER}\]" ${SVNACCESS} >/dev/null ; then
+   echo "[/${USER}]" >> ${SVNACCESS}
    echo "${USER} = rw" >> ${SVNACCESS}
    echo "" >> ${SVNACCESS}
 else
