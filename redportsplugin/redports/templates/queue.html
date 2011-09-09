@@ -19,7 +19,7 @@
             </thead>
             <tbody>
                 <tr py:for="port in commitqueue">
-                    <td><a href="/changeset/$port.revision/redports">r$port.revision</a></td>
+                    <td><a href="/changeset/$port.revision/">r$port.revision</a></td>
                     <td>$port.portname</td>
                     <td class="status-$port.status">$port.status</td>
                     <td>$port.startdate</td>
