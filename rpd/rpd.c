@@ -51,6 +51,101 @@ int getPage(char *url)
     return 0;
 }
 
+int handleStep11(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_RES *result2;
+    MYSQL_RES *result3;
+    MYSQL_ROW builds;
+    MYSQL_ROW backends;
+    MYSQL_ROW runningjobs;
+    char query[1000];
+
+    conn = mysql_init(NULL);
+    if(conn == NULL){
+        printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+        return 1;
+    }
+
+    if(mysql_real_connect(conn, "localhost", "root", "", "trac", 0, NULL, 0) == NULL){
+        printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+        return 1;
+    }
+
+    if(mysql_query(conn, "SELECT builds.id, builds.group, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 11 AND builds.backendid = 0")){
+        printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+        return 1;
+    }
+
+    result = mysql_store_result(conn);
+
+    while ((builds = mysql_fetch_row(result)))
+    {
+        sprintf(query, "SELECT backendid, maxparallel FROM backendbuilds, backends WHERE backendid = backends.id AND buildgroup = \"%s\" ORDER BY priority", builds[1]);
+
+        if(mysql_query(conn, query)){
+            printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+            return 1;
+        }
+
+        result2 = mysql_store_result(conn);
+
+        while((backends = mysql_fetch_row(result2)))
+        {
+            sprintf(query, "SELECT count(*) FROM builds WHERE backendid = %d AND status < 90", atoi(backends[0]));
+            if(mysql_query(conn, query)){
+                printf("Error %u on line: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+                return 1;
+            }
+
+            result3 = mysql_store_result(conn);
+            runningjobs = mysql_fetch_row(result3);
+
+            printf("Group %s running %d max %d (backend=%s, id=%s)\n", builds[1], atoi(runningjobs[0]), atoi(backends[1]), backends[0], builds[0]);
+
+            if(atoi(runningjobs[0]) < atoi(backends[1]))
+            {
+                sprintf(query, "UPDATE builds SET backendid = %d WHERE id = %d", atoi(backends[0]), atoi(builds[0]));
+                if(mysql_query(conn, query)){
+                    printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+                    return 1;
+                }
+            }
+
+            mysql_free_result(result3);
+        }
+
+        mysql_free_result(result2);
+
+
+        sprintf(query, "SELECT count(*) FROM builds WHERE queueid = \"%s\" AND backendid = 0", builds[2]);
+        if(mysql_query(conn, query)){
+            printf("Error %u on line: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+            return 1;
+        }
+
+        result2 = mysql_store_result(conn);
+        runningjobs = mysql_fetch_row(result2);
+
+        if(atoi(runningjobs[0]) == 0)
+        {
+            sprintf(query, "UPDATE buildqueue SET status = 20 WHERE id = \"%s\"", builds[2]);
+            if(mysql_query(conn, query)){
+                printf("Error %u on line: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+                return 1;
+            }
+        }
+        
+        mysql_free_result(result2);
+    }
+
+    mysql_free_result(result);
+    mysql_close(conn);
+    
+    return 0;
+}
+
 int handleStep10(void)
 {
     MYSQL *conn;
@@ -121,7 +216,9 @@ void run()
     while(1)
     {
         handleStep10();
-        sleep(10);
+        sleep(3);
+        handleStep11();
+        sleep(3);
     }
 }
  
