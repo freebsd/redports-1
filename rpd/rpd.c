@@ -14,7 +14,7 @@
 #define PID_FILE "/var/run/rpd.pid"
 
 
-size_t  write_data(void *ptr, size_t size, size_t nmemb, FILE *stream)
+size_t parseResponse(void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
     char buf[size*nmemb+1];
     char *pbuf = &buf[0];
@@ -22,17 +22,17 @@ size_t  write_data(void *ptr, size_t size, size_t nmemb, FILE *stream)
 
     memset(buf, '\0', size*nmemb+1);
     for(; i < nmemb ; i++){
-      strncpy(pbuf,ptr,size);
+      strncpy(pbuf, ptr, size);
       pbuf += size;
       ptr += size;
     }
 
-    printf("%s",buf);
+    printf("%s", buf);
     return size * nmemb;
 }
 
 
-int getPage(char *url)
+int getPage(char *url, char *credentials)
 {
     CURL *curl;
     CURLcode res;
@@ -42,14 +42,56 @@ int getPage(char *url)
         return 1;
     }
 
+    printf("%s\n", url);
+
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &write_data);
-    curl_easy_setopt(curl, CURLOPT_USERPWD, "user:test");
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &parseResponse);
+    curl_easy_setopt(curl, CURLOPT_USERPWD, credentials);
     res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
 
     return 0;
 }
+
+int handleStep30(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_ROW builds;
+    char query[1000];
+    char url[250];
+
+    conn = mysql_init(NULL);
+    if(conn == NULL){
+        printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+        return 1;
+    }
+
+    if(mysql_real_connect(conn, "localhost", "root", "", "trac", 0, NULL, 0) == NULL){
+        printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+        return 1;
+    }
+
+    if(mysql_query(conn, "SELECT protocol, host, uri, credentials, buildname, repository, revision FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30")){
+        printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+        return 1;
+    }
+
+    result = mysql_store_result(conn);
+
+    while ((builds = mysql_fetch_row(result)))
+    {
+        sprintf(url, "%s://%s%scheckout?repository=%s&revision=%s&build=%s", builds[0], builds[1], builds[2], builds[5], builds[6], builds[4]);
+        getPage(url, builds[3]);
+    }
+         
+    mysql_free_result(result);
+    mysql_close(conn);
+
+    return 0;
+}
+
+
 
 int handleStep11(void)
 {
@@ -106,7 +148,7 @@ int handleStep11(void)
 
             if(atoi(runningjobs[0]) < atoi(backends[1]))
             {
-                sprintf(query, "UPDATE builds SET backendid = %d WHERE id = %d", atoi(backends[0]), atoi(builds[0]));
+                sprintf(query, "UPDATE builds SET backendid = %d, status = 30 WHERE id = %d", atoi(backends[0]), atoi(builds[0]));
                 if(mysql_query(conn, query)){
                     printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
                     return 1;
@@ -130,7 +172,7 @@ int handleStep11(void)
 
         if(atoi(runningjobs[0]) == 0)
         {
-            sprintf(query, "UPDATE buildqueue SET status = 20 WHERE id = \"%s\"", builds[2]);
+            sprintf(query, "UPDATE buildqueue SET status = 30 WHERE id = \"%s\"", builds[2]);
             if(mysql_query(conn, query)){
                 printf("Error %u on line: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
                 return 1;
@@ -218,6 +260,8 @@ void run()
         handleStep10();
         sleep(3);
         handleStep11();
+        sleep(3);
+        handleStep30();
         sleep(3);
     }
 }
