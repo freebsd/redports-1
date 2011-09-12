@@ -18,20 +18,22 @@
        printf("SQL Error %u on line %d: %s\n", mysql_errno(connection), __LINE__, mysql_error(connection)); \
     }
 
-size_t parseResponse(void *ptr, size_t size, size_t nmemb, FILE *stream)
-{
-    char buf[size*nmemb+1];
-    char *pbuf = &buf[0];
-    size_t i = 0;
+char pageBuffer[512];
+char *pageBufferPtr;
 
-    memset(buf, '\0', size*nmemb+1);
+int readpage(void *ptr, size_t size, size_t nmemb, FILE *stream)
+{
+    int i = 0;
+ 
     for(; i < nmemb ; i++){
-      strncpy(pbuf, ptr, size);
-      pbuf += size;
-      ptr += size;
+        if((pageBufferPtr-&pageBuffer[0])+size > sizeof(pageBuffer))
+           return 0;
+
+        strncpy(pageBufferPtr, ptr, size);
+        pageBufferPtr += size;
+        ptr += size;
     }
 
-    printf("%s", buf);
     return size * nmemb;
 }
 
@@ -41,21 +43,52 @@ int getPage(char *url, char *credentials)
     CURL *curl;
     CURLcode res;
 
-    curl = curl_easy_init();
-    if(!curl) {
-        return 1;
-    }
+    memset(pageBuffer, '\0', sizeof(pageBuffer));
+    pageBufferPtr = &pageBuffer[0];
 
-    printf("%s\n", url);
+    curl = curl_easy_init();
+    if(!curl)
+        return 1;
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &parseResponse);
-    curl_easy_setopt(curl, CURLOPT_USERPWD, credentials);
+    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &readpage);
+
+    if(credentials != NULL)
+        curl_easy_setopt(curl, CURLOPT_USERPWD, credentials);
+
     res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
 
     return 0;
 }
+
+
+int downloadFile(char *url, char *credentials, char *filename)
+{
+    CURL *curl;
+    CURLcode res;
+
+    FILE *outfile;
+    outfile = fopen(filename, "w");
+
+    curl = curl_easy_init();
+    if(!curl)
+        return 1;
+
+    curl_easy_setopt(curl, CURLOPT_URL, url);
+    curl_easy_setopt(curl, CURLOPT_WRITEDATA, outfile);
+
+    if(credentials != NULL)
+        curl_easy_setopt(curl, CURLOPT_USERPWD, credentials);
+
+    res = curl_easy_perform(curl);
+    curl_easy_cleanup(curl);
+
+    fclose(outfile);
+
+    return 0;
+}
+
 
 int handleStep30(void)
 {
