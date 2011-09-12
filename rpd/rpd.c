@@ -13,6 +13,10 @@
 #define DAEMON_NAME "rpd"
 #define PID_FILE "/var/run/rpd.pid"
 
+#define LOGSQL(connection) \
+    { \
+       printf("SQL Error %u on line %d: %s\n", mysql_errno(connection), __LINE__, mysql_error(connection)); \
+    }
 
 size_t parseResponse(void *ptr, size_t size, size_t nmemb, FILE *stream)
 {
@@ -63,17 +67,17 @@ int handleStep30(void)
 
     conn = mysql_init(NULL);
     if(conn == NULL){
-        printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+        LOGSQL(conn);
         return 1;
     }
 
     if(mysql_real_connect(conn, "localhost", "root", "", "trac", 0, NULL, 0) == NULL){
-        printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+        LOGSQL(conn);
         return 1;
     }
 
     if(mysql_query(conn, "SELECT protocol, host, uri, credentials, buildname, repository, revision FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30")){
-        printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+        LOGSQL(conn);
         return 1;
     }
 
@@ -106,17 +110,17 @@ int handleStep11(void)
 
     conn = mysql_init(NULL);
     if(conn == NULL){
-        printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+        LOGSQL(conn);
         return 1;
     }
 
     if(mysql_real_connect(conn, "localhost", "root", "", "trac", 0, NULL, 0) == NULL){
-        printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+        LOGSQL(conn);
         return 1;
     }
 
     if(mysql_query(conn, "SELECT builds.id, builds.group, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 11 AND builds.backendid = 0")){
-        printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+        LOGSQL(conn);
         return 1;
     }
 
@@ -127,7 +131,7 @@ int handleStep11(void)
         sprintf(query, "SELECT backendid, maxparallel FROM backendbuilds, backends WHERE backendid = backends.id AND buildgroup = \"%s\" ORDER BY priority", builds[1]);
 
         if(mysql_query(conn, query)){
-            printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+            LOGSQL(conn);
             return 1;
         }
 
@@ -137,20 +141,18 @@ int handleStep11(void)
         {
             sprintf(query, "SELECT count(*) FROM builds WHERE backendid = %d AND status < 90", atoi(backends[0]));
             if(mysql_query(conn, query)){
-                printf("Error %u on line: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+                LOGSQL(conn);
                 return 1;
             }
 
             result3 = mysql_store_result(conn);
             runningjobs = mysql_fetch_row(result3);
 
-            printf("Group %s running %d max %d (backend=%s, id=%s)\n", builds[1], atoi(runningjobs[0]), atoi(backends[1]), backends[0], builds[0]);
-
             if(atoi(runningjobs[0]) < atoi(backends[1]))
             {
                 sprintf(query, "UPDATE builds SET backendid = %d, status = 30 WHERE id = %d", atoi(backends[0]), atoi(builds[0]));
                 if(mysql_query(conn, query)){
-                    printf("Error %u on line %d: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+                    LOGSQL(conn);
                     return 1;
                 }
             }
@@ -163,7 +165,7 @@ int handleStep11(void)
 
         sprintf(query, "SELECT count(*) FROM builds WHERE queueid = \"%s\" AND backendid = 0", builds[2]);
         if(mysql_query(conn, query)){
-            printf("Error %u on line: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+            LOGSQL(conn);
             return 1;
         }
 
@@ -174,7 +176,7 @@ int handleStep11(void)
         {
             sprintf(query, "UPDATE buildqueue SET status = 30 WHERE id = \"%s\"", builds[2]);
             if(mysql_query(conn, query)){
-                printf("Error %u on line: %s\n", mysql_errno(conn), __LINE__, mysql_error(conn));
+                LOGSQL(conn);
                 return 1;
             }
         }
@@ -201,17 +203,17 @@ int handleStep10(void)
 
     conn = mysql_init(NULL);
     if(conn == NULL){
-        printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
+        LOGSQL(conn);
         return 1;
     }
 
     if(mysql_real_connect(conn, "localhost", "root", "", "trac", 0, NULL, 0) == NULL){
-        printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
+        LOGSQL(conn);
         return 1;
     }
 
     if(mysql_query(conn, "SELECT id, owner FROM buildqueue WHERE status = 10")){
-        printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
+        LOGSQL(conn);
         return 1;
     }
 
@@ -222,7 +224,7 @@ int handleStep10(void)
         sprintf(query, "SELECT buildgroup FROM automaticbuildgroups WHERE username = \"%s\" ORDER BY priority", builds[1]);
 
         if(mysql_query(conn, query)){
-            printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
+            LOGSQL(conn);
             return 1;
         }
 
@@ -232,7 +234,7 @@ int handleStep10(void)
         {
             sprintf(query, "INSERT INTO builds VALUES (null, \"%s\",  \"%s\", 10, 0, 0, 0, 0)", builds[0], backends[0]);
 	    if(mysql_query(conn, query)){
-                printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
+                LOGSQL(conn);
                 return 1;
             }
         }
@@ -241,7 +243,7 @@ int handleStep10(void)
 
         sprintf(query, "UPDATE buildqueue SET status = 11 WHERE id = \"%s\"", builds[0]);
         if(mysql_query(conn, query)){
-            printf("Error %u: %s\n", mysql_errno(conn), mysql_error(conn));
+            LOGSQL(conn);
             return 1;
         }
     }
