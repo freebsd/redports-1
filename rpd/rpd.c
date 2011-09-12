@@ -89,15 +89,8 @@ int downloadFile(char *url, char *credentials, char *filename)
     return 0;
 }
 
-
-int handleStep30(void)
+int mysql_autoconnect(MYSQL *conn)
 {
-    MYSQL *conn;
-    MYSQL_RES *result;
-    MYSQL_ROW builds;
-    char query[1000];
-    char url[250];
-
     conn = mysql_init(NULL);
     if(conn == NULL){
         LOGSQL(conn);
@@ -108,6 +101,21 @@ int handleStep30(void)
         LOGSQL(conn);
         return 1;
     }
+
+    return 0;
+}
+
+
+int handleStep30(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_ROW builds;
+    char query[1000];
+    char url[250];
+
+    if(!mysql_autoconnect(conn))
+        return 1;
 
     if(mysql_query(conn, "SELECT protocol, host, uri, credentials, buildname, repository, revision FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30")){
         LOGSQL(conn);
@@ -141,16 +149,8 @@ int handleStep11(void)
     MYSQL_ROW runningjobs;
     char query[1000];
 
-    conn = mysql_init(NULL);
-    if(conn == NULL){
-        LOGSQL(conn);
+    if(!mysql_autoconnect(conn))
         return 1;
-    }
-
-    if(mysql_real_connect(conn, "localhost", "root", "", "trac", 0, NULL, 0) == NULL){
-        LOGSQL(conn);
-        return 1;
-    }
 
     if(mysql_query(conn, "SELECT builds.id, builds.group, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 11 AND builds.backendid = 0")){
         LOGSQL(conn);
@@ -234,16 +234,9 @@ int handleStep10(void)
     int i;
     char query[1000];
 
-    conn = mysql_init(NULL);
-    if(conn == NULL){
-        LOGSQL(conn);
-        return 1;
-    }
 
-    if(mysql_real_connect(conn, "localhost", "root", "", "trac", 0, NULL, 0) == NULL){
-        LOGSQL(conn);
+    if(!mysql_autoconnect(conn))
         return 1;
-    }
 
     if(mysql_query(conn, "SELECT id, owner FROM buildqueue WHERE status = 10")){
         LOGSQL(conn);
