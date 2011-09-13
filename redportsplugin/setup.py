@@ -16,13 +16,13 @@ setup(
     long_description="""
 	Integrates a frontend to view progress of a FreeBSD package buildfarm
     """,
-#    zip_safe=True,
+    zip_safe=True,
     packages=[PACKAGE],
     package_data={PACKAGE : ['templates/*.html', 'htdocs/*']},
     entry_points = {
         'trac.plugins': [
             'redports.db = redports.db',
-            'redports.web_ui = redports.web_ui',
             'redports.buildgroups = redports.buildgroups',
+            'redports.commitqueue = redports.commitqueue',
         ]
     })

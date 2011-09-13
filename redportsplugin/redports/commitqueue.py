@@ -11,7 +11,7 @@ import re
 
 from model import Port, PortsQueueIterator
 
-class CommitsAdminPanel(Component):
+class CommitqueuePanel(Component):
     """ Pages for adding/editing contacts. """
     implements(INavigationContributor, ITemplateProvider, IRequestHandler, IPermissionRequestor)
 
