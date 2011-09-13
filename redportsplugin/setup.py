@@ -23,5 +23,6 @@ setup(
         'trac.plugins': [
             'redports.db = redports.db',
             'redports.web_ui = redports.web_ui',
+            'redports.buildgroups = redports.buildgroups',
         ]
     })

@@ -15,13 +15,14 @@
     <div id="tabcontent">
         <table class="listing" id="queue_list">
             <thead>
-                <tr><th>Revision</th><th>Port</th><th>Status</th><th>Start</th><th>End</th></tr>
+                <tr><th>Revision</th><th>Port</th><th>Status</th><th>Buildgroup</th><th>Start</th><th>End</th></tr>
             </thead>
             <tbody>
                 <tr py:for="port in commitqueue">
                     <td><a href="/changeset/$port.revision/">r$port.revision</a></td>
                     <td>$port.portname</td>
                     <td class="status-$port.status">$port.status</td>
+                    <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
                     <td>$port.startdate</td>
                     <td>$port.enddate</td>
                 </tr>
