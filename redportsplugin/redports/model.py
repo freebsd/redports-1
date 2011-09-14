@@ -45,16 +45,22 @@ class Buildgroup(object):
         self.arch = None
         self.type = None
         self.description = None
+        self.available = None
+        self.status = None
 
 def BuildgroupsIterator(env, req):
    cursor = env.get_db_cnx().cursor()
-   cursor.execute("SELECT name, version, arch, type, description FROM buildgroups WHERE 1=1 ORDER BY version DESC, arch")
+   cursor.execute("SELECT name, version, arch, type, description, (SELECT count(*) FROM backendbuilds WHERE buildgroup = name AND status = 1) FROM buildgroups WHERE 1=1 ORDER BY version DESC, arch")
 
-   for name, version, arch, type, description in cursor:
+   for name, version, arch, type, description, available in cursor:
         buildgroup = Buildgroup(env)
         buildgroup.name = name
         buildgroup.version = version
         buildgroup.arch = arch
         buildgroup.type = type
         buildgroup.description = description
+        buildgroup.available = available
+        buildgroup.status = 'error'
+        if available > 0:
+            buildgroup.status = 'ok'
         yield buildgroup
