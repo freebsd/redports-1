@@ -34,6 +34,7 @@ class Port(object):
             self.statusname = 'transferring'
         elif math.floor(status / 10) == 9:
             self.statusname = 'finished'
+            self.finished = True
         else:
             self.statusname = 'unknown'
 
