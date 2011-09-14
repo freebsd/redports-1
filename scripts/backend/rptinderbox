@@ -187,7 +187,6 @@ status()
   BUILD=$1
 
   if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
-    echo "finished"
     . ${WRKBASE}/${BUILD}/.finished
 
     echo "STATUS=${STATUS}"
@@ -205,36 +204,57 @@ status()
   fi
 
   if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
-    echo "building"
+    echo "STATUS=building"
     return 1
   fi
 
   if [ -f "${WRKBASE}/${BUILD}/.lock" ]; then
-    echo "used"
+    echo "STATUS=used"
     return 1
   fi
 
-  echo "idle"
+  echo "STATUS=idle"
   return 0
 }
 
 
 case "$1" in
 'build')
-  build $2 $3 $4
-  return $?
+  if build $2 $3 $4 ; then
+    echo "OK"
+    return 0
+  else
+    echo "ERROR"
+    return 1
+  fi
 ;;
 'checkout')
-  checkout $2 $3 $4
-  return $?
+  if checkout $2 $3 $4 ; then
+    echo "OK"
+    return 0
+  else
+    echo "ERROR"
+    return 1
+  fi
 ;;
 'clean')
-  clean $2
+  if clean $2 ; then
+    echo "OK"
+    return 0
+  else
+    echo "ERROR"
+    return 1
+  fi
   return $?
 ;;
 'status')
-  status $2
-  return $?
+  if status $2 ; then
+    echo "OK"
+    return 0
+  else
+    echo "ERROR"
+    return 1
+  fi
 ;;
 *)
   echo "Usage: $0 [build|checkout|clean] param"
