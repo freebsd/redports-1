@@ -4,6 +4,7 @@
 #include <syslog.h>
 #include <signal.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include <my_global.h>
 #include <mysql.h>
@@ -87,6 +88,20 @@ int downloadFile(char *url, char *credentials, char *filename)
     fclose(outfile);
 
     return 0;
+}
+
+unsigned long long microtime(void)
+{
+    struct timeval time;
+    unsigned long long microtime;
+
+    gettimeofday(&time, NULL);
+
+    microtime = time.tv_sec;
+    microtime *= 1000000L;
+    microtime += time.tv_usec;
+
+    return microtime;
 }
 
 int mysql_autoconnect(MYSQL *conn)
@@ -183,7 +198,7 @@ int handleStep11(void)
 
             if(atoi(runningjobs[0]) < atoi(backends[1]))
             {
-                sprintf(query, "UPDATE builds SET backendid = %d, status = 30 WHERE id = %d", atoi(backends[0]), atoi(builds[0]));
+                sprintf(query, "UPDATE builds SET backendid = %d, status = 30, startdate = %lli WHERE id = %d", atoi(backends[0]), atoi(builds[0]), microtime());
                 if(mysql_query(conn, query)){
                     LOGSQL(conn);
                     return 1;
