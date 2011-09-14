@@ -1,5 +1,6 @@
 from trac.core import *
 from trac.util.datefmt import from_utimestamp, pretty_timedelta
+import math
 
 class Port(object):
     def __init__(self, env, id=None):
@@ -14,8 +15,27 @@ class Port(object):
 	self.group = None
         self.portname = None
         self.status = None
+        self.statusname = None
         self.startdate = None
         self.enddate = None
+
+    def setStatus(self, status):
+        self.status = status
+
+        if math.floor(status / 10) == 1:
+            self.statusname = 'created'
+        elif math.floor(status / 10) == 2:
+            self.statusname = 'waiting'
+        elif math.floor(status / 10) == 3:
+            self.statusname = 'starting'
+        elif math.floor(status / 10) == 5:
+            self.statusname = 'building'
+        elif math.floor(status / 10) == 7:
+            self.statusname = 'transferring'
+        elif math.floor(status / 10) == 9:
+            self.statusname = 'finished'
+        else:
+            self.statusname = 'unknown'
 
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
@@ -29,7 +49,7 @@ def PortsQueueIterator(env, req):
 	port.revision = revision
 	port.group = group
 	port.portname = portname
-	port.status = status
+        port.setStatus(status)
 	port.startdate = pretty_timedelta( from_utimestamp(startdate) )
 	port.enddate = from_utimestamp(enddate)
         yield port

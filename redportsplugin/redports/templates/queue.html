@@ -21,7 +21,7 @@
                 <tr py:for="port in commitqueue">
                     <td><a href="/changeset/$port.revision/">r$port.revision</a></td>
                     <td>$port.portname</td>
-                    <td class="status-$port.status">$port.status</td>
+                    <td class="status-$port.statusname"><a href="/wiki/Buildstatus#$port.statusname" title="$port.status">$port.statusname</a></td>
                     <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
                     <td>$port.startdate</td>
                     <td>$port.enddate</td>
