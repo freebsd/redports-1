@@ -153,7 +153,7 @@ int handleStep30(void)
 
 
 
-int handleStep11(void)
+int handleStep20(void)
 {
     MYSQL *conn;
     MYSQL_RES *result;
@@ -167,7 +167,7 @@ int handleStep11(void)
     if(!mysql_autoconnect(conn))
         return 1;
 
-    if(mysql_query(conn, "SELECT builds.id, builds.group, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 11 AND builds.backendid = 0")){
+    if(mysql_query(conn, "SELECT builds.id, builds.group, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 20 AND builds.backendid = 0")){
         LOGSQL(conn);
         return 1;
     }
@@ -282,7 +282,7 @@ int handleStep10(void)
 
         mysql_free_result(result2);
 
-        sprintf(query, "UPDATE buildqueue SET status = 11 WHERE id = \"%s\"", builds[0]);
+        sprintf(query, "UPDATE buildqueue SET status = 20 WHERE id = \"%s\"", builds[0]);
         if(mysql_query(conn, query)){
             LOGSQL(conn);
             return 1;
@@ -302,7 +302,7 @@ void run()
     {
         handleStep10();
         sleep(3);
-        handleStep11();
+        handleStep20();
         sleep(3);
         handleStep30();
         sleep(3);
