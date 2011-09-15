@@ -1,0 +1,209 @@
+/*
+ * Copyright (C) 2011 Bernhard Froehlich <decke@FreeBSD.org>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Author's name may not be used endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+ * STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+ * IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+
+#include "database.h"
+#include "remote.h"
+#include "util.h"
+
+
+int handleStep30(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_ROW builds;
+    char query[1000];
+    char url[250];
+
+    if(!mysql_autoconnect(conn))
+        return 1;
+
+    if(mysql_query(conn, "SELECT protocol, host, uri, credentials, buildname, repository, revision FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30")){
+        LOGSQL(conn);
+        return 1;
+    }
+
+    result = mysql_store_result(conn);
+
+    while ((builds = mysql_fetch_row(result)))
+    {
+        sprintf(url, "%s://%s%scheckout?repository=%s&revision=%s&build=%s", builds[0], builds[1], builds[2], builds[5], builds[6], builds[4]);
+        getpage(url, builds[3]);
+    }
+         
+    mysql_free_result(result);
+    mysql_close(conn);
+
+    return 0;
+}
+
+
+int handleStep20(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_RES *result2;
+    MYSQL_RES *result3;
+    MYSQL_ROW builds;
+    MYSQL_ROW backends;
+    MYSQL_ROW runningjobs;
+    char query[1000];
+
+    if(!mysql_autoconnect(conn))
+        return 1;
+
+    if(mysql_query(conn, "SELECT builds.id, builds.group, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 20 AND builds.backendid = 0")){
+        LOGSQL(conn);
+        return 1;
+    }
+
+    result = mysql_store_result(conn);
+
+    while ((builds = mysql_fetch_row(result)))
+    {
+        sprintf(query, "SELECT backendid, maxparallel FROM backendbuilds, backends WHERE backendid = backends.id AND buildgroup = \"%s\" ORDER BY priority", builds[1]);
+
+        if(mysql_query(conn, query)){
+            LOGSQL(conn);
+            return 1;
+        }
+
+        result2 = mysql_store_result(conn);
+
+        while((backends = mysql_fetch_row(result2)))
+        {
+            sprintf(query, "SELECT count(*) FROM builds WHERE backendid = %d AND status < 90", atoi(backends[0]));
+            if(mysql_query(conn, query)){
+                LOGSQL(conn);
+                return 1;
+            }
+
+            result3 = mysql_store_result(conn);
+            runningjobs = mysql_fetch_row(result3);
+
+            if(atoi(runningjobs[0]) < atoi(backends[1]))
+            {
+                sprintf(query, "UPDATE builds SET backendid = %d, status = 30, startdate = %lli WHERE id = %d", atoi(backends[0]), atoi(builds[0]), microtime());
+                if(mysql_query(conn, query)){
+                    LOGSQL(conn);
+                    return 1;
+                }
+            }
+
+            mysql_free_result(result3);
+        }
+
+        mysql_free_result(result2);
+
+
+        sprintf(query, "SELECT count(*) FROM builds WHERE queueid = \"%s\" AND backendid = 0", builds[2]);
+        if(mysql_query(conn, query)){
+            LOGSQL(conn);
+            return 1;
+        }
+
+        result2 = mysql_store_result(conn);
+        runningjobs = mysql_fetch_row(result2);
+
+        if(atoi(runningjobs[0]) == 0)
+        {
+            sprintf(query, "UPDATE buildqueue SET status = 30 WHERE id = \"%s\"", builds[2]);
+            if(mysql_query(conn, query)){
+                LOGSQL(conn);
+                return 1;
+            }
+        }
+        
+        mysql_free_result(result2);
+    }
+
+    mysql_free_result(result);
+    mysql_close(conn);
+    
+    return 0;
+}
+
+int handleStep10(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_RES *result2;
+    MYSQL_ROW builds;
+    MYSQL_ROW backends;
+    int num_fields;
+    int i;
+    char query[1000];
+
+
+    if(!mysql_autoconnect(conn))
+        return 1;
+
+    if(mysql_query(conn, "SELECT id, owner FROM buildqueue WHERE status = 10")){
+        LOGSQL(conn);
+        return 1;
+    }
+
+    result = mysql_store_result(conn);
+
+    while ((builds = mysql_fetch_row(result)))
+    {
+        sprintf(query, "SELECT buildgroup FROM automaticbuildgroups WHERE username = \"%s\" ORDER BY priority", builds[1]);
+
+        if(mysql_query(conn, query)){
+            LOGSQL(conn);
+            return 1;
+        }
+
+        result2 = mysql_store_result(conn);
+
+        while((backends = mysql_fetch_row(result2)))
+        {
+            sprintf(query, "INSERT INTO builds VALUES (null, \"%s\",  \"%s\", 10, 0, 0, 0, 0)", builds[0], backends[0]);
+	    if(mysql_query(conn, query)){
+                LOGSQL(conn);
+                return 1;
+            }
+        }
+
+        mysql_free_result(result2);
+
+        sprintf(query, "UPDATE buildqueue SET status = 20 WHERE id = \"%s\"", builds[0]);
+        if(mysql_query(conn, query)){
+            LOGSQL(conn);
+            return 1;
+        }
+    }
+
+    mysql_free_result(result);
+    mysql_close(conn);
+
+    return 0;
+}
+

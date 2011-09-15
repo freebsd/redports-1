@@ -24,5 +24,24 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-extern unsigned long long microtime(void);
+#include <my_global.h>
+#include <mysql.h>
+
+#include "database.h"
+
+int mysql_autoconnect(MYSQL *conn)
+{
+    conn = mysql_init(NULL);
+    if(conn == NULL){
+        LOGSQL(conn);
+        return 1;
+    }
+
+    if(mysql_real_connect(conn, "localhost", "root", "", "trac", 0, NULL, 0) == NULL){
+        LOGSQL(conn);
+        return 1;
+    }
+
+    return 0;
+}
 

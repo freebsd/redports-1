@@ -12,14 +12,20 @@ all:	rpd
 clean:
 	@rm -f *.o
 
-rpd:	rpd.o remote.o util.o
-	$(CC) $(LDFLAGS) -lcurl `mysql_config --libs` rpd.o remote.o util.o -o rpd
+rpd:	database.o remote.o rpd.o steps.o util.o
+	$(CC) $(LDFLAGS) -lcurl `mysql_config --libs` database.o remote.o rpd.o steps.o util.o -o rpd
 
-rpd.o:	rpd.c util.o
-	$(CC) $(CPPFLAGS) `mysql_config --cflags` -c rpd.c
+database.o: database.c
+	$(CC) $(CPPFLAGS) `mysql_config --cflags` -c database.c
 
 remote.o: remote.c
 	$(CC) $(CPPFLAGS) -c remote.c
+
+rpd.o:	rpd.c util.o
+	$(CC) $(CPPFLAGS) -c rpd.c
+
+steps.o: steps.c
+	$(CC) $(CPPFLAGS) `mysql_config --cflags` -c steps.c
 
 util.o:	util.c
 	$(CC) $(CPPFLAGS) -c util.c

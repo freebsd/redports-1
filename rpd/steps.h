@@ -24,5 +24,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-extern unsigned long long microtime(void);
+extern int handleStep10(void);
+extern int handleStep20(void);
+extern int handleStep30(void);
 

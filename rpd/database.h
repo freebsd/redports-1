@@ -24,5 +24,13 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-extern unsigned long long microtime(void);
+#include <my_global.h>
+#include <mysql.h>
+
+#define LOGSQL(con) \
+{ \
+    printf("SQL Error %u on line %d: %s\n", mysql_errno(con), __LINE__, mysql_error(con)); \
+}
+
+extern int mysql_autoconnect(MYSQL *conn);
 

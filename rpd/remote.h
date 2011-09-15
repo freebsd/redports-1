@@ -24,6 +24,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-int downloadfile(char *url, char *credentials, char *filename);
-int getpage(char *url, char *credentials);
+extern int downloadfile(char *url, char *credentials, char *filename);
+extern int getpage(char *url, char *credentials);
 
