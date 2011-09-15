@@ -1,5 +1,19 @@
 CPPFLAGS=-I/usr/local/include
 LDFLAGS=-L/usr/local/lib
 
-rpd:	rpd.c
-	$(CC) rpd.c -o rpd $(CPPFLAGS) $(LDFLAGS) -lcurl `mysql_config --cflags --libs`
+all:	rpd
+
+clean:
+	@rm -f *.o
+
+rpd:	rpd.o remote.o util.o
+	$(CC) $(LDFLAGS) -lcurl `mysql_config --libs` rpd.o remote.o util.o -o rpd
+
+rpd.o:	rpd.c util.o
+	$(CC) $(CPPFLAGS) `mysql_config --cflags` -c rpd.c
+
+remote.o: remote.c
+	$(CC) $(CPPFLAGS) -c remote.c
+
+util.o:	util.c
+	$(CC) $(CPPFLAGS) -c util.c

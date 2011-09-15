@@ -4,13 +4,13 @@
 #include <syslog.h>
 #include <signal.h>
 #include <string.h>
-#include <sys/time.h>
 
 #include <my_global.h>
 #include <mysql.h>
 
-#include <curl/curl.h>
- 
+#include "remote.h"
+#include "util.h"
+
 #define DAEMON_NAME "rpd"
 #define PID_FILE "/var/run/rpd.pid"
 
@@ -18,91 +18,6 @@
     { \
        printf("SQL Error %u on line %d: %s\n", mysql_errno(connection), __LINE__, mysql_error(connection)); \
     }
-
-char pageBuffer[512];
-char *pageBufferPtr;
-
-int readpage(void *ptr, size_t size, size_t nmemb, FILE *stream)
-{
-    int i = 0;
- 
-    for(; i < nmemb ; i++){
-        if((pageBufferPtr-&pageBuffer[0])+size > sizeof(pageBuffer))
-           return 0;
-
-        strncpy(pageBufferPtr, ptr, size);
-        pageBufferPtr += size;
-        ptr += size;
-    }
-
-    return size * nmemb;
-}
-
-
-int getPage(char *url, char *credentials)
-{
-    CURL *curl;
-    CURLcode res;
-
-    memset(pageBuffer, '\0', sizeof(pageBuffer));
-    pageBufferPtr = &pageBuffer[0];
-
-    curl = curl_easy_init();
-    if(!curl)
-        return 1;
-
-    curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &readpage);
-
-    if(credentials != NULL)
-        curl_easy_setopt(curl, CURLOPT_USERPWD, credentials);
-
-    res = curl_easy_perform(curl);
-    curl_easy_cleanup(curl);
-
-    return 0;
-}
-
-
-int downloadFile(char *url, char *credentials, char *filename)
-{
-    CURL *curl;
-    CURLcode res;
-
-    FILE *outfile;
-    outfile = fopen(filename, "w");
-
-    curl = curl_easy_init();
-    if(!curl)
-        return 1;
-
-    curl_easy_setopt(curl, CURLOPT_URL, url);
-    curl_easy_setopt(curl, CURLOPT_WRITEDATA, outfile);
-
-    if(credentials != NULL)
-        curl_easy_setopt(curl, CURLOPT_USERPWD, credentials);
-
-    res = curl_easy_perform(curl);
-    curl_easy_cleanup(curl);
-
-    fclose(outfile);
-
-    return 0;
-}
-
-unsigned long long microtime(void)
-{
-    struct timeval time;
-    unsigned long long microtime;
-
-    gettimeofday(&time, NULL);
-
-    microtime = time.tv_sec;
-    microtime *= 1000000L;
-    microtime += time.tv_usec;
-
-    return microtime;
-}
 
 int mysql_autoconnect(MYSQL *conn)
 {
@@ -142,7 +57,7 @@ int handleStep30(void)
     while ((builds = mysql_fetch_row(result)))
     {
         sprintf(url, "%s://%s%scheckout?repository=%s&revision=%s&build=%s", builds[0], builds[1], builds[2], builds[5], builds[6], builds[4]);
-        getPage(url, builds[3]);
+        getpage(url, builds[3]);
     }
          
     mysql_free_result(result);
