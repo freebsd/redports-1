@@ -1,5 +1,11 @@
-CPPFLAGS=-I/usr/local/include
-LDFLAGS=-L/usr/local/lib
+#
+# RedPorts Dispatcher Daemon
+#
+
+LOCALBASE?=/usr/local
+
+CPPFLAGS=-I${LOCALBASE}/include
+LDFLAGS=-L${LOCALBASE}/lib
 
 all:	rpd
 
