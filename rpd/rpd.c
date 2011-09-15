@@ -29,7 +29,6 @@
 #include <unistd.h>
 #include <syslog.h>
 #include <signal.h>
-#include <string.h>
 
 #include "steps.h"
 

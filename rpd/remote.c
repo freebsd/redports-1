@@ -24,9 +24,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <stdlib.h>
 #include <string.h>
-#include <stdio.h>
 #include <curl/curl.h>
 
 char pagebuffer[1024];
