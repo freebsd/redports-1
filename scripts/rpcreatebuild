@@ -21,6 +21,7 @@ if ! zfs list zroot/tinderbox/${BUILD} >/dev/null ; then
    zfs create -o compression=lzjb -o setuid=off zroot/tinderbox/${BUILD}/portstree
    zfs create -o compression=lzjb -o setuid=off zroot/tinderbox/${BUILD}/jail
 
+   zfs set mountpoint=legacy zroot/tinderbox/${BUILD}
    zfs set mountpoint=${TINDERBOX}/portstrees/${BUILD} zroot/tinderbox/${BUILD}/portstree
    zfs set mountpoint=${TINDERBOX}/jails/${BUILD} zroot/tinderbox/${BUILD}/jail
 fi
