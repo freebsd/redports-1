@@ -1,5 +1,12 @@
 #!/bin/sh
 
+# Requirements:
+#   lftp (ftp/lftp)
+#   tinderbox (ports-mgmt/tinderbox)
+#   zfs
+
+FTP=ftp.at.freebsd.org
+
 VERSION=$1
 ARCH=$2
 
@@ -7,13 +14,14 @@ BUILD=${VERSION}-FreeBSD-${ARCH}
 TINDERBOX=/usr/local/tinderbox
 
 if [ `echo -n ${VERSION} | wc -c` -eq 1 ]; then
-   TAG=.
+   OPTIONS="-t . -u CSUP"
 else
-   TAG=`echo RELENG_${VERSION} | tr "." "_"`
+   OPTIONS="-t ${VERSION}-RELEASE -u LFTP -H ${FTP}"
 fi
 
 if ! zfs list zroot/tinderbox >/dev/null ; then
    zfs create -o compression=lzjb -o setuid=off zroot/tinderbox
+   zfs set mountpoint=legacy zroot/tinderbox
 fi
 
 if ! zfs list zroot/tinderbox/${BUILD} >/dev/null ; then
@@ -32,7 +40,7 @@ if [ `uname -m` != "${ARCH}" ]; then
 fi
 
 ${TINDERBOX}/scripts/tc createPortsTree -p ${BUILD} -u CSUP -d "FreeBSD Portstree" || exit 1
-${TINDERBOX}/scripts/tc createJail -j ${BUILD} -u CSUP -t ${TAG} -d "FreeBSD ${VERSION}/${ARCH}" -a ${ARCH} || exit 1
+${TINDERBOX}/scripts/tc createJail -j ${BUILD} ${OPTIONS} -d "FreeBSD ${VERSION}/${ARCH}" -a ${ARCH} || exit 1
 ${TINDERBOX}/scripts/tc createBuild -b ${BUILD} -j ${BUILD} -p ${BUILD} -d "FreeBSD ${VERSION}/${ARCH} for redports" || exit 1
 
 exit 0
