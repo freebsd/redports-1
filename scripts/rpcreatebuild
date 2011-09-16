@@ -22,11 +22,11 @@ if ! zfs list zroot/tinderbox/${BUILD} >/dev/null ; then
    zfs create -o compression=lzjb -o setuid=off zroot/tinderbox/${BUILD}/jail
 
    zfs set mountpoint=${TINDERBOX}/portstrees/${BUILD} zroot/tinderbox/${BUILD}/portstree
-   zfs set mountpoint=${TINDERBOX}/jails/${BUILD} zroot/tinderbox
+   zfs set mountpoint=${TINDERBOX}/jails/${BUILD} zroot/tinderbox/${BUILD}/jail
 fi
 
 if [ `uname -m` != "${ARCH}" ]; then
-   echo "export MARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD
+   echo "export MARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
    echo "export MACHINE_ARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
 fi
 
