@@ -25,6 +25,11 @@ if ! zfs list zroot/tinderbox/${BUILD} >/dev/null ; then
    zfs set mountpoint=${TINDERBOX}/jails/${BUILD} zroot/tinderbox
 fi
 
+if [ `uname -m` != "${ARCH}" ]; then
+   echo "export MARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD
+   echo "export MACHINE_ARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
+fi
+
 ${TINDERBOX}/scripts/tc createPortsTree -p ${BUILD} -u CSUP -d "FreeBSD Portstree" || exit 1
 ${TINDERBOX}/scripts/tc createJail -j ${BUILD} -u CSUP -t ${TAG} -d "FreeBSD ${VERSION}/${ARCH}" -a ${ARCH} || exit 1
 ${TINDERBOX}/scripts/tc createBuild -b ${BUILD} -j ${BUILD} -p ${BUILD} -d "FreeBSD ${VERSION}/${ARCH} for redports" || exit 1
