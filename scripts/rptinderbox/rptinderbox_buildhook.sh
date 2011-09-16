@@ -37,7 +37,9 @@ if [ -f "${LOCK}" ]; then
 fi
 
 if [ "${STATUS}" = "SUCCESS" ]; then
-  echo "BUILDLOG=\"/logs/${BUILD}/${PACKAGE_NAME}.log\"" >> ${FINISHED}
+  if [ -f "${LOCK}" ]; then
+    echo "BUILDLOG=\"/logs/${BUILD}/${PACKAGE_NAME}.log\"" >> ${FINISHED}
+  fi
   if [ -n "${DELETE_OLD}" ]; then
     rm ${PB}/wrkdirs/${BUILD}/${PACKAGE_NAME}.tbz
   fi
@@ -45,6 +47,8 @@ if [ "${STATUS}" = "SUCCESS" ]; then
     compress_wrkdir
   fi
 elif [ "${STATUS}" != "DUD" ]; then
-  echo "BUILDLOG=\"/errors/${BUILD}/${PACKAGE_NAME}.log\"" >> ${FINISHED}
+  if [ -f "${LOCK}" ]; then
+    echo "BUILDLOG=\"/errors/${BUILD}/${PACKAGE_NAME}.log\"" >> ${FINISHED}
+  fi
   compress_wrkdir
 fi
