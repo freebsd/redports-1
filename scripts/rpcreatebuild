@@ -1,0 +1,32 @@
+#!/bin/sh
+
+VERSION=$1
+ARCH=$2
+
+BUILD=${VERSION}-FreeBSD-${ARCH}
+TINDERBOX=/usr/local/tinderbox
+
+if [ `echo -n ${VERSION} | wc -c` -eq 1 ]; then
+   TAG=.
+else
+   TAG=`echo RELENG_${VERSION} | tr "." "_"`
+fi
+
+if ! zfs list zroot/tinderbox >/dev/null ; then
+   zfs create -o compression=lzjb -o setuid=off zroot/tinderbox
+fi
+
+if ! zfs list zroot/tinderbox/${BUILD} >/dev/null ; then
+   zfs create -o compression=lzjb -o setuid=on zroot/tinderbox/${BUILD}
+   zfs create -o compression=lzjb -o setuid=off zroot/tinderbox/${BUILD}/portstree
+   zfs create -o compression=lzjb -o setuid=off zroot/tinderbox/${BUILD}/jail
+
+   zfs set mountpoint=${TINDERBOX}/portstrees/${BUILD} zroot/tinderbox/${BUILD}/portstree
+   zfs set mountpoint=${TINDERBOX}/jails/${BUILD} zroot/tinderbox
+fi
+
+${TINDERBOX}/scripts/tc createPortsTree -p ${BUILD} -u CSUP -d "FreeBSD Portstree" || exit 1
+${TINDERBOX}/scripts/tc createJail -j ${BUILD} -u CSUP -t ${TAG} -d "FreeBSD ${VERSION}/${ARCH}" -a ${ARCH} || exit 1
+${TINDERBOX}/scripts/tc createBuild -b ${BUILD} -j ${BUILD} -p ${BUILD} -d "FreeBSD ${VERSION}/${ARCH} for redports" || exit 1
+
+exit 0
