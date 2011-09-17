@@ -5,7 +5,7 @@
 #   tinderbox (ports-mgmt/tinderbox)
 #   zfs
 
-FTP=ftp.at.freebsd.org
+FTP=ftp2.freebsd.org
 
 VERSION=$1
 ARCH=$2
