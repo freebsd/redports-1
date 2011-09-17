@@ -186,6 +186,11 @@ status()
 {
   BUILD=$1
 
+  if [ ! -d "${WRKBASE}/${BUILD}" ]; then
+    echo "STATUS=unknown"
+    return 1
+  fi
+
   if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
     . ${WRKBASE}/${BUILD}/.finished
 
@@ -200,17 +205,17 @@ status()
     if [ -n "${WRKDIR}" ]; then
       echo "WRKDIR=${WRKDIR}"
     fi
-    return 1
+    return 0
   fi
 
   if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
     echo "STATUS=building"
-    return 1
+    return 0
   fi
 
   if [ -f "${WRKBASE}/${BUILD}/.lock" ]; then
     echo "STATUS=used"
-    return 1
+    return 0
   fi
 
   echo "STATUS=idle"
