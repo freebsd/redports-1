@@ -128,6 +128,7 @@ build()
   PORT=$1
   BUILD=$2
   PRIORITY=$3
+  FINISHURL=$4
   LOCK=${WRKBASE}/${BUILD}/.lock
 
   if [ -f "${WRKBASE}/.lock" ]; then
@@ -169,6 +170,7 @@ build()
 
   echo "PORT=\"${PORT}\"" >> ${LOCK}
   echo "PRIORITY=\"${PRIORITY}\"" >> ${LOCK}
+  echo "FINISHURL=\"${FINISHURL}\"" >> ${LOCK}
   echo "LASTPACKAGE=\"${LASTPACKAGE}\"" >> ${LOCK}
   echo "LASTPACKAGEDATE=\"${LASTPACKAGEDATE}\"" >> ${LOCK}
 
@@ -222,7 +224,7 @@ status()
 
 case "$1" in
 'build')
-  if build $2 $3 $4 2>&1 ; then
+  if build $2 $3 $4 $5 2>&1 ; then
     echo "OK"
     return 0
   else
