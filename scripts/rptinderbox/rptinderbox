@@ -222,7 +222,7 @@ status()
 
 case "$1" in
 'build')
-  if build $2 $3 $4 ; then
+  if build $2 $3 $4 2>&1 ; then
     echo "OK"
     return 0
   else
@@ -231,7 +231,7 @@ case "$1" in
   fi
 ;;
 'checkout')
-  if checkout $2 $3 $4 ; then
+  if checkout $2 $3 $4 2>&1 ; then
     echo "OK"
     return 0
   else
@@ -240,7 +240,7 @@ case "$1" in
   fi
 ;;
 'clean')
-  if clean $2 ; then
+  if clean $2 2>&1 ; then
     echo "OK"
     return 0
   else
@@ -250,7 +250,7 @@ case "$1" in
   return $?
 ;;
 'status')
-  if status $2 ; then
+  if status $2 2>&1 ; then
     echo "OK"
     return 0
   else
