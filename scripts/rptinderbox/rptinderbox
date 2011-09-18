@@ -14,12 +14,9 @@
 # /usr/local/tinderbox/portstrees/<portstree>/ports/   Tinderbox portstree
 # 
 
-#REPOBASE=http://svn.redports.org/
-REPOBASE=https://svn.bluelife.at/
 ZFSROOT="zroot/tinderbox/%s/portstree"
 
 WRKBASE=/tmp/rptinderbox
-LOG=${WRKBASE}/rptinderbox.log
 TINDERBOX=/usr/local/tinderbox
 
 checkout()
@@ -29,14 +26,14 @@ checkout()
   BUILD=$3
 
   if [ -f "${WRKBASE}/.lock" ]; then
-    echo "Maintenance lock exists." >> ${LOG}
+    echo "Maintenance lock exists."
     return 1
   fi
 
   LOCK=${WRKBASE}/${BUILD}/.lock
 
   if [ -f "${LOCK}" ]; then
-    echo "Lock ${LOCK} exists." >> ${LOG}
+    echo "Lock ${LOCK} exists."
     return 1
   fi
 
@@ -50,7 +47,7 @@ checkout()
   PORTSTREE=`${TINDERBOX}/scripts/tc getPortsTreeForBuild -b ${BUILD} 2>/dev/null`
 
   if [ -z "${PORTSTREE}" ]; then
-    echo "Unknown portstree for build ${BUILD}" >> ${LOG}
+    echo "Unknown portstree for build ${BUILD}"
     return 1
   fi
 
@@ -62,7 +59,7 @@ checkout()
   echo "LOCK=\"${LOCK}\"" >> ${LOCK}
 
   # checkout overlay ports
-  svn export --non-interactive --revision ${REVISION} ${REPOBASE}${REPOSITORY} ${WRKBASE}/${BUILD}/ports >> ${LOG} || return 2
+  svn export --non-interactive --revision ${REVISION} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports || return 2
 
   # create snapshot of original tree
   ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
@@ -84,7 +81,7 @@ clean()
   LOCK=${WRKBASE}/${BUILD}/.lock
 
   if [ ! -f "${LOCK}" ]; then
-    echo "No lock for build ${BUILD}" >> ${LOG}
+    echo "No lock for build ${BUILD}"
     return 1
   fi
 
@@ -92,7 +89,7 @@ clean()
 
   if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
       if [ ! -f "${WRKBASE}/${BUILD}/.finished" ]; then
-        ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -b ${BUILD} -d ${PORT} >> ${LOG}
+        ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -b ${BUILD} -d ${PORT}
       fi
   fi
 
@@ -134,29 +131,29 @@ build()
   LOCK=${WRKBASE}/${BUILD}/.lock
 
   if [ -f "${WRKBASE}/.lock" ]; then
-    echo "Maintenance lock exists." >> ${LOG}
+    echo "Maintenance lock exists."
     return 1
   fi
 
   if [ ! -f "${LOCK}" ]; then
-    echo "No lock for build ${BUILD}" >> ${LOG}
+    echo "No lock for build ${BUILD}"
     return 1
   fi
 
   . ${LOCK}
 
   if [ ! -f "${WRKBASE}/${BUILD}/.checkout" ]; then
-    echo "No checkout for build ${BUILD}" >> ${LOG}
+    echo "No checkout for build ${BUILD}"
     return 1
   fi
 
   if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
-    echo "Build already running" >> ${LOG}
+    echo "Build already running"
     return 1
   fi
 
   if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
-    echo "Build already finished" >> ${LOG}
+    echo "Build already finished"
     return 1
   fi
 
@@ -262,7 +259,7 @@ case "$1" in
   fi
 ;;
 *)
-  echo "Usage: $0 [build|checkout|clean] param"
+  echo "Usage: $0 [build|checkout|clean|status] param"
   exit 1
 ;;
 esac
