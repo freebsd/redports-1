@@ -1,0 +1,33 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="layout.html" />
+  <xi:include href="macros.html" />
+  <head>
+    <title>Redports Buildgroups</title>
+  </head>
+
+  <body>
+    <h1>Buildgroups</h1>
+    <div id="tabcontent">
+        <table class="listing" id="buildgroups_list">
+            <thead>
+                <tr><th>Name</th><th>Version</th><th>Architecture</th><th>Backends</th><th>Description</th></tr>
+            </thead>
+            <tbody>
+                <tr py:for="group in buildgroups">
+                    <td><a href="#id-$group.name" id="id-$group.name">$group.name</a></td>
+                    <td>FreeBSD $group.version</td>
+                    <td>$group.arch</td>
+                    <td class="status-$group.status">$group.available available</td>
+                    <td>$group.description</td>
+                </tr>
+            </tbody>
+        </table>
+	<br />
+    </div>
+  </body>
+</html>
