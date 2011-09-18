@@ -36,11 +36,12 @@ int handleStep30(void)
     MYSQL_ROW builds;
     char query[1000];
     char url[250];
+    int status;
 
     if(!mysql_autoconnect(conn))
         return 1;
 
-    if(mysql_query(conn, "SELECT protocol, host, uri, credentials, buildname, repository, revision FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30")){
+    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, repository, revision FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30")){
         LOGSQL(conn);
         return 1;
     }
@@ -49,8 +50,17 @@ int handleStep30(void)
 
     while ((builds = mysql_fetch_row(result)))
     {
-        sprintf(url, "%s://%s%scheckout?repository=%s&revision=%s&build=%s", builds[0], builds[1], builds[2], builds[5], builds[6], builds[4]);
-        getpage(url, builds[3]);
+        sprintf(url, "%s://%s%scheckout?repository=%s&revision=%s&build=%s", builds[1], builds[2], builds[3], builds[6], builds[7], builds[5]);
+        if(getpage(url, builds[3]))
+           status = 31;
+        else
+           status = 90;
+
+        sprintf(query, "UPDATE builds SET status = %d WHERE id = %d", status, atoi(builds[0]));
+        if(mysql_query(conn, query)){
+           LOGSQL(conn);
+           return 1;
+        }
     }
          
     mysql_free_result(result);
