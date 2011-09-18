@@ -38,6 +38,18 @@ class Port(object):
         else:
             self.statusname = 'unknown'
 
+    def updateStatus(self, status, key):
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("SELECT count(*) FROM builds WHERE backendkey = %s", key)
+        row = cursor.fetchone()
+        if not row:
+            raise TracError('SQL Error for key ' % key)
+        if row[0] != 1:
+            raise TracError('Invalid key')
+        cursor.execute("UPDATE builds SET status = %s WHERE backendkey = %s", ( status, key ))
+        db.commit()
+
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
     #   Using the prepared db statement won't work if we have more than one entry in order_by

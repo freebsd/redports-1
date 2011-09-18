@@ -20,6 +20,7 @@ class RedportsEnvironment(Component):
             Table('builds', key=('id'))[
                 Column('id', type='int', auto_increment=True),
                 Column('queueid', type='varchar(25)', size=25),
+                Column('backendkey', type='varchar(25)', size=25),
                 Column('group', type='varchar(50)', size=50),
                 Column('status', type='int'),
                 Column('buildstatus', type='int'),
@@ -52,7 +53,7 @@ class RedportsEnvironment(Component):
                 Column('type', type='varchar(25)', size=25),
                 Column('description', type='varchar(255)', size=255),
             ],
-            Table('automaticbuildgroups', key=('username'))[
+            Table('automaticbuildgroups')[
                 Column('username', type='varchar(50)', size=50),
                 Column('buildgroup', type='varchar(25)', size=25),
                 Column('priority', type='int'),

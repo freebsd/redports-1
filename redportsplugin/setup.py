@@ -22,6 +22,7 @@ setup(
     entry_points = {
         'trac.plugins': [
             'redports.db = redports.db',
+            'redports.backend = redports.backend',
             'redports.buildgroups = redports.buildgroups',
             'redports.commitqueue = redports.commitqueue',
         ]
