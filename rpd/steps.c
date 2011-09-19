@@ -29,12 +29,20 @@
 #include "util.h"
 #include "steps.h"
 
-typedef int (*stepHandler)(void);
+/* internal functions */
+extern int nextstepindex(void);
 
-static stepHandler steps[] = {
-    handleStep10,
-    handleStep20,
-    handleStep30
+/* internal data structs */
+struct StepHandler
+{
+    int (*handler)(void);
+    int maxparallel;
+};
+
+struct StepHandler stepreg[] = {
+    { handleStep10, 1 },
+    { handleStep20, 1 },
+    { handleStep30, 1 }
 };
 
 
@@ -221,17 +229,55 @@ int handleStep10(void)
     return 0;
 }
 
-int nextstep(void)
+int nextstepindex(void)
 {
     static long step;
-    return (step++%(sizeof(steps)/sizeof(stepHandler)));
+    return (step++%(sizeof(stepreg)/sizeof(struct StepHandler)));
+}
+
+int nextstep(int steps[], int max)
+{
+    int i;
+    int sum;
+    int next;
+    int count;
+
+    for(i=0,sum=0; i < max; i++)
+    {
+        if(steps[i] >= 0)
+           sum++;
+    }
+
+    /* no more free slots? */
+    if(sum >= max-1)
+        return -1;
+
+    count = sizeof(stepreg)/sizeof(struct StepHandler);
+
+    while(count-- > 0)
+    {
+        next = nextstepindex();
+
+        for(i=0,sum=0; i < max; i++)
+        {
+            if(steps[i] == next)
+               sum++;
+        }
+
+        if(sum < stepreg[next].maxparallel)
+            return next;
+    }
+
+    return -1;
 }
 
 int handlestep(int step)
 {
-    if(step < 0 || step >= (sizeof(steps)/sizeof(stepHandler)))
+    if(step < 0 || step >= (sizeof(stepreg)/sizeof(struct StepHandler)))
         return -1;
 
-    return steps[step]();
+    printf("Step %d\n", step);
+
+    return stepreg[step].handler();
 }
 

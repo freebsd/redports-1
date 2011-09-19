@@ -24,7 +24,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-extern int nextstep(void);
+extern int nextstep(int steps[], int max);
 extern int handlestep(int step);
 
 extern int handleStep10(void);

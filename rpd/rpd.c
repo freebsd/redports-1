@@ -47,18 +47,20 @@
 void run()
 {
     pid_t pids[MAXCHILDS];
+    int stats[MAXCHILDS];
     int slot;
     int step=0;
 
     memset(pids, '\0', sizeof(pids));
+    memset(stats, -1, sizeof(stats));
 
     while(1)
     {
         pid_t pid;
         int step;
-        step = nextstep();
+        step = nextstep(stats, MAXCHILDS);
 
-        if(step > 0 && step < 10)
+        if(step >= 0)
         {
             for(slot=0; slot < MAXCHILDS; slot++)
             {
@@ -66,6 +68,7 @@ void run()
                     continue;
 
                 /* free slot found */
+                stats[slot] = step;
                 pids[slot] = fork();
 
                 if(pids[slot] == 0)
@@ -74,6 +77,7 @@ void run()
                     handlestep(step);
                     exit(0);
                 }
+                break;
             }
         }
 
@@ -84,13 +88,14 @@ void run()
             {
                 if(pids[slot] == pid)
                 {
+                    stats[slot] = -1;
                     pids[slot] = 0;
                     break;
                 }
             }
         }
 
-        sleep(2);
+        sleep(1);
     }
 }
  
