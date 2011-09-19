@@ -27,6 +27,15 @@
 #include "database.h"
 #include "remote.h"
 #include "util.h"
+#include "steps.h"
+
+typedef int (*stepHandler)(void);
+
+static stepHandler steps[] = {
+    handleStep10,
+    handleStep20,
+    handleStep30
+};
 
 
 int handleStep30(void)
@@ -210,5 +219,19 @@ int handleStep10(void)
     mysql_close(conn);
 
     return 0;
+}
+
+int nextstep(void)
+{
+    static long step;
+    return (step++%(sizeof(steps)/sizeof(stepHandler)));
+}
+
+int handlestep(int step)
+{
+    if(step < 0 || step >= (sizeof(steps)/sizeof(stepHandler)))
+        return -1;
+
+    return steps[step]();
 }
 

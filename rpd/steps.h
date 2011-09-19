@@ -24,6 +24,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+extern int nextstep(void);
+extern int handlestep(int step);
+
 extern int handleStep10(void);
 extern int handleStep20(void);
 extern int handleStep30(void);

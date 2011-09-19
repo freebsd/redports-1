@@ -29,23 +29,68 @@
 #include <unistd.h>
 #include <syslog.h>
 #include <signal.h>
+#include <string.h>
+
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/time.h>
+#include <sys/resource.h>
 
 #include "steps.h"
 
 #define DAEMON_NAME "rpd"
 #define PID_FILE "/var/run/rpd.pid"
 
+#define MAXCHILDS 5
+
 
 void run()
 {
+    pid_t pids[MAXCHILDS];
+    int slot;
+    int step=0;
+
+    memset(pids, '\0', sizeof(pids));
+
     while(1)
     {
-        handleStep10();
-        sleep(3);
-        handleStep20();
-        sleep(3);
-        handleStep30();
-        sleep(3);
+        pid_t pid;
+        int step;
+        step = nextstep();
+
+        if(step > 0 && step < 10)
+        {
+            for(slot=0; slot < MAXCHILDS; slot++)
+            {
+                if(pids[slot] != 0)
+                    continue;
+
+                /* free slot found */
+                pids[slot] = fork();
+
+                if(pids[slot] == 0)
+                {
+                    /* child process */
+                    handlestep(step);
+                    exit(0);
+                }
+            }
+        }
+
+        /* wait for any child to exit */
+        while((pid = waitpid(-1, 0, WNOHANG)) > 0)
+        {
+            for(slot=0; slot < MAXCHILDS; slot++)
+            {
+                if(pids[slot] == pid)
+                {
+                    pids[slot] = 0;
+                    break;
+                }
+            }
+        }
+
+        sleep(2);
     }
 }
  
