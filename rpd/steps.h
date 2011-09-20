@@ -30,4 +30,5 @@ extern int handlestep(int step);
 extern int handleStep10(void);
 extern int handleStep20(void);
 extern int handleStep30(void);
+extern int handleStep31(void);
 

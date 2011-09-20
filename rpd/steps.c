@@ -29,6 +29,8 @@
 #include "util.h"
 #include "steps.h"
 
+#define FRONTENDBASE "https://redports.org/backend"
+
 /* internal functions */
 extern int nextstepindex(void);
 
@@ -42,9 +44,50 @@ struct StepHandler
 struct StepHandler stepreg[] = {
     { handleStep10, 1 },
     { handleStep20, 1 },
-    { handleStep30, 1 }
+    { handleStep30, 1 },
+    { handleStep31, 1 }
 };
 
+
+int handleStep31(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_ROW builds;
+    char query[1000];
+    char url[250];
+    int status;
+
+    if(!mysql_autoconnect(conn))
+        return 1;
+
+    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, portname, buildname, backendkey FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30")){
+        LOGSQL(conn);
+        return 1;
+    }
+
+    result = mysql_store_result(conn);
+
+    while ((builds = mysql_fetch_row(result)))
+    {
+        sprintf(url, "%s://%s%sbuild?port=%s&build=%s&priority=%s&finishurl=%s/finished/%s", builds[1], builds[2], builds[3], builds[5], builds[6], FRONTENDBASE, builds[7]);
+        if(getpage(url, builds[4]))
+           status = 50;
+        else
+           status = 90;
+
+        sprintf(query, "UPDATE builds SET status = %d WHERE id = %d", status, atoi(builds[0]));
+        if(mysql_query(conn, query)){
+           LOGSQL(conn);
+           return 1;
+        }
+    }
+
+    mysql_free_result(result);
+    mysql_close(conn);
+
+    return 0;
+}
 
 int handleStep30(void)
 {
@@ -68,7 +111,7 @@ int handleStep30(void)
     while ((builds = mysql_fetch_row(result)))
     {
         sprintf(url, "%s://%s%scheckout?repository=%s&revision=%s&build=%s", builds[1], builds[2], builds[3], builds[6], builds[7], builds[5]);
-        if(getpage(url, builds[3]))
+        if(getpage(url, builds[4]))
            status = 31;
         else
            status = 90;
