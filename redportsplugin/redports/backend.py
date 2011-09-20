@@ -7,7 +7,7 @@ from trac.util.translation import _
 from genshi.builder import tag
 
 import re
-
+from string import hexdigits
 from model import Port
 
 class BackendConnector(Component):
@@ -26,16 +26,27 @@ class BackendConnector(Component):
         return []
 
     def match_request(self, req):
-        if re.match(r'^/backend', req.path_info):
+        if re.match(r'^/backend/', req.path_info):
             return True
 
     def process_request(self, req):
-        port = Port(self.env)
-        port.updateStatus(70, req.args.get('key'))
+        # https://redports.org/backend/finished/123456789012345678901234
+        if req.path_info.startswith("/backend/finished/"):
+            key = req.path_info[18:]
+            if len(key) > 10 and self.ishex(key):
+                port = Port(self.env)
+                port.updateStatus(70, key)
 
-        req.redirect(req.href.commitqueue())
+                req.send("OK", "text/plain", 200)
+                return ""
+        req.send("ERROR", "text/plain", 500)
         return ""
 
     def get_permission_actions(self):
         return ""
 
+    def ishex(self, s):
+        for c in s:
+            if not c in hexdigits:
+                return False
+        return True
