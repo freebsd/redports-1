@@ -24,5 +24,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#define CONFIGMAXKEY 25
+#define CONFIGMAXVALUE 50
+
+extern int configparse(char *filename);
+extern char* configget(char *key);
+extern int configset(char *key, char *value);
 extern unsigned long long microtime(void);
 

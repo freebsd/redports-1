@@ -24,7 +24,96 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdio.h>
+#include <string.h>
 #include <sys/time.h>
+
+#include "util.h"
+
+struct configparam
+{
+    char key[CONFIGMAXKEY];
+    char value[CONFIGMAXVALUE];
+};
+
+struct configparam config[] = {
+    { "dbHost",        "localhost" },
+    { "dbUsername",    "root" },
+    { "dbPassword",    "" },
+    { "dbDatabase",    "trac" },
+    { "wwwurl",        "" },
+    { "wwwroot",       "" },
+    { "", "" }
+};
+
+int configparse(char *filename)
+{
+    char *value;
+    char line[255];
+    FILE *file = fopen(filename, "r");
+
+    if(file == NULL)
+        return 1;
+    
+    while(fgets(line, sizeof(line), file) != NULL)
+    {
+        if(line[0] == '#')
+            continue;
+        line[strlen(line)-1] = '\0';
+        
+        if((value = strstr(line, " ")) != NULL || (value = strstr(line, "\t")) != NULL)
+        {
+            *value = '\0';
+            *value++;
+
+            while(*value == ' ' || *value == '\t')
+                *value++;
+
+            if(strlen(line) == 0 || strlen(value) == 0)
+                 continue;
+
+            if(configset(line, value) != 0)
+                return 1;
+        }
+    }
+
+    fclose(file);
+    return 0;
+}
+
+char* configget(char *key)
+{
+    int i;
+
+    for(i=0; config[i].key[0] != '\0'; i++)
+    {
+        if(strcmp(key, config[i].key) == 0)
+        {
+            return config[i].value;
+        }
+    }
+
+    return NULL;
+}
+
+int configset(char *key, char *value)
+{
+    int i;
+
+    for(i=0; config[i].key[0] != '\0'; i++)
+    {
+        if(strcmp(key, config[i].key) == 0)
+        {
+            strncpy(config[i].value, value, sizeof(config[i].value)-1);
+            config[i].value[sizeof(config[i].value)-1] = '\0';
+            return 0;
+        }
+    }
+
+    printf("configset: Unknown config param <%s>\n", key);
+
+    return 1;
+}
 
 unsigned long long microtime(void)
 {

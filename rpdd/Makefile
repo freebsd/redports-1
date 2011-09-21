@@ -7,13 +7,13 @@ LOCALBASE?=/usr/local
 CPPFLAGS=-I${LOCALBASE}/include
 LDFLAGS=-L${LOCALBASE}/lib
 
-all:	rpd
+all:	rpdd
 
 clean:
 	@rm -f *.o
 
-rpd:	database.o remote.o rpd.o steps.o util.o
-	$(CC) $(LDFLAGS) -lcurl `mysql_config --libs` database.o remote.o rpd.o steps.o util.o -o rpd
+rpdd:	database.o remote.o rpdd.o steps.o util.o
+	$(CC) $(LDFLAGS) -lcurl `mysql_config --libs` database.o remote.o rpdd.o steps.o util.o -o rpdd
 
 database.o: database.c
 	$(CC) $(CPPFLAGS) `mysql_config --cflags` -c database.c
@@ -21,8 +21,8 @@ database.o: database.c
 remote.o: remote.c
 	$(CC) $(CPPFLAGS) -c remote.c
 
-rpd.o:	rpd.c util.o
-	$(CC) $(CPPFLAGS) -c rpd.c
+rpdd.o:	rpdd.c util.o
+	$(CC) $(CPPFLAGS) -c rpdd.c
 
 steps.o: steps.c
 	$(CC) $(CPPFLAGS) `mysql_config --cflags` -c steps.c
