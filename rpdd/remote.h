@@ -24,6 +24,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _REMOTE_H_
+#define _REMOTE_H_
+
 extern int downloadfile(char *url, char *credentials, char *filename);
 extern int getpage(char *url, char *credentials);
 
+#endif /* _REMOTE_H */

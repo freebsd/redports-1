@@ -24,6 +24,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _DATABASE_H_
+#define _DATABASE_H_
+
 #include <my_global.h>
 #include <mysql.h>
 
@@ -34,3 +37,4 @@
 
 extern int mysql_autoconnect(MYSQL *conn);
 
+#endif /* _DATABASE_H */

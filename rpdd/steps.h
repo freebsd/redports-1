@@ -24,6 +24,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _STEPS_H_
+#define _STEPS_H_
+
 extern int nextstep(int steps[], int max);
 extern int handlestep(int step);
 
@@ -32,3 +35,4 @@ extern int handleStep20(void);
 extern int handleStep30(void);
 extern int handleStep31(void);
 
+#endif /* _STEPS_H */

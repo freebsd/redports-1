@@ -24,6 +24,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifndef _UTIL_H_
+#define _UTIL_H_
+
 #define CONFIGMAXKEY 25
 #define CONFIGMAXVALUE 50
 
@@ -32,3 +35,4 @@ extern char* configget(char *key);
 extern int configset(char *key, char *value);
 extern unsigned long long microtime(void);
 
+#endif /* _UTIL_H */
