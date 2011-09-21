@@ -11,7 +11,7 @@ SVNACCESS=/var/db/trac/redports/conf/svnaccess
 TMP=/tmp/redportsrepo
 
 USER=$1
-REPOSITORY=redports
+REPOSITORY=file:///var/subversion/redports
 SVNUSER=redports
 
 if [ -z "$USER" ]; then
@@ -26,7 +26,7 @@ fi
 
 # create svn folder for user
 rm -rf ${TMP}
-svn checkout --username ${SVNUSER} --non-interactive --non-recursive file:///var/subversion/${REPOSITORY} ${TMP} >/dev/null && \
+svn checkout --username ${SVNUSER} --non-interactive --non-recursive ${REPOSITORY} ${TMP} >/dev/null && \
 svn update --non-interactive ${TMP}/${USER} >/dev/null
 
 if [ $? != 0 ]; then
