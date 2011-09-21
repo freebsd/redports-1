@@ -29,7 +29,6 @@
 #include "util.h"
 #include "steps.h"
 
-#define FRONTENDBASE "https://redports.org/backend"
 
 /* internal functions */
 extern int nextstepindex(void);
@@ -70,7 +69,7 @@ int handleStep31(void)
 
     while ((builds = mysql_fetch_row(result)))
     {
-        sprintf(url, "%s://%s%sbuild?port=%s&build=%s&priority=%s&finishurl=%s/finished/%s", builds[1], builds[2], builds[3], builds[5], builds[6], FRONTENDBASE, builds[7]);
+        sprintf(url, "%s://%s%sbuild?port=%s&build=%s&priority=%s&finishurl=%s/backend/finished/%s", builds[1], builds[2], builds[3], builds[5], builds[6], configget("wwwurl"), builds[7]);
         if(getpage(url, builds[4]))
            status = 50;
         else

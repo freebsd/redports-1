@@ -28,6 +28,7 @@
 #include <mysql.h>
 
 #include "database.h"
+#include "util.h"
 
 int mysql_autoconnect(MYSQL *conn)
 {
@@ -37,7 +38,8 @@ int mysql_autoconnect(MYSQL *conn)
         return 1;
     }
 
-    if(mysql_real_connect(conn, "localhost", "root", "", "trac", 0, NULL, 0) == NULL){
+    if(mysql_real_connect(conn, configget("dbHost"), configget("dbUsername"), configget("dbPassword"),
+                          configget("dbDatabase"), 0, NULL, 0) == NULL){
         LOGSQL(conn);
         return 1;
     }
