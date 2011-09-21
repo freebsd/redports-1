@@ -6,7 +6,7 @@ build:
 	python setup.py bdist_egg
 
 clean:
-	rm -fr build/ redports.egg-info/
+	rm -fr build/ dist/ redports.egg-info/
 
 rollout:
 	cp -p dist/*.egg /var/db/trac/redports/plugins/
