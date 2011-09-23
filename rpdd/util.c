@@ -27,6 +27,13 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/time.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <dirent.h>
+#include <time.h>
+#include <libgen.h>
+#include <limits.h>
 
 #include "util.h"
 
@@ -127,5 +134,68 @@ unsigned long long microtime(void)
     microtime += time.tv_usec;
 
     return microtime;
+}
+
+int rmdirrec(char *directory)
+{
+   // TODO: implement recursive remove of directory
+   printf("rm %s\n", directory);
+   return 0;
+}
+
+int checkdir(char *directory)
+{
+   struct tm tm;
+   char *file;
+
+   file = basename(directory);
+
+   if(strlen(file) != 14)
+      return 0;
+
+   if(strncmp(file, "20", 2) != 0)
+      return 0;
+
+   if(strptime(file, "%Y%m%d%H%M%S", &tm) == NULL)
+      return 0;
+
+   return difftime(time(NULL), mktime(&tm)) > 30*3600*24;
+}
+
+int cleanolddir(char *directory)
+{
+   DIR *dp;
+   struct dirent *ep;
+   struct stat sp;
+   char tmp[PATH_MAX];
+
+   dp = opendir(directory);
+   if(dp == NULL)
+      return 1;
+
+   while(ep = readdir(dp))
+   {
+       if(ep->d_name[0] == '.')
+          continue;
+
+       sprintf(tmp, "%s/%s", directory, ep->d_name);
+
+       if(stat(tmp, &sp) < 0)
+          continue;
+
+       if(!S_ISDIR(sp.st_mode))
+          continue;
+
+       if(!checkdir(tmp)){
+          cleanolddir(tmp);
+          continue;
+       }
+
+       rmdirrec(tmp);
+   }
+
+   closedir(dp);
+
+   return 0;
 }
 
