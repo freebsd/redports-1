@@ -23,7 +23,7 @@ class RedportsEnvironment(Component):
                 Column('backendkey', type='varchar(25)', size=25),
                 Column('group', type='varchar(50)', size=50),
                 Column('status', type='int'),
-                Column('buildstatus', type='int'),
+                Column('buildstatus', type='varchar(25)', size=25),
                 Column('backendid', type='int'),
                 Column('startdate', type='bigint'),
                 Column('enddate', type='bigint')
