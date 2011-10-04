@@ -34,5 +34,9 @@ extern int configparse(char *filename);
 extern char* configget(char *key);
 extern int configset(char *key, char *value);
 extern unsigned long long microtime(void);
+extern int mkdirrec(char *directory);
+extern int rmdirrec(char *directory);
+extern int checkdir(char *directory);
+extern int cleanolddir(char *directory);
 
-#endif /* _UTIL_H */
+#endif /* _UTIL_H_ */

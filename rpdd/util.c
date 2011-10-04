@@ -136,11 +136,59 @@ unsigned long long microtime(void)
     return microtime;
 }
 
+int mkdirrec(char *dir)
+{
+   struct stat sb;
+   char directory[PATH_MAX];
+
+   strncpy(directory, dir, sizeof(directory)-1);
+   directory[sizeof(directory)-1] = '\0';
+
+   if(stat(directory, &sb) == 0)
+      return 0;
+
+   if(mkdirrec(dirname(directory)) == 0)
+      return mkdir(directory, (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH));
+
+   return -1;
+}
+
 int rmdirrec(char *directory)
 {
-   // TODO: implement recursive remove of directory
-   printf("rm %s\n", directory);
-   return 0;
+   DIR *dp;
+   struct dirent *ep;
+   struct stat sp;
+   char tmp[PATH_MAX];
+
+   dp = opendir(directory);
+   if(dp == NULL)
+      return 1;
+
+   while(ep = readdir(dp))
+   {
+       if(strcmp(ep->d_name, ".") == 0)
+          continue;
+
+       if(strcmp(ep->d_name, "..") == 0)
+          continue;
+
+       sprintf(tmp, "%s/%s", directory, ep->d_name);
+
+       if(stat(tmp, &sp) < 0)
+          return -1;
+
+       if(S_ISDIR(sp.st_mode))
+       {
+          if(rmdirrec(tmp) != 0)
+             return -1;
+       }
+       else
+          unlink(tmp);
+   }
+
+   closedir(dp);
+
+   return rmdir(directory);
 }
 
 int checkdir(char *directory)
