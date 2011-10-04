@@ -33,7 +33,10 @@ char *ppagebuffer;
 char *remotevars[] = {
     "STATUS",
     "ERROR",
-    "OK"
+    "OK",
+    "FAIL_REASON",
+    "BUILDLOG",
+    "WRKDIR"
 };
 
 /* Internals */

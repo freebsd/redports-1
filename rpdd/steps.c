@@ -44,8 +44,115 @@ struct StepHandler stepreg[] = {
     { handleStep10, 1 },
     { handleStep20, 1 },
     { handleStep30, 1 },
-    { handleStep31, 1 }
+    { handleStep31, 1 },
+    { handleStep70, 1 },
+    { handleStep71, 1 }
 };
+
+int handleStep71(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_RES *result2;
+    MYSQL_ROW builds;
+    MYSQL_ROW runningdownloads;
+    char url[250];
+    char query[1000];
+    char buildlog[255];
+
+    if(!mysql_autoconnect(conn))
+        return 1;
+
+    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, owner, queueid FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 71")){
+        LOGSQL(conn);
+        return 1;
+    }
+
+    result = mysql_store_result(conn);
+
+    while ((builds = mysql_fetch_row(result)))
+    {
+        sprintf(url, "%s://%s%sstatus?build=%s", builds[1], builds[2], builds[3], builds[5]);
+        if(!getpage(url, builds[4]))
+           continue;
+
+        /* TODO: getenv("STATUS") prüfen */
+        /* TODO: Directories für Buildlogs erzeugen */
+
+        if(getenv("BUILDLOG") != NULL)
+        {
+           sprintf(buildlog, "%s/~%s/%s/build.log", configget("wwwroot"), builds[6], builds[7]);
+           if(!downloadfile(getenv("BUILDLOG"), builds[4], buildlog))
+              continue;
+        }
+
+        if(getenv("WRKDIR") != NULL)
+        {
+           sprintf(buildlog, "%s/~%s/%s/wrkdir.tar.gz", configget("wwwroot"), builds[6], builds[7]);
+           if(!downloadfile(getenv("WRKDIR"), builds[4], buildlog))
+              continue;
+        }
+
+        sprintf(query, "UPDATE builds SET buildstatus = \"%s\", enddate = %lli, status = 90 WHERE id = %d", getenv("FAIL_REASON") == NULL ? getenv("STATUS") : getenv("FAIL_REASON"), microtime(), atoi(builds[0]));
+        if(mysql_query(conn, query)){
+           LOGSQL(conn);
+           return 1;
+        }
+    }
+
+    mysql_free_result(result);
+    mysql_close(conn);
+
+    return 0;
+}
+
+int handleStep70(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_RES *result2;
+    MYSQL_ROW builds;
+    MYSQL_ROW runningdownloads;
+    char query[1000];
+
+    if(!mysql_autoconnect(conn))
+        return 1;
+
+    if(mysql_query(conn, "SELECT builds.id, backendid FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status > 70 AND build.status < 80")){
+        LOGSQL(conn);
+        return 1;
+    }
+
+    result = mysql_store_result(conn);
+
+    while ((builds = mysql_fetch_row(result)))
+    {
+        sprintf(query, "SELECT count(*) FROM builds WHERE status = 71 AND backendid = %d", atoi(builds[1]));
+        if(mysql_query(conn, query)){
+           LOGSQL(conn);
+           return 1;
+        }
+
+        result2 = mysql_store_result(conn);
+        runningdownloads = mysql_fetch_row(result2);
+
+        if(atoi(runningdownloads[0]) == 0)
+        {
+           sprintf(query, "UPDATE builds SET status = 71 WHERE id = %d", atoi(builds[0]));
+           if(mysql_query(conn, query)){
+              LOGSQL(conn);
+              return 1;
+           }
+        }
+
+        mysql_free_result(result2);
+    }
+
+    mysql_free_result(result);
+    mysql_close(conn);
+
+    return 0;
+}
 
 
 int handleStep31(void)
@@ -249,7 +356,7 @@ int handleStep10(void)
 
         while((backends = mysql_fetch_row(result2)))
         {
-            sprintf(query, "INSERT INTO builds VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 10, 0, 0, 0, 0)", builds[0], backends[0]);
+            sprintf(query, "INSERT INTO builds VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 10, \"\", 0, 0, 0)", builds[0], backends[0]);
 	    if(mysql_query(conn, query)){
                 LOGSQL(conn);
                 return 1;
