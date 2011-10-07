@@ -36,6 +36,7 @@ extern int handleStep30(void);
 extern int handleStep31(void);
 extern int handleStep70(void);
 extern int handleStep71(void);
+extern int handleStep91(void);
 extern int handleStep95(void);
 
 #endif /* _STEPS_H */

@@ -47,6 +47,7 @@ struct StepHandler stepreg[] = {
     { handleStep31, 1 },
     { handleStep70, 1 },
     { handleStep71, 1 },
+    { handleStep91, 1 },
     { handleStep95, 1 }
 };
 
@@ -64,6 +65,42 @@ int handleStep95(void)
     return 0;
 }
 
+int handleStep91(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_ROW builds;
+    char url[250];
+    char query[1000];
+    int status;
+
+    if(!mysql_autoconnect(conn))
+        return 1;
+
+    if(mysql_query(conn, "SELECT id, protocol, host, uri, credentials FROM backends WHERE status > 0")){
+        LOGSQL(conn);
+        return 1;
+    }
+
+    result = mysql_store_result(conn);
+
+    while ((builds = mysql_fetch_row(result)))
+    {
+        sprintf(url, "%s://%s%sping", builds[1], builds[2], builds[3]);
+        if(getpage(url, builds[4]) == -1)
+           status = 2; /* Status failure */
+        else
+           status = 1; /* Status enabled */
+
+        sprintf(query, "UPDATE backends SET status = %d WHERE id = %d", status, builds[0]);
+        if(mysql_query(conn, query)){
+           LOGSQL(conn);
+           return 1;
+        }
+    }
+
+    return 0;
+}
 
 int handleStep71(void)
 {
