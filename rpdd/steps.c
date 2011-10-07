@@ -46,8 +46,24 @@ struct StepHandler stepreg[] = {
     { handleStep30, 1 },
     { handleStep31, 1 },
     { handleStep70, 1 },
-    { handleStep71, 1 }
+    { handleStep71, 1 },
+    { handleStep95, 1 }
 };
+
+int handleStep95(void)
+{
+    static time_t timestamp = 0;
+
+    if(timestamp < time(NULL)+(60*120))
+        return 0;
+
+    timestamp = time(NULL);
+
+    cleanolddir(configget("wwwroot"));
+
+    return 0;
+}
+
 
 int handleStep71(void)
 {
