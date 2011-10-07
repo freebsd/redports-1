@@ -35,8 +35,10 @@ if ! zfs list zroot/tinderbox/${BUILD} >/dev/null ; then
 fi
 
 if [ `uname -m` != "${ARCH}" ]; then
-   echo "export MARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
+   echo "export ARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
    echo "export MACHINE_ARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
+   echo "export UNAME_m=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
+   echo "export UNAME_p=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
 fi
 
 ${TINDERBOX}/scripts/tc createPortsTree -p ${BUILD} -u CSUP -d "FreeBSD Portstree" || exit 1
