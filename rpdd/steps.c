@@ -77,7 +77,10 @@ int handleStep71(void)
            continue;
 
         /* TODO: getenv("STATUS") prüfen */
-        /* TODO: Directories für Buildlogs erzeugen */
+
+        sprintf(buildlog, "%s/~%s/%s", configget("wwwroot"), builds[6], builds[7]);
+        if(mkdirrec(buildlog) != 0)
+           continue;
 
         if(getenv("BUILDLOG") != NULL)
         {
