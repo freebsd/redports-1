@@ -67,12 +67,18 @@ int handleStep95(void)
 
 int handleStep91(void)
 {
+    static time_t timestamp = 0;
     MYSQL *conn;
     MYSQL_RES *result;
     MYSQL_ROW builds;
     char url[250];
     char query[1000];
     int status;
+
+    if(timestamp < time(NULL)+120)
+        return 0;
+
+    timestamp = time(NULL);
 
     if(!mysql_autoconnect(conn))
         return 1;
