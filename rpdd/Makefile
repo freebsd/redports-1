@@ -10,7 +10,7 @@ LDFLAGS=-L${LOCALBASE}/lib
 all:	rpdd
 
 clean:
-	@rm -f *.o
+	@rm -f *.o *.core
 
 rpdd:	database.o remote.o rpdd.o steps.o util.o
 	$(CC) $(LDFLAGS) -lcurl `mysql_config --libs` database.o remote.o rpdd.o steps.o util.o -o rpdd
