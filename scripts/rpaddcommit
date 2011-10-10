@@ -8,7 +8,7 @@
 
 PATH=${PATH}:/usr/local/bin
 
-REPOSITORY=https://svn.redports.org/
+REPOSITORY=http://svn.redports.org/
 DBNAME=trac
 DBUSER=root
 LOG=/var/log/redports.log
