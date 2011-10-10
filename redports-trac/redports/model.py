@@ -31,6 +31,8 @@ class Port(object):
             self.statusname = 'building'
         elif math.floor(status / 10) == 7:
             self.statusname = 'transferring'
+        elif math.floor(status / 10) == 8:
+            self.statusname = 'cleaning'
         elif math.floor(status / 10) == 9:
             self.statusname = 'finished'
             self.finished = True
