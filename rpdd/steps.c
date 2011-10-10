@@ -115,7 +115,8 @@ int handleStep71(void)
     MYSQL_ROW runningdownloads;
     char url[250];
     char query[1000];
-    char buildlog[255];
+    char remotefile[255];
+    char localfile[255];
 
     if((conn = mysql_autoconnect()) == NULL)
         return 1;
@@ -135,24 +136,34 @@ int handleStep71(void)
 
         /* TODO: getenv("STATUS") prüfen */
 
-        sprintf(buildlog, "%s/~%s/%s", configget("wwwroot"), builds[6], builds[7]);
-        if(mkdirrec(buildlog) != 0)
+        sprintf(localfile, "%s/~%s/%s", configget("wwwroot"), builds[6], builds[7]);
+        printf("Log dir: %s\n", localfile);
+        if(mkdirrec(localfile) != 0)
            continue;
 
         if(getenv("BUILDLOG") != NULL)
         {
-           sprintf(buildlog, "%s/~%s/%s/build.log", configget("wwwroot"), builds[6], builds[7]);
-           if(!downloadfile(getenv("BUILDLOG"), builds[4], buildlog))
+           sprintf(localfile, "%s/~%s/%s/build.log", configget("wwwroot"), builds[6], builds[7]);
+           sprintf(remotefile, "%s://%s%s", builds[1], builds[2], getenv("BUILDLOG"));
+           printf("Downloading Log %s to %s\n", remotefile, localfile);
+           if(downloadfile(remotefile, builds[4], localfile) != 0){
+              printf("Download failed!");
               continue;
+           }
         }
 
         if(getenv("WRKDIR") != NULL)
         {
-           sprintf(buildlog, "%s/~%s/%s/wrkdir.tar.gz", configget("wwwroot"), builds[6], builds[7]);
-           if(!downloadfile(getenv("WRKDIR"), builds[4], buildlog))
+           sprintf(localfile, "%s/~%s/%s/wrkdir.tar.gz", configget("wwwroot"), builds[6], builds[7]);
+           sprintf(remotefile, "%s://%s%s", builds[1], builds[2], getenv("WRKDIR"));
+           printf("Downloading Wrkdir %s to %s\n", remotefile, localfile);
+           if(downloadfile(remotefile, builds[4], localfile) != 0){
+              printf("Download failed!");
               continue;
+           }
         }
 
+        printf("Updating build status for %s to %s\n", builds[0], getenv("FAIL_REASON") == NULL ? getenv("STATUS") : getenv("FAIL_REASON"));
         sprintf(query, "UPDATE builds SET buildstatus = \"%s\", enddate = %lli, status = 90 WHERE id = %d", getenv("FAIL_REASON") == NULL ? getenv("STATUS") : getenv("FAIL_REASON"), microtime(), atoi(builds[0]));
         if(mysql_query(conn, query)){
            LOGSQL(conn);
@@ -178,7 +189,7 @@ int handleStep70(void)
     if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
-    if(mysql_query(conn, "SELECT builds.id, builds.backendid FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status > 70 AND builds.status < 80")){
+    if(mysql_query(conn, "SELECT builds.id, builds.backendid FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status >= 70 AND builds.status < 80")){
         LOGSQL(conn);
         return 1;
     }
@@ -221,13 +232,13 @@ int handleStep31(void)
     MYSQL_RES *result;
     MYSQL_ROW builds;
     char query[1000];
-    char url[250];
+    char url[500];
     int status;
 
     if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
-    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, portname, buildname, backendkey FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30")){
+    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, portname, buildname, backendkey FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 31")){
         LOGSQL(conn);
         return 1;
     }
@@ -236,11 +247,14 @@ int handleStep31(void)
 
     while ((builds = mysql_fetch_row(result)))
     {
-        sprintf(url, "%s://%s%sbuild?port=%s&build=%s&priority=%s&finishurl=%s/backend/finished/%s", builds[1], builds[2], builds[3], builds[5], builds[6], configget("wwwurl"), builds[7]);
+        sprintf(url, "%s://%s%sbuild?port=%s&build=%s&priority=%s&finishurl=%s/backend/finished/%s", builds[1], builds[2], builds[3], builds[5], builds[6], "5", configget("wwwurl"), builds[7]);
         if(getpage(url, builds[4]))
            status = 50;
         else
+        {
            status = 90;
+           printf("CGI Error: %s\n", getenv("ERROR"));
+        }
 
         sprintf(query, "UPDATE builds SET status = %d WHERE id = %d", status, atoi(builds[0]));
         if(mysql_query(conn, query)){
@@ -280,7 +294,10 @@ int handleStep30(void)
         if(getpage(url, builds[4]))
            status = 31;
         else
+        {
            status = 90;
+           printf("CGI Error: %s\n", getenv("ERROR"));
+        }
 
         sprintf(query, "UPDATE builds SET status = %d WHERE id = %d", status, atoi(builds[0]));
         if(mysql_query(conn, query)){
@@ -341,7 +358,7 @@ int handleStep20(void)
 
             if(atoi(runningjobs[0]) < atoi(backends[1]))
             {
-                sprintf(query, "UPDATE builds SET backendid = %d, status = 30, startdate = %lli WHERE id = %d", atoi(backends[0]), atoi(builds[0]), microtime());
+                sprintf(query, "UPDATE builds SET backendid = %d, status = 30, startdate = %lli WHERE id = %d", atoi(backends[0]), microtime(), atoi(builds[0]));
                 if(mysql_query(conn, query)){
                     LOGSQL(conn);
                     return 1;
