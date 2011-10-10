@@ -77,6 +77,7 @@ void run()
                     handlestep(step);
                     exit(0);
                 }
+                setlastrun(step);
                 break;
             }
         }

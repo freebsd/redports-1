@@ -36,29 +36,27 @@ extern int nextstepindex(void);
 /* internal data structs */
 struct StepHandler
 {
+    char name[25];
     int (*handler)(void);
     int maxparallel;
+    int delay;
+    time_t lastrun;
 };
 
 struct StepHandler stepreg[] = {
-    { handleStep10, 1 },
-    { handleStep20, 1 },
-    { handleStep30, 1 },
-    { handleStep31, 1 },
-    { handleStep70, 1 },
-    { handleStep71, 1 },
-    { handleStep91, 1 },
-    { handleStep95, 1 }
+    { "10", handleStep10, 1, 0, 0 },
+    { "20", handleStep20, 1, 0, 0 },
+    { "30", handleStep30, 1, 0, 0 },
+    { "31", handleStep31, 1, 0, 0 },
+    { "70", handleStep70, 1, 0, 0 },
+    { "71", handleStep71, 1, 0, 0 },
+    { "91", handleStep91, 1, 120, 0 },
+    { "95", handleStep95, 1, 7200, 0 }
 };
 
 int handleStep95(void)
 {
-    static time_t timestamp = 0;
-
-    if(timestamp < time(NULL)+(60*120))
-        return 0;
-
-    timestamp = time(NULL);
+    printf("Cleaning old directories in %s\n", configget("wwwroot"));
 
     cleanolddir(configget("wwwroot"));
 
@@ -67,18 +65,12 @@ int handleStep95(void)
 
 int handleStep91(void)
 {
-    static time_t timestamp = 0;
     MYSQL *conn;
     MYSQL_RES *result;
     MYSQL_ROW builds;
     char url[250];
     char query[1000];
     int status;
-
-    if(timestamp < time(NULL)+120)
-        return 0;
-
-    timestamp = time(NULL);
 
     if(!mysql_autoconnect(conn))
         return 1;
@@ -97,6 +89,8 @@ int handleStep91(void)
            status = 2; /* Status failure */
         else
            status = 1; /* Status enabled */
+
+        printf("%s is %s\n", builds[2], status == 2 ? "not available" : "available");
 
         sprintf(query, "UPDATE backends SET status = %d WHERE id = %d", status, builds[0]);
         if(mysql_query(conn, query)){
@@ -475,8 +469,13 @@ int nextstep(int steps[], int max)
                sum++;
         }
 
-        if(sum < stepreg[next].maxparallel)
-            return next;
+        if(sum >= stepreg[next].maxparallel)
+            continue;
+
+        if(stepreg[next].lastrun+stepreg[next].delay > time(NULL))
+            continue;
+
+        return next;
     }
 
     return -1;
@@ -484,11 +483,24 @@ int nextstep(int steps[], int max)
 
 int handlestep(int step)
 {
+    int rv;
+
     if(step < 0 || step >= (sizeof(stepreg)/sizeof(struct StepHandler)))
         return -1;
 
-    printf("Step %d\n", step);
+    printf("- Step %s -------------------------\n", stepreg[step].name);
 
-    return stepreg[step].handler();
+    rv = stepreg[step].handler();
+
+    printf("-----------------------------------\n");
+    return rv;
 }
 
+int setlastrun(int step)
+{
+    if(step < 0 || step >= (sizeof(stepreg)/sizeof(struct StepHandler)))
+        return -1;
+
+    stepreg[step].lastrun = time(NULL);
+    return 0;
+}

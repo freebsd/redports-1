@@ -29,6 +29,7 @@
 
 extern int nextstep(int steps[], int max);
 extern int handlestep(int step);
+extern int setlastrun(int step);
 
 extern int handleStep10(void);
 extern int handleStep20(void);
