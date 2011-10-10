@@ -40,6 +40,7 @@
 
 #define DAEMON_NAME "rpd"
 #define PID_FILE "/var/run/rpd.pid"
+#define CONF_FILE "rpdd.conf"
 
 #define MAXCHILDS 5
 
@@ -161,24 +162,13 @@ int main(int argc, char *argv[]) {
                 break;
         }
     }
- 
-    syslog(LOG_INFO, "%s daemon starting up", DAEMON_NAME);
- 
-    // Setup syslog logging - see SETLOGMASK(3)
-#if defined(DEBUG)
-    setlogmask(LOG_UPTO(LOG_DEBUG));
-    openlog(DAEMON_NAME, LOG_CONS | LOG_NDELAY | LOG_PERROR | LOG_PID, LOG_USER);
-#else
-    setlogmask(LOG_UPTO(LOG_INFO));
-    openlog(DAEMON_NAME, LOG_CONS, LOG_USER);
-#endif
+
+    configparse(CONF_FILE);
  
     /* Our process ID and Session ID */
     pid_t pid, sid;
  
     if (daemonize) {
-        syslog(LOG_INFO, "starting the daemonizing process");
- 
         /* Fork off the parent process */
         pid = fork();
         if (pid < 0) {
@@ -214,10 +204,6 @@ int main(int argc, char *argv[]) {
  
     run();
  
-    syslog(LOG_INFO, "%s daemon exiting", DAEMON_NAME);
- 
-    // free everything
-
     exit(0);
 }
 
