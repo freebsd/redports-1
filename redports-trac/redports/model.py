@@ -53,7 +53,7 @@ class Port(object):
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
     #   Using the prepared db statement won't work if we have more than one entry in order_by
-    cursor.execute("SELECT buildqueue.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, builds.group, buildqueue.portname, buildqueue.status, builds.startdate, builds.enddate FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND owner = %s ORDER BY id DESC", req.authname )
+    cursor.execute("SELECT buildqueue.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status), builds.startdate, builds.enddate FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND owner = %s ORDER BY id DESC", req.authname )
     for id, owner, repository, revision, group, portname, status, startdate, enddate in cursor:
         port = Port(env)
  	port.id = id
@@ -83,7 +83,7 @@ class Buildgroup(object):
 
 def BuildgroupsIterator(env, req):
    cursor = env.get_db_cnx().cursor()
-   cursor.execute("SELECT name, version, arch, type, description, (SELECT count(*) FROM backendbuilds WHERE buildgroup = name AND status = 1) FROM buildgroups WHERE 1=1 ORDER BY version DESC, arch")
+   cursor.execute("SELECT name, version, arch, type, description, (SELECT count(*) FROM backendbuilds, backends WHERE buildgroup = name AND backendbuilds.status = 1 AND backendbuilds.backendid = backends.id AND backends.status = 1) FROM buildgroups WHERE 1=1 ORDER BY version DESC, arch")
 
    for name, version, arch, type, description, available in cursor:
         buildgroup = Buildgroup(env)
