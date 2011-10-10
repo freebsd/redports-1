@@ -181,6 +181,7 @@ build()
   return 0
 }
 
+
 status()
 {
   BUILD=$1
@@ -218,6 +219,19 @@ status()
   fi
 
   echo "STATUS=idle"
+
+  # Portstree last builtdate
+  PORTSTREE=`${TINDERBOX}/scripts/tc getPortsTreeForBuild -b ${BUILD} 2>/dev/null`
+
+  if [ -z "${PORTSTREE}" ]; then
+    echo "Unknown portstree for build ${BUILD}"
+    return 1
+  fi
+
+  PORTSTREELASTBUILT=`${TINDERBOX}/scripts/tc dumpObject -t ${PORTSTREE} | grep ports_tree_last_built | cut -d":" -f2- | cut -d" " -f2- >/dev/null`
+
+  echo "PORTSTREELASTBUILT=${PORTSTREELASTBUILT}"
+
   return 0
 }
 
