@@ -187,8 +187,7 @@ status()
   BUILD=$1
 
   if [ ! -d "${WRKBASE}/${BUILD}" ]; then
-    echo "STATUS=unknown"
-    return 1
+    mkdir -p ${WRKBASE}/${BUILD}
   fi
 
   if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
@@ -228,7 +227,7 @@ status()
     return 1
   fi
 
-  PORTSTREELASTBUILT=`${TINDERBOX}/scripts/tc dumpObject -t ${PORTSTREE} | grep ports_tree_last_built | cut -d":" -f2- | cut -d" " -f2- >/dev/null`
+  PORTSTREELASTBUILT=`${TINDERBOX}/scripts/tc dumpObject -t ${PORTSTREE} | grep ports_tree_last_built | cut -d":" -f2- | cut -d" " -f2- 2>/dev/null`
 
   echo "PORTSTREELASTBUILT=${PORTSTREELASTBUILT}"
 
