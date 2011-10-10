@@ -24,6 +24,8 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <stdio.h>
+
 #include "database.h"
 #include "remote.h"
 #include "util.h"
@@ -72,7 +74,7 @@ int handleStep91(void)
     char query[1000];
     int status;
 
-    if(!mysql_autoconnect(conn))
+    if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
     if(mysql_query(conn, "SELECT id, protocol, host, uri, credentials FROM backends WHERE status > 0")){
@@ -84,6 +86,8 @@ int handleStep91(void)
 
     while ((builds = mysql_fetch_row(result)))
     {
+        printf("Checking backend %s\n", builds[2]);
+
         sprintf(url, "%s://%s%sping", builds[1], builds[2], builds[3]);
         if(getpage(url, builds[4]) == -1)
            status = 2; /* Status failure */
@@ -92,7 +96,7 @@ int handleStep91(void)
 
         printf("%s is %s\n", builds[2], status == 2 ? "not available" : "available");
 
-        sprintf(query, "UPDATE backends SET status = %d WHERE id = %d", status, builds[0]);
+        sprintf(query, "UPDATE backends SET status = %d WHERE id = %d", status, atol(builds[0]));
         if(mysql_query(conn, query)){
            LOGSQL(conn);
            return 1;
@@ -113,7 +117,7 @@ int handleStep71(void)
     char query[1000];
     char buildlog[255];
 
-    if(!mysql_autoconnect(conn))
+    if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
     if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, owner, queueid FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 71")){
@@ -171,10 +175,10 @@ int handleStep70(void)
     MYSQL_ROW runningdownloads;
     char query[1000];
 
-    if(!mysql_autoconnect(conn))
+    if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
-    if(mysql_query(conn, "SELECT builds.id, backendid FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status > 70 AND build.status < 80")){
+    if(mysql_query(conn, "SELECT builds.id, builds.backendid FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status > 70 AND builds.status < 80")){
         LOGSQL(conn);
         return 1;
     }
@@ -220,7 +224,7 @@ int handleStep31(void)
     char url[250];
     int status;
 
-    if(!mysql_autoconnect(conn))
+    if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
     if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, portname, buildname, backendkey FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30")){
@@ -260,7 +264,7 @@ int handleStep30(void)
     char url[250];
     int status;
 
-    if(!mysql_autoconnect(conn))
+    if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
     if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, repository, revision FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30")){
@@ -303,7 +307,7 @@ int handleStep20(void)
     MYSQL_ROW runningjobs;
     char query[1000];
 
-    if(!mysql_autoconnect(conn))
+    if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
     if(mysql_query(conn, "SELECT builds.id, builds.group, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 20 AND builds.backendid = 0")){
@@ -389,7 +393,7 @@ int handleStep10(void)
     char query[1000];
 
 
-    if(!mysql_autoconnect(conn))
+    if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
     if(mysql_query(conn, "SELECT id, owner FROM buildqueue WHERE status = 10")){
@@ -412,6 +416,7 @@ int handleStep10(void)
 
         while((backends = mysql_fetch_row(result2)))
         {
+            printf("adding build %s for %s\n", builds[0], builds[1]);
             sprintf(query, "INSERT INTO builds VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 10, \"\", 0, 0, 0)", builds[0], backends[0]);
 	    if(mysql_query(conn, query)){
                 LOGSQL(conn);
@@ -492,7 +497,8 @@ int handlestep(int step)
 
     rv = stepreg[step].handler();
 
-    printf("-----------------------------------\n");
+    printf("- End Step %s = %s -----------\n", stepreg[step].name, (rv == 0) ? "success" : "failure" );
+ 
     return rv;
 }
 
@@ -504,3 +510,4 @@ int setlastrun(int step)
     stepreg[step].lastrun = time(NULL);
     return 0;
 }
+

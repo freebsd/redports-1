@@ -30,20 +30,22 @@
 #include "database.h"
 #include "util.h"
 
-int mysql_autoconnect(MYSQL *conn)
+MYSQL* mysql_autoconnect(void)
 {
+    MYSQL *conn = NULL;
+
     conn = mysql_init(NULL);
     if(conn == NULL){
         LOGSQL(conn);
-        return 1;
+        return NULL;
     }
 
     if(mysql_real_connect(conn, configget("dbHost"), configget("dbUsername"), configget("dbPassword"),
                           configget("dbDatabase"), 0, NULL, 0) == NULL){
         LOGSQL(conn);
-        return 1;
+        return NULL;
     }
 
-    return 0;
+    return conn;
 }
 

@@ -32,9 +32,10 @@
 
 #define LOGSQL(con) \
 { \
-    printf("SQL Error %u on line %d: %s\n", mysql_errno(con), __LINE__, mysql_error(con)); \
+    printf("SQL Error %u in %s#%d: %s\n", \
+        mysql_errno(con), __FILE__, __LINE__, mysql_error(con)); \
 }
 
-extern int mysql_autoconnect(MYSQL *conn);
+extern MYSQL* mysql_autoconnect(void);
 
 #endif /* _DATABASE_H */
