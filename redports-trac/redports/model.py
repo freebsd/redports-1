@@ -17,9 +17,8 @@ class Port(object):
         self.status = None
         self.statusname = None
         self.startdate = None
-        self.enddate = None
 
-    def setStatus(self, status):
+    def setStatus(self, status, statusname):
         self.status = status
 
         if math.floor(status / 10) == 1:
@@ -38,6 +37,9 @@ class Port(object):
         else:
             self.statusname = 'unknown'
 
+        if statusname:
+            self.statusname = statusname.lower()
+
     def updateStatus(self, status, key):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
@@ -53,8 +55,8 @@ class Port(object):
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
     #   Using the prepared db statement won't work if we have more than one entry in order_by
-    cursor.execute("SELECT buildqueue.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status), builds.startdate, builds.enddate FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND owner = %s ORDER BY id DESC", req.authname )
-    for id, owner, repository, revision, group, portname, status, startdate, enddate in cursor:
+    cursor.execute("SELECT buildqueue.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status), builds.buildstatus, builds.startdate, builds.enddate FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND owner = %s ORDER BY id DESC", req.authname )
+    for id, owner, repository, revision, group, portname, status, statusname, startdate, enddate in cursor:
         port = Port(env)
  	port.id = id
 	port.owner = owner
@@ -62,9 +64,8 @@ def PortsQueueIterator(env, req):
 	port.revision = revision
 	port.group = group
 	port.portname = portname
-        port.setStatus(status)
-	port.startdate = pretty_timedelta( from_utimestamp(startdate) )
-	port.enddate = from_utimestamp(enddate)
+        port.setStatus(status, statusname)
+	port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
         yield port
 
 class Buildgroup(object):

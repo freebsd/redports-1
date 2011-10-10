@@ -23,3 +23,16 @@
 .status-ok {
     background: green;
 }
+
+/* Buildstatus */
+.status-fail {
+    background: red;
+}
+
+.status-success {
+    background: #E8FFE8;
+}
+
+.status-leftovers {
+    background: #FFFFD8;
+}

@@ -15,7 +15,7 @@
     <div id="tabcontent">
         <table class="listing" id="queue_list">
             <thead>
-                <tr><th>Revision</th><th>Port</th><th>Status</th><th>Buildgroup</th><th>Start</th><th>End</th><th>Links</th></tr>
+                <tr><th>Revision</th><th>Port</th><th>Status</th><th>Buildgroup</th><th>Buildtime</th><th>Links</th></tr>
             </thead>
             <tbody>
                 <tr py:for="port in commitqueue">
@@ -24,7 +24,6 @@
                     <td class="status-$port.statusname"><a href="/wiki/Buildstatus#$port.statusname" title="$port.status">$port.statusname</a></td>
                     <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
                     <td>$port.startdate</td>
-                    <td>$port.enddate</td>
                     <td><py:if test="port.finished"><a href="/~$port.owner/$port.id/build.log">log</a></py:if></td>
                 </tr>
             </tbody>
