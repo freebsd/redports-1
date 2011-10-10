@@ -136,14 +136,14 @@ int handleStep71(void)
 
         /* TODO: getenv("STATUS") prüfen */
 
-        sprintf(localfile, "%s/~%s/%s", configget("wwwroot"), builds[6], builds[7]);
+        sprintf(localfile, "%s/%s/%s", configget("wwwroot"), builds[6], builds[7]);
         printf("Log dir: %s\n", localfile);
         if(mkdirrec(localfile) != 0)
            continue;
 
         if(getenv("BUILDLOG") != NULL)
         {
-           sprintf(localfile, "%s/~%s/%s/build.log", configget("wwwroot"), builds[6], builds[7]);
+           sprintf(localfile, "%s/%s/%s/build.log", configget("wwwroot"), builds[6], builds[7]);
            sprintf(remotefile, "%s://%s%s", builds[1], builds[2], getenv("BUILDLOG"));
            printf("Downloading Log %s to %s\n", remotefile, localfile);
            if(downloadfile(remotefile, builds[4], localfile) != 0){
@@ -154,7 +154,7 @@ int handleStep71(void)
 
         if(getenv("WRKDIR") != NULL)
         {
-           sprintf(localfile, "%s/~%s/%s/wrkdir.tar.gz", configget("wwwroot"), builds[6], builds[7]);
+           sprintf(localfile, "%s/%s/%s/wrkdir.tar.gz", configget("wwwroot"), builds[6], builds[7]);
            sprintf(remotefile, "%s://%s%s", builds[1], builds[2], getenv("WRKDIR"));
            printf("Downloading Wrkdir %s to %s\n", remotefile, localfile);
            if(downloadfile(remotefile, builds[4], localfile) != 0){
