@@ -52,6 +52,7 @@ struct StepHandler stepreg[] = {
     { "31", handleStep31, 1, 0, 0 },
     { "70", handleStep70, 1, 0, 0 },
     { "71", handleStep71, 1, 0, 0 },
+    { "80", handleStep80, 1, 0, 0 },
     { "91", handleStep91, 1, 120, 0 },
     { "95", handleStep95, 1, 7200, 0 }
 };
@@ -97,6 +98,51 @@ int handleStep91(void)
         printf("%s is %s\n", builds[2], status == 2 ? "not available" : "available");
 
         sprintf(query, "UPDATE backends SET status = %d WHERE id = %d", status, atol(builds[0]));
+        if(mysql_query(conn, query)){
+           LOGSQL(conn);
+           return 1;
+        }
+    }
+
+    return 0;
+}
+
+int handleStep80(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_ROW builds;
+    char url[250];
+    char query[1000];
+    int status;
+
+    if((conn = mysql_autoconnect()) == NULL)
+        return 1;
+
+    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 80")){
+        LOGSQL(conn);
+        return 1;
+    }
+
+    result = mysql_store_result(conn);
+
+    while ((builds = mysql_fetch_row(result)))
+    {
+        printf("Cleaning build %s on backend %s\n", builds[5], builds[2]);
+
+        sprintf(url, "%s://%s%sclean?build=%s", builds[1], builds[2], builds[3], builds[5]);
+        if(getpage(url, builds[4]) != 0)
+        {
+            printf("CGI Error: %s\n", getenv("ERROR"));
+
+            sprintf(query, "UPDATE buildgroups SET status = 2 WHERE id = %d", atol(builds[6]));
+            if(mysql_query(conn, query)){
+                LOGSQL(conn);
+                return 1;
+            }
+        }
+
+        sprintf(query, "UPDATE builds SET status = 90 WHERE id = %d", atoi(builds[0]));
         if(mysql_query(conn, query)){
            LOGSQL(conn);
            return 1;
@@ -164,7 +210,7 @@ int handleStep71(void)
         }
 
         printf("Updating build status for %s to %s\n", builds[0], getenv("FAIL_REASON") == NULL ? getenv("STATUS") : getenv("FAIL_REASON"));
-        sprintf(query, "UPDATE builds SET buildstatus = \"%s\", enddate = %lli, status = 90 WHERE id = %d", getenv("FAIL_REASON") == NULL ? getenv("STATUS") : getenv("FAIL_REASON"), microtime(), atoi(builds[0]));
+        sprintf(query, "UPDATE builds SET buildstatus = \"%s\", enddate = %lli, status = 80 WHERE id = %d", getenv("FAIL_REASON") == NULL ? getenv("STATUS") : getenv("FAIL_REASON"), microtime(), atoi(builds[0]));
         if(mysql_query(conn, query)){
            LOGSQL(conn);
            return 1;
@@ -252,7 +298,7 @@ int handleStep31(void)
            status = 50;
         else
         {
-           status = 90;
+           status = 80;
            printf("CGI Error: %s\n", getenv("ERROR"));
         }
 
@@ -295,7 +341,7 @@ int handleStep30(void)
            status = 31;
         else
         {
-           status = 90;
+           status = 80;
            printf("CGI Error: %s\n", getenv("ERROR"));
         }
 
