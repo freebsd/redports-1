@@ -398,7 +398,7 @@ int handleStep20(void)
 
     while ((builds = mysql_fetch_row(result)))
     {
-        sprintf(query, "SELECT backendid, maxparallel FROM backendbuilds, backends WHERE backendid = backends.id AND buildgroup = \"%s\" ORDER BY priority", builds[1]);
+        sprintf(query, "SELECT backendid, maxparallel FROM backendbuilds, backends WHERE backendid = backends.id AND buildgroup = \"%s\" AND backendbuilds.status = 1 AND backends.status = 1 ORDER BY priority", builds[1]);
 
         if(mysql_query(conn, query)){
             LOGSQL(conn);
