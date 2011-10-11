@@ -119,7 +119,7 @@ int handleStep80(void)
     if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
-    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 80")){
+    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, backendbuilds.id, buildqueue.id FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 80")){
         LOGSQL(conn);
         return 1;
     }
@@ -143,6 +143,12 @@ int handleStep80(void)
         }
 
         sprintf(query, "UPDATE builds SET status = 90 WHERE id = %d", atoi(builds[0]));
+        if(mysql_query(conn, query)){
+           LOGSQL(conn);
+           return 1;
+        }
+
+        sprintf(query, "UPDATE buildqueue SET status = 90, enddate = %lli WHERE id = \"%s\"", microtime(), builds[7]);
         if(mysql_query(conn, query)){
            LOGSQL(conn);
            return 1;
