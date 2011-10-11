@@ -18,7 +18,7 @@ REV=$2
 USER=`svnlook author -r ${REV} ${REPOS}`
 
 # add affected ports to buildqueue
-for PORT in `svnlook changed ${REPOS} -r ${REV} | cut -b5- | cut -d'/' -f2-3 | uniq`
+for PORT in `svnlook changed ${REPOS} -r ${REV} | grep -v "D   " | cut -b5- | cut -d'/' -f2-3 | uniq`
 do
     REPOSITORYPATH=`svnlook changed ${REPOS} -r ${REV} | cut -b5- | cut -d'/' -f1 | uniq`
     REPOSITORYBASE=${REPOSITORY}${REPOSITORYPATH}
