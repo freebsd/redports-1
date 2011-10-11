@@ -131,11 +131,11 @@ int handleStep80(void)
         printf("Cleaning build %s on backend %s\n", builds[5], builds[2]);
 
         sprintf(url, "%s://%s%sclean?build=%s", builds[1], builds[2], builds[3], builds[5]);
-        if(getpage(url, builds[4]) != 0)
+        if(!getpage(url, builds[4]))
         {
             printf("CGI Error: %s\n", getenv("ERROR"));
 
-            sprintf(query, "UPDATE buildgroups SET status = 2 WHERE id = %d", atol(builds[6]));
+            sprintf(query, "UPDATE backendbuilds SET status = 2 WHERE id = %d", atol(builds[6]));
             if(mysql_query(conn, query)){
                 LOGSQL(conn);
                 return 1;
@@ -163,6 +163,7 @@ int handleStep71(void)
     char query[1000];
     char remotefile[255];
     char localfile[255];
+    char *status = "error";
 
     if((conn = mysql_autoconnect()) == NULL)
         return 1;
@@ -178,9 +179,18 @@ int handleStep71(void)
     {
         sprintf(url, "%s://%s%sstatus?build=%s", builds[1], builds[2], builds[3], builds[5]);
         if(!getpage(url, builds[4]))
+        {
+           printf("CGI Error: %s\n", getenv("ERROR"));
            continue;
+        }
 
-        /* TODO: getenv("STATUS") prüfen */
+        if(strcmp(getenv("STATUS"), "finished") == 0)
+        {
+           if(getenv("BUILDSTATUS") != NULL)
+              status = getenv("BUILDSTATUS");
+           if(getenv("FAIL_REASON") != NULL)
+              status = getenv("FAIL_REASON");
+        }
 
         sprintf(localfile, "%s/%s/%s", configget("wwwroot"), builds[6], builds[7]);
         printf("Log dir: %s\n", localfile);
@@ -209,8 +219,8 @@ int handleStep71(void)
            }
         }
 
-        printf("Updating build status for %s to %s\n", builds[0], getenv("FAIL_REASON") == NULL ? getenv("STATUS") : getenv("FAIL_REASON"));
-        sprintf(query, "UPDATE builds SET buildstatus = \"%s\", enddate = %lli, status = 80 WHERE id = %d", getenv("FAIL_REASON") == NULL ? getenv("STATUS") : getenv("FAIL_REASON"), microtime(), atoi(builds[0]));
+        printf("Updating build status for %s to %s\n", builds[0], status);
+        sprintf(query, "UPDATE builds SET buildstatus = \"%s\", enddate = %lli, status = 80 WHERE id = %d", status, microtime(), atoi(builds[0]));
         if(mysql_query(conn, query)){
            LOGSQL(conn);
            return 1;

@@ -31,11 +31,12 @@ char pagebuffer[1024];
 char *ppagebuffer;
 
 char *remotevars[] = {
-    "STATUS",
-    "ERROR",
-    "OK",
-    "FAIL_REASON",
     "BUILDLOG",
+    "BUILDSTATUS",
+    "ERROR",
+    "FAIL_REASON",
+    "OK",
+    "STATUS",
     "WRKDIR"
 };
 
