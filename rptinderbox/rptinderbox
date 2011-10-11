@@ -193,7 +193,8 @@ status()
   if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
     . ${WRKBASE}/${BUILD}/.finished
 
-    echo "STATUS=${STATUS}"
+    echo "STATUS=finished"
+    echo "BUILDSTATUS=${STATUS}"
 
     if [ -n "${FAIL_REASON}" ]; then
       echo "FAIL_REASON=${FAIL_REASON}"
