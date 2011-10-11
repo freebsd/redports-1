@@ -98,7 +98,7 @@ clean()
   zfs destroy ${ZFSVOLUME}@work
 
   if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
-    NEWPACKAGES=`find ${TINDERBOX}/packages/${PORTSTREE}/All/ -type f -newermt "${LASTPACKAGEDATE}" -print`
+    NEWPACKAGES=`cd ${TINDERBOX}/packages/${PORTSTREE}/All/ && find * -type f -newermt "${LASTPACKAGEDATE}" -print`
 
     for package in ${NEWPACKAGES}
     do
