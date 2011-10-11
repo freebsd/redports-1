@@ -57,7 +57,7 @@ class Port(object):
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
     #   Using the prepared db statement won't work if we have more than one entry in order_by
-    cursor.execute("SELECT buildqueue.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status), builds.buildstatus, builds.startdate, builds.enddate FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND owner = %s ORDER BY id DESC", req.authname )
+    cursor.execute("SELECT buildqueue.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status), builds.buildstatus, builds.startdate, IF(builds.enddate<builds.startdate,UNIX_TIMESTAMP()*1000000,builds.enddate) FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND owner = %s ORDER BY id DESC", req.authname )
     for id, owner, repository, revision, group, portname, status, statusname, startdate, enddate in cursor:
         port = Port(env)
  	port.id = id
