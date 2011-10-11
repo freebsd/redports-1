@@ -34,7 +34,7 @@ if [ -f "${LOCK}" ]; then
     echo "FAIL_REASON=\"${FAIL_REASON}\"" >> ${FINISHED}
     echo "PACKAGE_NAME=\"${PACKAGE_NAME}\"" >> ${FINISHED}
 
-    curl -s "${FINISHURL}&status=${STATUS}" >/dev/null
+    curl -s "${FINISHURL}" >/dev/null
   fi
 fi
 
