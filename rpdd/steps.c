@@ -78,10 +78,8 @@ int handleStep91(void)
     if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
-    if(mysql_query(conn, "SELECT id, protocol, host, uri, credentials FROM backends WHERE status > 0")){
-        LOGSQL(conn);
-        return 1;
-    }
+    if(mysql_query(conn, "SELECT id, protocol, host, uri, credentials FROM backends WHERE status > 0 FOR UPDATE"))
+        RETURN_ROLLBACK(conn);
 
     result = mysql_store_result(conn);
 
@@ -98,13 +96,13 @@ int handleStep91(void)
         printf("%s is %s\n", builds[2], status == 2 ? "not available" : "available");
 
         sprintf(query, "UPDATE backends SET status = %d WHERE id = %d", status, atol(builds[0]));
-        if(mysql_query(conn, query)){
-           LOGSQL(conn);
-           return 1;
-        }
+        if(mysql_query(conn, query))
+           RETURN_ROLLBACK(conn);
     }
 
-    return 0;
+    mysql_free_result(result);
+
+    RETURN_COMMIT(conn);
 }
 
 int handleStep80(void)
@@ -117,12 +115,10 @@ int handleStep80(void)
     int status;
 
     if((conn = mysql_autoconnect()) == NULL)
-        return 1;
+        return -1;
 
-    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, backendbuilds.id, buildqueue.id FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 80")){
-        LOGSQL(conn);
-        return 1;
-    }
+    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, backendbuilds.id, buildqueue.id FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 80 FOR UPDATE"))
+        RETURN_ROLLBACK(conn);
 
     result = mysql_store_result(conn);
 
@@ -136,26 +132,22 @@ int handleStep80(void)
             printf("CGI Error: %s\n", getenv("ERROR"));
 
             sprintf(query, "UPDATE backendbuilds SET status = 2 WHERE id = %d", atol(builds[6]));
-            if(mysql_query(conn, query)){
-                LOGSQL(conn);
-                return 1;
-            }
+            if(mysql_query(conn, query))
+                RETURN_ROLLBACK(conn);
         }
 
         sprintf(query, "UPDATE builds SET status = 90 WHERE id = %d", atoi(builds[0]));
-        if(mysql_query(conn, query)){
-           LOGSQL(conn);
-           return 1;
-        }
+        if(mysql_query(conn, query))
+           RETURN_ROLLBACK(conn);
 
         sprintf(query, "UPDATE buildqueue SET status = 90, enddate = %lli WHERE id = \"%s\"", microtime(), builds[7]);
-        if(mysql_query(conn, query)){
-           LOGSQL(conn);
-           return 1;
-        }
+        if(mysql_query(conn, query))
+           RETURN_ROLLBACK(conn);
     }
 
-    return 0;
+    mysql_free_result(result);
+
+    RETURN_COMMIT(conn);
 }
 
 int handleStep71(void)
@@ -172,12 +164,10 @@ int handleStep71(void)
     char *status = "error";
 
     if((conn = mysql_autoconnect()) == NULL)
-        return 1;
+        return -1;
 
-    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, owner, queueid FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 71")){
-        LOGSQL(conn);
-        return 1;
-    }
+    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, owner, queueid FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 71 FOR UPDATE"))
+        RETURN_ROLLBACK(conn);
 
     result = mysql_store_result(conn);
 
@@ -227,16 +217,13 @@ int handleStep71(void)
 
         printf("Updating build status for %s to %s\n", builds[0], status);
         sprintf(query, "UPDATE builds SET buildstatus = \"%s\", enddate = %lli, status = 80 WHERE id = %d", status, microtime(), atoi(builds[0]));
-        if(mysql_query(conn, query)){
-           LOGSQL(conn);
-           return 1;
-        }
+        if(mysql_query(conn, query))
+           RETURN_ROLLBACK(conn);
     }
 
     mysql_free_result(result);
-    mysql_close(conn);
 
-    return 0;
+    RETURN_COMMIT(conn);
 }
 
 int handleStep70(void)
@@ -249,22 +236,18 @@ int handleStep70(void)
     char query[1000];
 
     if((conn = mysql_autoconnect()) == NULL)
-        return 1;
+        return -1;
 
-    if(mysql_query(conn, "SELECT builds.id, builds.backendid FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status >= 70 AND builds.status < 80")){
-        LOGSQL(conn);
-        return 1;
-    }
+    if(mysql_query(conn, "SELECT builds.id, builds.backendid FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status >= 70 AND builds.status < 80 FOR UPDATE"))
+        RETURN_ROLLBACK(conn);
 
     result = mysql_store_result(conn);
 
     while ((builds = mysql_fetch_row(result)))
     {
         sprintf(query, "SELECT count(*) FROM builds WHERE status = 71 AND backendid = %d", atoi(builds[1]));
-        if(mysql_query(conn, query)){
-           LOGSQL(conn);
-           return 1;
-        }
+        if(mysql_query(conn, query))
+           RETURN_ROLLBACK(conn);
 
         result2 = mysql_store_result(conn);
         runningdownloads = mysql_fetch_row(result2);
@@ -272,19 +255,16 @@ int handleStep70(void)
         if(atoi(runningdownloads[0]) == 0)
         {
            sprintf(query, "UPDATE builds SET status = 71 WHERE id = %d", atoi(builds[0]));
-           if(mysql_query(conn, query)){
-              LOGSQL(conn);
-              return 1;
-           }
+           if(mysql_query(conn, query))
+               RETURN_ROLLBACK(conn);
         }
 
         mysql_free_result(result2);
     }
 
     mysql_free_result(result);
-    mysql_close(conn);
 
-    return 0;
+    RETURN_COMMIT(conn);
 }
 
 
@@ -298,12 +278,10 @@ int handleStep31(void)
     int status;
 
     if((conn = mysql_autoconnect()) == NULL)
-        return 1;
+        return -1;
 
-    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, portname, buildname, backendkey FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 31")){
-        LOGSQL(conn);
-        return 1;
-    }
+    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, portname, buildname, backendkey FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 31 FOR UPDATE"))
+        RETURN_ROLLBACK(conn);
 
     result = mysql_store_result(conn);
 
@@ -319,16 +297,13 @@ int handleStep31(void)
         }
 
         sprintf(query, "UPDATE builds SET status = %d WHERE id = %d", status, atoi(builds[0]));
-        if(mysql_query(conn, query)){
-           LOGSQL(conn);
-           return 1;
-        }
+        if(mysql_query(conn, query))
+           RETURN_ROLLBACK(conn);
     }
 
     mysql_free_result(result);
-    mysql_close(conn);
 
-    return 0;
+    RETURN_COMMIT(conn);
 }
 
 int handleStep30(void)
@@ -341,12 +316,10 @@ int handleStep30(void)
     int status;
 
     if((conn = mysql_autoconnect()) == NULL)
-        return 1;
+        return -1;
 
-    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, repository, revision FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30")){
-        LOGSQL(conn);
-        return 1;
-    }
+    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, repository, revision FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30 FOR UPDATE"))
+        RETURN_ROLLBACK(conn);
 
     result = mysql_store_result(conn);
 
@@ -362,16 +335,13 @@ int handleStep30(void)
         }
 
         sprintf(query, "UPDATE builds SET status = %d WHERE id = %d", status, atoi(builds[0]));
-        if(mysql_query(conn, query)){
-           LOGSQL(conn);
-           return 1;
-        }
+        if(mysql_query(conn, query))
+           RETURN_ROLLBACK(conn);
     }
          
     mysql_free_result(result);
-    mysql_close(conn);
 
-    return 0;
+    RETURN_COMMIT(conn);
 }
 
 
@@ -387,12 +357,10 @@ int handleStep20(void)
     char query[1000];
 
     if((conn = mysql_autoconnect()) == NULL)
-        return 1;
+        return -1;
 
-    if(mysql_query(conn, "SELECT builds.id, builds.group, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 20 AND builds.backendid = 0")){
-        LOGSQL(conn);
-        return 1;
-    }
+    if(mysql_query(conn, "SELECT builds.id, builds.group, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 20 AND builds.backendid = 0 FOR UPDATE"))
+        RETURN_ROLLBACK(conn);
 
     result = mysql_store_result(conn);
 
@@ -400,20 +368,16 @@ int handleStep20(void)
     {
         sprintf(query, "SELECT backendid, maxparallel FROM backendbuilds, backends WHERE backendid = backends.id AND buildgroup = \"%s\" AND backendbuilds.status = 1 AND backends.status = 1 ORDER BY priority", builds[1]);
 
-        if(mysql_query(conn, query)){
-            LOGSQL(conn);
-            return 1;
-        }
+        if(mysql_query(conn, query))
+            RETURN_ROLLBACK(conn);
 
         result2 = mysql_store_result(conn);
 
         while((backends = mysql_fetch_row(result2)))
         {
             sprintf(query, "SELECT count(*) FROM builds WHERE backendid = %d AND status < 90", atoi(backends[0]));
-            if(mysql_query(conn, query)){
-                LOGSQL(conn);
-                return 1;
-            }
+            if(mysql_query(conn, query))
+                RETURN_ROLLBACK(conn);
 
             result3 = mysql_store_result(conn);
             runningjobs = mysql_fetch_row(result3);
@@ -421,10 +385,8 @@ int handleStep20(void)
             if(atoi(runningjobs[0]) < atoi(backends[1]))
             {
                 sprintf(query, "UPDATE builds SET backendid = %d, status = 30, startdate = %lli WHERE id = %d", atoi(backends[0]), microtime(), atoi(builds[0]));
-                if(mysql_query(conn, query)){
-                    LOGSQL(conn);
-                    return 1;
-                }
+                if(mysql_query(conn, query))
+                    RETURN_ROLLBACK(conn);
             }
 
             mysql_free_result(result3);
@@ -434,10 +396,8 @@ int handleStep20(void)
 
 
         sprintf(query, "SELECT count(*) FROM builds WHERE queueid = \"%s\" AND backendid = 0", builds[2]);
-        if(mysql_query(conn, query)){
-            LOGSQL(conn);
-            return 1;
-        }
+        if(mysql_query(conn, query))
+            RETURN_ROLLBACK(conn);
 
         result2 = mysql_store_result(conn);
         runningjobs = mysql_fetch_row(result2);
@@ -445,19 +405,16 @@ int handleStep20(void)
         if(atoi(runningjobs[0]) == 0)
         {
             sprintf(query, "UPDATE buildqueue SET status = 30 WHERE id = \"%s\"", builds[2]);
-            if(mysql_query(conn, query)){
-                LOGSQL(conn);
-                return 1;
-            }
+            if(mysql_query(conn, query))
+                RETURN_ROLLBACK(conn);
         }
         
         mysql_free_result(result2);
     }
 
     mysql_free_result(result);
-    mysql_close(conn);
-    
-    return 0;
+
+    RETURN_COMMIT(conn);
 }
 
 int handleStep10(void)
@@ -473,12 +430,10 @@ int handleStep10(void)
 
 
     if((conn = mysql_autoconnect()) == NULL)
-        return 1;
+        return -1;
 
-    if(mysql_query(conn, "SELECT id, owner FROM buildqueue WHERE status = 10")){
-        LOGSQL(conn);
-        return 1;
-    }
+    if(mysql_query(conn, "SELECT id, owner FROM buildqueue WHERE status = 10 FOR UPDATE"))
+        RETURN_ROLLBACK(conn);
 
     result = mysql_store_result(conn);
 
@@ -486,10 +441,8 @@ int handleStep10(void)
     {
         sprintf(query, "SELECT buildgroup FROM automaticbuildgroups WHERE username = \"%s\" ORDER BY priority", builds[1]);
 
-        if(mysql_query(conn, query)){
-            LOGSQL(conn);
-            return 1;
-        }
+        if(mysql_query(conn, query))
+            RETURN_ROLLBACK(conn);
 
         result2 = mysql_store_result(conn);
 
@@ -497,25 +450,20 @@ int handleStep10(void)
         {
             printf("adding build %s for %s\n", builds[0], builds[1]);
             sprintf(query, "INSERT INTO builds VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 10, \"\", 0, 0, 0)", builds[0], backends[0]);
-	    if(mysql_query(conn, query)){
-                LOGSQL(conn);
-                return 1;
-            }
+	    if(mysql_query(conn, query))
+                RETURN_ROLLBACK(conn);
         }
 
         mysql_free_result(result2);
 
         sprintf(query, "UPDATE buildqueue SET status = 20 WHERE id = \"%s\"", builds[0]);
-        if(mysql_query(conn, query)){
-            LOGSQL(conn);
-            return 1;
-        }
+        if(mysql_query(conn, query))
+            RETURN_ROLLBACK(conn);
     }
 
     mysql_free_result(result);
-    mysql_close(conn);
 
-    return 0;
+    RETURN_COMMIT(conn);
 }
 
 int nextstepindex(void)

@@ -46,6 +46,12 @@ MYSQL* mysql_autoconnect(void)
         return NULL;
     }
 
+    if(mysql_query(conn, "BEGIN")){
+        LOGSQL(conn);
+        mysql_close(conn);
+        return NULL;
+    }
+
     return conn;
 }
 

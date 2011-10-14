@@ -36,6 +36,26 @@
         mysql_errno(con), __FILE__, __LINE__, mysql_error(con)); \
 }
 
+#define RETURN_ROLLBACK(conn) \
+{ \
+   LOGSQL(conn); \
+   if(mysql_query(conn, "ROLLBACK") != 0) \
+      LOGSQL(conn); \
+   mysql_close(conn); \
+   return -1; \
+}
+
+#define RETURN_COMMIT(conn) \
+{ \
+   if(mysql_query(conn, "COMMIT") != 0) \
+   { \
+      RETURN_ROLLBACK(conn); \
+   } \
+   mysql_close(conn); \
+   return 0; \
+}
+   
+
 extern MYSQL* mysql_autoconnect(void);
 
 #endif /* _DATABASE_H */
