@@ -1,9 +1,9 @@
 #queue_list {
-    max-width: 800px;
+    max-width: 900px;
 }
 
 #buildgroups_list {
-    max-width: 800px;
+    max-width: 900px;
 }
 
 .status-committed {
@@ -35,4 +35,19 @@
 
 .status-leftovers {
     background: #FFFFD8;
+}
+
+/* Buildgroups */
+#buildgroups_list th {
+    height: 2.5em;
+    vertical-align: middle;
+}
+
+#buildgroups_list td {
+    height: 2.8em;
+    vertical-align: middle;
+}
+
+#tabcontent {
+    margin-left: 0;
 }

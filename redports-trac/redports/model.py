@@ -70,10 +70,12 @@ def PortsQueueIterator(env, req):
 	port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
         yield port
 
+
 class Buildgroup(object):
-   def __init__(self, env, id=None):
+   def __init__(self, env, name):
         self.env = env
         self.clear()
+        self.name = name
 
    def clear(self):
         self.name = None
@@ -83,14 +85,50 @@ class Buildgroup(object):
         self.description = None
         self.available = None
         self.status = None
+        self.priority = None
+        self.priorityname = None
+        self.joined = None
+
+   def setPriority(self, priority):
+        self.priority = 0
+        self.priorityname = 'unknown'
+
+        if int(priority) > 0 and int(priority) < 10:
+            self.priority = int(priority)
+        else:
+            self.priority = 5
+
+        if self.priority == 1:
+            self.priorityname = 'highest'
+        if self.priority == 3:
+            self.priorityname = 'high'
+        if self.priority == 5:
+            self.priorityname = 'normal'
+        if self.priority == 7:
+            self.priorityname = 'low'
+        if self.priority == 9:
+            self.priorityname = 'lowest'
+
+   def leave(self, req):
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("DELETE FROM automaticbuildgroups WHERE buildgroup = %s AND username = %s", ( self.name, req.authname ) )
+        db.commit()
+
+   def join(self, req):
+        self.leave(req)
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("INSERT INTO automaticbuildgroups (username, buildgroup, priority) VALUES(%s, %s, %s)", ( req.authname, self.name, self.priority ) )
+        db.commit()
 
 def BuildgroupsIterator(env, req):
    cursor = env.get_db_cnx().cursor()
+   cursor2 = env.get_db_cnx().cursor()
    cursor.execute("SELECT name, version, arch, type, description, (SELECT count(*) FROM backendbuilds, backends WHERE buildgroup = name AND backendbuilds.status = 1 AND backendbuilds.backendid = backends.id AND backends.status = 1) FROM buildgroups WHERE 1=1 ORDER BY version DESC, arch")
 
    for name, version, arch, type, description, available in cursor:
-        buildgroup = Buildgroup(env)
-        buildgroup.name = name
+        buildgroup = Buildgroup(env, name)
         buildgroup.version = version
         buildgroup.arch = arch
         buildgroup.type = type
@@ -99,4 +137,19 @@ def BuildgroupsIterator(env, req):
         buildgroup.status = 'error'
         if available > 0:
             buildgroup.status = 'ok'
+        if req.authname and req.authname != 'anonymous':
+            cursor2.execute("SELECT priority FROM automaticbuildgroups WHERE username = %s AND buildgroup = %s", ( req.authname, name ) )
+            if cursor2.rowcount > 0:
+                buildgroup.joined = 'true'
+                buildgroup.setPriority(cursor2.fetchall()[0][0])
+        
+        yield buildgroup
+
+def AvailableBuildgroupsIterator(env, req):
+   cursor = env.get_db_cnx().cursor()
+   cursor.execute("SELECT name FROM buildgroups WHERE name NOT IN (SELECT buildgroup FROM automaticbuildgroups WHERE username = %s) ORDER BY name", req.authname )
+
+   for name in cursor:
+        buildgroup = Buildgroup(env, name)
+
         yield buildgroup
