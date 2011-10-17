@@ -1,9 +1,9 @@
 #queue_list {
-    max-width: 900px;
+    max-width: 70%;
 }
 
 #buildgroups_list {
-    max-width: 900px;
+    max-width: 70%;
 }
 
 .status-committed {
@@ -50,4 +50,8 @@
 
 #tabcontent {
     margin-left: 0;
+}
+
+#tabcontent form.addnew {
+    width: 25%;
 }
