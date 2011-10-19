@@ -24,7 +24,7 @@
                     <td class="status-$port.statusname"><a href="/wiki/Buildstatus#$port.statusname" title="$port.status">$port.statusname</a></td>
                     <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
                     <td>$port.startdate</td>
-                    <td><py:if test="port.finished"><a href="/~$port.owner/$port.id/build.log">log</a></py:if></td>
+                    <td><py:if test="port.finished"><a href="$port.directory/build.log">log</a></py:if></td>
                 </tr>
             </tbody>
         </table>
