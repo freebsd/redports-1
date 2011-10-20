@@ -331,13 +331,26 @@ int handleStep30(void)
     if((conn = mysql_autoconnect()) == NULL)
         return -1;
 
-    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, repository, revision FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30 FOR UPDATE"))
+    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, repository, revision, backendbuilds.id FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
     result = mysql_store_result(conn);
 
     while ((builds = mysql_fetch_row(result)))
     {
+        sprintf(url, "%s://%s%sstatus?build=%s", builds[1], builds[2], builds[3], builds[5]);
+        if(!getpage(url, builds[4]) || strcmp(getenv("STATUS"), "idle") != 0)
+        {
+           if(getenv("ERROR") != NULL)
+              printf("CGI Error: %s\n", getenv("ERROR"));
+           
+           sprintf(query, "UPDATE backendbuilds SET status = 2 WHERE id = %d", atoi(builds[8]));
+           if(mysql_query(conn, query))
+              RETURN_ROLLBACK(conn);
+
+           continue;
+        }
+
         sprintf(url, "%s://%s%scheckout?repository=%s&revision=%s&build=%s", builds[1], builds[2], builds[3], builds[6], builds[7], builds[5]);
         if(getpage(url, builds[4]))
            status = 31;
