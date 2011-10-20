@@ -120,6 +120,22 @@ clean()
 
   rm -rf ${WRKBASE}/${BUILD} || return 1
 
+  # clean buildqueue from failed builds
+  for ENTRY in `${TINDERBOX}/scripts/tc listBuildPortsQueue -s FAIL -r | egrep ":${BUILD}:"`
+  do
+    ID=`echo ${ENTRY} | cut -d: -f1`
+
+    ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -i ${ID}
+  done
+
+  # clean buildqueue from succeeded builds
+  for ENTRY in `${TINDERBOX}/scripts/tc listBuildPortsQueue -s SUCCESS -r | egrep ":${BUILD}:"`
+  do
+    ID=`echo ${ENTRY} | cut -d: -f1`
+
+    ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -i ${ID}
+  done
+
   return 0
 }
 
@@ -186,51 +202,47 @@ status()
 {
   BUILD=$1
 
-  if [ ! -d "${WRKBASE}/${BUILD}" ]; then
-    mkdir -p ${WRKBASE}/${BUILD}
+  if ${TINDERBOX}/scripts/tc listBuildPortsQueue -s ENQUEUED -r | egrep ":${BUILD}:" >/dev/null ; then
+    echo "STATUS=building"
+  elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s PROCESSING -r | egrep ":${BUILD}:" >/dev/null ; then
+    echo "STATUS=building"
+  elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s FAIL -r | egrep ":${BUILD}:" >/dev/null ; then
+    echo "STATUS=finished"
+  elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s SUCCESS -r | egrep ":${BUILD}:" >/dev/null ; then
+    echo "STATUS=finished"
+  else
+    echo "STATUS=idle"
+
+    # Portstree last builtdate
+    PORTSTREE=`${TINDERBOX}/scripts/tc getPortsTreeForBuild -b ${BUILD} 2>/dev/null`
+
+    if [ -z "${PORTSTREE}" ]; then
+      echo "Unknown portstree for build ${BUILD}"
+      return 1
+    fi
+
+    PORTSTREELASTBUILT=`${TINDERBOX}/scripts/tc dumpObject -t ${PORTSTREE} | grep ports_tree_last_built | cut -d":" -f2- | cut -d" " -f2- 2>/dev/null`
+
+    echo "PORTSTREELASTBUILT=${PORTSTREELASTBUILT}"
   fi
 
   if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
     . ${WRKBASE}/${BUILD}/.finished
 
-    echo "STATUS=finished"
-    echo "BUILDSTATUS=${STATUS}"
+    echo "BUILDSTATUS=${BUILDSTATUS}"
 
     if [ -n "${FAIL_REASON}" ]; then
       echo "FAIL_REASON=${FAIL_REASON}"
     fi
 
-    echo "BUILDLOG=${BUILDLOG}"
+    if [ -n "${BUILDLOG}" ]; then
+      echo "BUILDLOG=${BUILDLOG}"
+    fi
 
     if [ -n "${WRKDIR}" ]; then
       echo "WRKDIR=${WRKDIR}"
     fi
-    return 0
   fi
-
-  if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
-    echo "STATUS=building"
-    return 0
-  fi
-
-  if [ -f "${WRKBASE}/${BUILD}/.lock" ]; then
-    echo "STATUS=used"
-    return 0
-  fi
-
-  echo "STATUS=idle"
-
-  # Portstree last builtdate
-  PORTSTREE=`${TINDERBOX}/scripts/tc getPortsTreeForBuild -b ${BUILD} 2>/dev/null`
-
-  if [ -z "${PORTSTREE}" ]; then
-    echo "Unknown portstree for build ${BUILD}"
-    return 1
-  fi
-
-  PORTSTREELASTBUILT=`${TINDERBOX}/scripts/tc dumpObject -t ${PORTSTREE} | grep ports_tree_last_built | cut -d":" -f2- | cut -d" " -f2- 2>/dev/null`
-
-  echo "PORTSTREELASTBUILT=${PORTSTREELASTBUILT}"
 
   return 0
 }
