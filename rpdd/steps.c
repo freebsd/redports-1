@@ -109,7 +109,9 @@ int handleStep80(void)
 {
     MYSQL *conn;
     MYSQL_RES *result;
+    MYSQL_RES *result2;
     MYSQL_ROW builds;
+    MYSQL_ROW active;
     char url[250];
     char query[1000];
     int status;
@@ -140,9 +142,19 @@ int handleStep80(void)
         if(mysql_query(conn, query))
            RETURN_ROLLBACK(conn);
 
-        sprintf(query, "UPDATE buildqueue SET status = 90, enddate = %lli WHERE id = \"%s\"", microtime(), builds[7]);
+        sprintf(query, "SELECT count(*) FROM builds WHERE queueid = \"%s\" AND status < 90", builds[7]);
         if(mysql_query(conn, query))
            RETURN_ROLLBACK(conn);
+
+        result2 = mysql_store_result(conn);
+        active = mysql_fetch_row(result2);
+
+        if(atoi(active[0]) == 0)
+        {
+           sprintf(query, "UPDATE buildqueue SET status = 90, enddate = %lli WHERE id = \"%s\"", microtime(), builds[7]);
+           if(mysql_query(conn, query))
+              RETURN_ROLLBACK(conn);
+        }
     }
 
     mysql_free_result(result);
@@ -161,6 +173,7 @@ int handleStep71(void)
     char query[1000];
     char remotefile[255];
     char localfile[255];
+    char localdir[255];
     char *status = "error";
 
     if((conn = mysql_autoconnect()) == NULL)
@@ -188,14 +201,14 @@ int handleStep71(void)
               status = getenv("FAIL_REASON");
         }
 
-        sprintf(localfile, "%s/%s/%s", configget("wwwroot"), builds[6], builds[7]);
-        printf("Log dir: %s\n", localfile);
-        if(mkdirrec(localfile) != 0)
+        sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), builds[6], builds[7], builds[0]);
+        printf("Log dir: %s\n", localdir);
+        if(mkdirrec(localdir) != 0)
            continue;
 
         if(getenv("BUILDLOG") != NULL)
         {
-           sprintf(localfile, "%s/%s/%s/build.log", configget("wwwroot"), builds[6], builds[7]);
+           sprintf(localfile, "%s/build.log", localdir);
            sprintf(remotefile, "%s://%s%s", builds[1], builds[2], getenv("BUILDLOG"));
            printf("Downloading Log %s to %s\n", remotefile, localfile);
            if(downloadfile(remotefile, builds[4], localfile) != 0){
@@ -206,7 +219,7 @@ int handleStep71(void)
 
         if(getenv("WRKDIR") != NULL)
         {
-           sprintf(localfile, "%s/%s/%s/wrkdir.tar.gz", configget("wwwroot"), builds[6], builds[7]);
+           sprintf(localfile, "%s/wrkdir.tar.gz", localdir);
            sprintf(remotefile, "%s://%s%s", builds[1], builds[2], getenv("WRKDIR"));
            printf("Downloading Wrkdir %s to %s\n", remotefile, localfile);
            if(downloadfile(remotefile, builds[4], localfile) != 0){
