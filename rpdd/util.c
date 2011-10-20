@@ -188,6 +188,8 @@ int rmdirrec(char *directory)
 
    closedir(dp);
 
+   printf("Removing %s\n", directory);
+
    return rmdir(directory);
 }
 
@@ -198,10 +200,13 @@ int checkdir(char *directory)
 
    file = basename(directory);
 
-   if(strlen(file) != 14)
+   if(strlen(file) < 15)
       return 0;
 
    if(strncmp(file, "20", 2) != 0)
+      return 0;
+
+   if(file[14] != '-')
       return 0;
 
    if(strptime(file, "%Y%m%d%H%M%S", &tm) == NULL)
