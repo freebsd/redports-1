@@ -27,10 +27,10 @@ compress_wrkdir () {
 if [ -f "${LOCK}" ]; then
   . ${LOCK}
 
-  if [ "${PORTDIR}" = "${PORT}" ]; then
+  if [ "${PORTDIR}" = "${PORT}" -o "${FAIL_REASON}" != "" ]; then
     touch ${FINISHED}
 
-    echo "STATUS=\"${STATUS}\"" >> ${FINISHED}
+    echo "BUILDSTATUS=\"${STATUS}\"" >> ${FINISHED}
     echo "FAIL_REASON=\"${FAIL_REASON}\"" >> ${FINISHED}
     echo "PACKAGE_NAME=\"${PACKAGE_NAME}\"" >> ${FINISHED}
 
@@ -39,7 +39,7 @@ if [ -f "${LOCK}" ]; then
 fi
 
 if [ "${STATUS}" = "SUCCESS" ]; then
-  if [ -f "${LOCK}" ]; then
+  if [ -f "${LOCK}" -a "${PORTDIR}" = "${PORT}" ]; then
     echo "BUILDLOG=\"/logs/${BUILD}/${PACKAGE_NAME}.log\"" >> ${FINISHED}
   fi
   if [ -n "${DELETE_OLD}" ]; then
@@ -49,7 +49,7 @@ if [ "${STATUS}" = "SUCCESS" ]; then
     compress_wrkdir
   fi
 elif [ "${STATUS}" != "DUD" ]; then
-  if [ -f "${LOCK}" ]; then
+  if [ -f "${LOCK}" -a "${PORTDIR}" = "${PORT}" ]; then
     echo "BUILDLOG=\"/errors/${BUILD}/${PACKAGE_NAME}.log\"" >> ${FINISHED}
   fi
   compress_wrkdir
