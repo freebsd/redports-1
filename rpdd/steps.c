@@ -50,6 +50,8 @@ struct StepHandler stepreg[] = {
     { "20", handleStep20, 1, 0, 0 },
     { "30", handleStep30, 1, 0, 0 },
     { "31", handleStep31, 1, 0, 0 },
+    { "50", handleStep50, 1, 120, 0 },
+    { "51", handleStep51, 1, 0, 0 },
     { "70", handleStep70, 1, 0, 0 },
     { "71", handleStep71, 1, 0, 0 },
     { "80", handleStep80, 1, 0, 0 },
@@ -276,6 +278,64 @@ int handleStep70(void)
     }
 
     mysql_free_result(result);
+
+    RETURN_COMMIT(conn);
+}
+
+int handleStep51(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_ROW builds;
+    char query[1000];
+    char url[250];
+
+    if((conn = mysql_autoconnect()) == NULL)
+        return -1;
+
+    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 51 FOR UPDATE"))
+        RETURN_ROLLBACK(conn);
+
+    result = mysql_store_result(conn);
+
+    while ((builds = mysql_fetch_row(result)))
+    {
+        sprintf(url, "%s://%s%sstatus?build=%s", builds[1], builds[2], builds[3], builds[5]);
+        if(!getpage(url, builds[4]))
+        {
+           printf("CGI Error: %s\n", getenv("ERROR"));
+           continue;
+        }
+
+        if(strcmp(getenv("STATUS"), "finished") == 0)
+        {
+           sprintf(query, "UPDATE builds SET status = 70 WHERE id = %d", atoi(builds[0]));
+           if(mysql_query(conn, query))
+               RETURN_ROLLBACK(conn);
+        }
+        else
+        {
+           sprintf(query, "UPDATE builds SET status = 50 WHERE id = %d", atoi(builds[0]));
+           if(mysql_query(conn, query))
+               RETURN_ROLLBACK(conn);
+        }
+    }
+
+    mysql_free_result(result);
+
+    RETURN_COMMIT(conn);
+}
+
+
+int handleStep50(void)
+{
+    MYSQL *conn;
+
+    if((conn = mysql_autoconnect()) == NULL)
+        return -1;
+
+    if(mysql_query(conn, "UPDATE builds SET status = 51 WHERE status = 50"))
+        RETURN_ROLLBACK(conn);
 
     RETURN_COMMIT(conn);
 }
