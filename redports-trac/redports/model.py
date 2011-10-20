@@ -51,7 +51,7 @@ class Port(object):
             raise TracError('SQL Error for key ' % key)
         if row[0] != 1:
             raise TracError('Invalid key')
-        cursor.execute("UPDATE builds SET status = %s WHERE backendkey = %s", ( status, key ))
+        cursor.execute("UPDATE builds SET status = %s WHERE backendkey = %s AND status < %s", ( status, key, status ))
         db.commit()
 
 def PortsQueueIterator(env, req):

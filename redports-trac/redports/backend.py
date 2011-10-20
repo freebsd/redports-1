@@ -35,7 +35,7 @@ class BackendConnector(Component):
             key = req.path_info[18:]
             if len(key) > 10 and self.ishex(key):
                 port = Port(self.env)
-                port.updateStatus(70, key)
+                port.updateStatus(51, key)
 
                 req.send("OK", "text/plain", 200)
                 return ""
