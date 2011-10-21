@@ -38,14 +38,20 @@
 
 #include "steps.h"
 
+#define RPD_VERSION "0.8.92"
 #define DAEMON_NAME "rpd"
 #define PID_FILE "/var/run/rpd.pid"
 #define CONF_FILE "rpdd.conf"
 
-#define MAXCHILDS 5
+#define MAXCHILDS 2
+
+void usage(void);
+void version(void);
+void run(void);
+void signal_handler(int sig);
 
 
-void run()
+void run(void)
 {
     pid_t pids[MAXCHILDS];
     int stats[MAXCHILDS];
@@ -101,14 +107,16 @@ void run()
     }
 }
  
-void usage(int argc, char *argv[]){
-    if (argc >= 1){
-        printf("Usage: %s -h -n\n", argv[0]);
-        printf("  Options:\n");
-        printf("      -n   Don't fork off as a daemon.\n");
-        printf("      -h   Show this help screen.\n");
-        printf("\n");
-    }
+void usage(void){
+    printf("Usage: %s [options]\n", DAEMON_NAME);
+    printf("Options:\n");
+    printf("    -n   Don't fork off as a daemon.\n");
+    printf("    -h   Show this help screen.\n");
+    printf("    -v   Show version information.\n");
+}
+
+void version(void){
+    printf("%s %s\n", DAEMON_NAME, RPD_VERSION);
 }
  
 void signal_handler(int sig) {
@@ -147,17 +155,21 @@ int main(int argc, char *argv[]) {
     signal(SIGQUIT, signal_handler);
  
     int c;
-    while( (c = getopt(argc, argv, "nh|help")) != -1) {
+    while( (c = getopt(argc, argv, "nhv")) != -1) {
         switch(c){
             case 'h':
-                usage(argc, argv);
+                usage();
                 exit(0);
                 break;
             case 'n':
                 daemonize = 0;
                 break;
+            case 'v':
+                version();
+                exit(0);
+                break;
             default:
-                usage(argc, argv);
+                usage();
                 exit(0);
                 break;
         }
