@@ -18,6 +18,12 @@ class Port(object):
         self.statusname = None
         self.startdate = None
 
+    def addPort(self):
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES (CONCAT(DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), '-', RPAD(SUBSTRING(FLOOR(RAND()*1000000), 1, 5), 5, '0')), %s, %s, %s, %s, 10, UNIX_TIMESTAMP()*1000000, 0)", ( self.owner, self.repository, self.revision, self.portname ))
+        db.commit()
+
     def setStatus(self, status, statusname):
         self.status = status
 

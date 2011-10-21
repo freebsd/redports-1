@@ -7,18 +7,46 @@
   <xi:include href="layout.html" />
   <xi:include href="macros.html" />
   <head>
-    <title>Your Commits</title>
+    <title>Your Builds</title>
   </head>
 
   <body>
-    <h1>Your Commits</h1>
+    <h1>Your Builds</h1>
     <div id="tabcontent">
+
+        <form class="addnew" method="post" action="">
+        <fieldset>
+          <legend>Rebuild Port:</legend>
+          <table>
+            <tr class="field">
+              <th><label for="repository">Repository:</label></th>
+              <td><a href="/browser/$authname">$repository</a></td>
+            </tr>
+            <tr class="field">
+              <th><label for="revision">Revision:</label></th>
+              <td><input type="text" name="revision" size="5" value="$revision" /></td>
+            </tr>
+            <tr class="field">
+              <th><label for="portname">Port:</label></th>
+              <td><input type="text" name="portname" /></td>
+            </tr>
+          </table>
+          <p class="help">
+            Trigger a rebuild for a specific port in your repository.
+          </p>
+          <div class="buttons">
+            <input type="submit" name="addbuild" value="Add" />
+          </div>
+        </fieldset>
+        </form>
+
+
         <table class="listing" id="queue_list">
             <thead>
                 <tr><th>Revision</th><th>Port</th><th>Status</th><th>Buildgroup</th><th>Buildtime</th><th>Links</th></tr>
             </thead>
             <tbody>
-                <tr py:for="port in commitqueue">
+                <tr py:for="port in buildqueue">
                     <td><a href="/changeset/$port.revision/">r$port.revision</a></td>
                     <td>$port.portname</td>
                     <td class="status-$port.statusname"><a href="/wiki/Buildstatus#$port.statusname" title="$port.status">$port.statusname</a></td>

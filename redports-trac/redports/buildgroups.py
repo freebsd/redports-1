@@ -15,7 +15,7 @@ class BuildgroupPanel(Component):
     implements(INavigationContributor, ITemplateProvider, IRequestHandler, IPermissionRequestor)
 
     def get_active_navigation_item(self, req):
-        return 'commitqueue'
+        return 'buildqueue'
 
     def get_navigation_items(self, req):
         return ""
