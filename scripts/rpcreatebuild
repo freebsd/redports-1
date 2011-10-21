@@ -13,7 +13,7 @@ ARCH=$2
 BUILD=${VERSION}-FreeBSD-${ARCH}
 TINDERBOX=/usr/local/tinderbox
 
-if [ `echo -n ${VERSION} | wc -c` -eq 1 ]; then
+if ! echo ${VERSION} | grep "\." > /dev/null ; then
    OPTIONS="-t . -u CSUP"
 else
    OPTIONS="-t ${VERSION}-RELEASE -u LFTP -H ${FTP}"
