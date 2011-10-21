@@ -41,9 +41,9 @@
         </form>
 
 
-        <table class="listing" id="queue_list">
+        <table class="listing" id="buildqueue_list">
             <thead>
-                <tr><th>Revision</th><th>Port</th><th>Status</th><th>Buildgroup</th><th>Buildtime</th><th>Links</th></tr>
+                <tr><th>Rev.</th><th>Port</th><th>Status</th><th>Buildgroup</th><th>Buildtime</th><th>Links</th><th>Options</th></tr>
             </thead>
             <tbody>
                 <tr py:for="port in buildqueue">
@@ -53,6 +53,14 @@
                     <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
                     <td>$port.startdate</td>
                     <td><py:if test="port.finished"><a href="$port.directory/build.log">log</a></py:if></td>
+                    <td>
+                      <py:if test="port.finished">
+                        <form method="post" action="">
+                          <input type="hidden" name="id" value="$port.id" />
+                          <input type="submit" name="deletebuild" value="Delete" />
+                        </form>
+                      </py:if>
+                    </td>
                 </tr>
             </tbody>
         </table>

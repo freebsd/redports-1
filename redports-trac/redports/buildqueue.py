@@ -72,6 +72,12 @@ class BuildqueuePanel(Component):
             port.addPort()
             req.redirect(req.href.buildqueue())
 
+        if req.method == 'POST' and req.args.get('deletebuild'):
+            port = Port(self.env)
+            port.id = req.args.get('id')
+            port.deleteBuildQueueEntry(req)
+            req.redirect(req.href.buildqueue())
+
         req.perm('redports').assert_permission('BUILDQUEUE_VIEW')
 
         add_stylesheet(req, 'common/css/admin.css')

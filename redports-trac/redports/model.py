@@ -9,6 +9,7 @@ class Port(object):
 
     def clear(self):
         self.id = None
+        self.queueid = None
 	self.owner = None
 	self.repository = None
         self.revision = None
@@ -60,13 +61,28 @@ class Port(object):
         cursor.execute("UPDATE builds SET status = %s WHERE backendkey = %s AND status < %s", ( status, key, status ))
         db.commit()
 
+    def deleteBuildQueueEntry(self, req):
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("SELECT count(*) FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND builds.id = %s AND buildqueue.owner = %s", ( self.id, req.authname ))
+        row = cursor.fetchone()
+        if not row:
+            raise TracError('SQL Error for key ' % key)
+        if row[0] != 1:
+            raise TracError('Invalid ID')
+        
+        cursor.execute("DELETE FROM builds WHERE id = %s", self.id )
+        db.commit()
+        
+
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
     #   Using the prepared db statement won't work if we have more than one entry in order_by
-    cursor.execute("SELECT buildqueue.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, builds.id, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status), builds.buildstatus, builds.startdate, IF(builds.enddate<builds.startdate,UNIX_TIMESTAMP()*1000000,builds.enddate) FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND owner = %s ORDER BY builds.id DESC", req.authname )
-    for id, owner, repository, revision, buildid, group, portname, status, statusname, startdate, enddate in cursor:
+    cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status), builds.buildstatus, builds.startdate, IF(builds.enddate<builds.startdate,UNIX_TIMESTAMP()*1000000,builds.enddate) FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND owner = %s ORDER BY builds.id DESC", req.authname )
+    for id, owner, repository, revision, queueid, group, portname, status, statusname, startdate, enddate in cursor:
         port = Port(env)
  	port.id = id
+        port.queueid = queueid
 	port.owner = owner
 	port.repository = repository
 	port.revision = revision
@@ -74,7 +90,7 @@ def PortsQueueIterator(env, req):
 	port.portname = portname
         port.setStatus(status, statusname)
 	port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
-	port.directory = '/~%s/%s-%s' % ( owner, id, buildid )
+	port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
         yield port
 
 

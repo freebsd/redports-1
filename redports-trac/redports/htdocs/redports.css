@@ -1,11 +1,30 @@
-#queue_list {
+/* Buildqueue */
+#buildqueue_list {
     max-width: 70%;
 }
 
+#buildqueue_list td {
+    vertical-align: middle;
+}
+
+
+/* Buildgroups */
 #buildgroups_list {
     max-width: 70%;
 }
 
+#buildgroups_list th {
+    height: 2.5em;
+    vertical-align: middle;
+}
+
+#buildgroups_list td {
+    height: 2.8em;
+    vertical-align: middle;
+}
+
+
+/* Status */
 .status-committed {
 }
 
@@ -24,6 +43,7 @@
     background: green;
 }
 
+
 /* Buildstatus */
 .status-fail {
     background: red;
@@ -37,16 +57,6 @@
     background: #FFFFD8;
 }
 
-/* Buildgroups */
-#buildgroups_list th {
-    height: 2.5em;
-    vertical-align: middle;
-}
-
-#buildgroups_list td {
-    height: 2.8em;
-    vertical-align: middle;
-}
 
 #tabcontent {
     margin-left: 0;
