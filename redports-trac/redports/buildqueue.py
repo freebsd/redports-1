@@ -10,7 +10,7 @@ from genshi.builder import tag
 from pkg_resources import resource_filename
 import re
 
-from model import Port, PortsQueueIterator
+from model import Port, PortsQueueIterator, AllBuildgroupsIterator
 
 class BuildqueuePanel(Component):
     """ Pages for adding/editing contacts. """
@@ -69,6 +69,7 @@ class BuildqueuePanel(Component):
             port.repository = repopath
             port.revision = req.args.get('revision')
             port.portname = req.args.get('portname')
+            port.group = req.args.get('group')
             port.addPort()
             req.redirect(req.href.buildqueue())
 
@@ -85,6 +86,7 @@ class BuildqueuePanel(Component):
 
         return ('buildqueue.html', 
             {   'buildqueue': PortsQueueIterator(self.env, req),
+                'allbuildgroups': AllBuildgroupsIterator(self.env),
                 'repository': repopath,
                 'revision': repos.youngest_rev,
                 'authname': req.authname

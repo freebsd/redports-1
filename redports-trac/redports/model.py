@@ -22,10 +22,33 @@ class Port(object):
     def addPort(self):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
-        cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES (CONCAT(DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), '-', RPAD(SUBSTRING(FLOOR(RAND()*1000000), 1, 5), 5, '0')), %s, %s, %s, %s, 10, UNIX_TIMESTAMP()*1000000, 0)", ( self.owner, self.repository, self.revision, self.portname ))
+
+        cursor.execute("SELECT CONCAT(DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), '-', RPAD(SUBSTRING(FLOOR(RAND()*1000000), 1, 5), 5, '0'))")
+        row = cursor.fetchone()
+        if not row:
+            raise TracError('SQL Error while generating new buildqueue id')
+
+        self.queueid = row[0]
+
+        if self.group == 'automatic':
+            self.setStatus(10)
+        else:
+            self.setStatus(20)
+
+            cursor.execute("SELECT count(*) FROM buildgroups WHERE name = %s", self.group )
+            row = cursor.fetchone()
+            if not row:
+                raise TracError('SQL Error')
+            if row[0] != 1:
+                raise TracError('Invalid buildgroup')
+
+        cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES (%s, %s, %s, %s, %s, %s, UNIX_TIMESTAMP()*1000000, 0)", ( self.queueid, self.owner, self.repository, self.revision, self.portname, self.status ))
+
+        if self.status == 20:
+             cursor.execute("INSERT INTO builds VALUES ( null, '%s', SUBSTRING(MD5(RAND()), 1, 25), '%s', 10, null, 0, 0, 0 )" % ( self.queueid, self.group ))
         db.commit()
 
-    def setStatus(self, status, statusname):
+    def setStatus(self, status, statusname=None):
         self.status = status
 
         if math.floor(status / 10) == 1:
@@ -179,3 +202,13 @@ def AvailableBuildgroupsIterator(env, req):
         buildgroup = Buildgroup(env, name)
 
         yield buildgroup
+
+def AllBuildgroupsIterator(env):
+   cursor = env.get_db_cnx().cursor()
+   cursor.execute("SELECT name FROM buildgroups ORDER BY name")
+
+   for name in cursor:
+        buildgroup = Buildgroup(env, name)
+
+        yield buildgroup
+

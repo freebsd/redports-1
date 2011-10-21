@@ -30,6 +30,15 @@
               <th><label for="portname">Port:</label></th>
               <td><input type="text" name="portname" /></td>
             </tr>
+            <tr class="field">
+              <th><label for="group">Buildgroup:</label></th>
+              <td>
+                <select id="group" name="group">
+                  <option value="automatic">automatic</option>
+                  <option py:for="groups in allbuildgroups">$groups.name</option>
+                </select>
+              </td>
+            </tr>
           </table>
           <p class="help">
             Trigger a rebuild for a specific port in your repository.
