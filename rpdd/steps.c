@@ -535,7 +535,7 @@ int handleStep10(void)
         while((backends = mysql_fetch_row(result2)))
         {
             printf("adding build %s for %s\n", builds[0], builds[1]);
-            sprintf(query, "INSERT INTO builds VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 10, \"\", 0, 0, 0)", builds[0], backends[0]);
+            sprintf(query, "INSERT INTO builds VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 10, null, 0, 0, 0)", builds[0], backends[0]);
 	    if(mysql_query(conn, query))
                 RETURN_ROLLBACK(conn);
         }
