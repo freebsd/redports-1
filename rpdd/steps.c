@@ -307,7 +307,7 @@ int handleStep51(void)
            continue;
         }
 
-        if(strcmp(getenv("STATUS"), "finished") == 0)
+        if(strcmp(getenv("STATUS"), "finished") == 0 || strcmp(getenv("STATUS"), "idle") == 0)
         {
            sprintf(query, "UPDATE builds SET status = 70 WHERE id = %d", atoi(builds[0]));
            if(mysql_query(conn, query))
