@@ -30,8 +30,10 @@ class Port(object):
 
         if math.floor(status / 10) == 1:
             self.statusname = 'created'
+            self.deletable = True
         elif math.floor(status / 10) == 2:
             self.statusname = 'waiting'
+            self.deletable = True
         elif math.floor(status / 10) == 3:
             self.statusname = 'starting'
         elif math.floor(status / 10) == 5:
@@ -43,6 +45,7 @@ class Port(object):
         elif math.floor(status / 10) == 9:
             self.statusname = 'finished'
             self.finished = True
+            self.deletable = True
         else:
             self.statusname = 'unknown'
 
@@ -71,7 +74,7 @@ class Port(object):
         if row[0] != 1:
             raise TracError('Invalid ID')
         
-        cursor.execute("DELETE FROM builds WHERE id = %s", self.id )
+        cursor.execute("DELETE FROM builds WHERE id = %s AND (status < 30 OR status > 89)", self.id )
         db.commit()
         
 

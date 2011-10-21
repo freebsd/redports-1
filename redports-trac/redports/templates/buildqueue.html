@@ -54,7 +54,7 @@
                     <td>$port.startdate</td>
                     <td><py:if test="port.finished"><a href="$port.directory/build.log">log</a></py:if></td>
                     <td>
-                      <py:if test="port.finished">
+                      <py:if test="port.deletable">
                         <form method="post" action="">
                           <input type="hidden" name="id" value="$port.id" />
                           <input type="submit" name="deletebuild" value="Delete" />
