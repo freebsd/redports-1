@@ -17,6 +17,8 @@ class Port(object):
         self.portname = None
         self.status = None
         self.statusname = None
+        self.buildlog = None
+        self.wrkdir = None
         self.startdate = None
 
     def addPort(self):
@@ -104,20 +106,22 @@ class Port(object):
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
     #   Using the prepared db statement won't work if we have more than one entry in order_by
-    cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status), builds.buildstatus, builds.startdate, IF(builds.enddate<builds.startdate,UNIX_TIMESTAMP()*1000000,builds.enddate) FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND owner = %s ORDER BY builds.id DESC", req.authname )
-    for id, owner, repository, revision, queueid, group, portname, status, statusname, startdate, enddate in cursor:
-        port = Port(env)
+    cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status), builds.buildstatus, builds.buildlog, builds.wrkdir, builds.startdate, IF(builds.enddate<builds.startdate,UNIX_TIMESTAMP()*1000000,builds.enddate) FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND owner = %s ORDER BY builds.id DESC", req.authname )
+    for id, owner, repository, revision, queueid, group, portname, status, statusname, buildlog, wrkdir, startdate, enddate in cursor:
+	port = Port(env)
  	port.id = id
-        port.queueid = queueid
+	port.queueid = queueid
 	port.owner = owner
 	port.repository = repository
 	port.revision = revision
 	port.group = group
 	port.portname = portname
-        port.setStatus(status, statusname)
+	port.setStatus(status, statusname)
+	port.buildlog = buildlog
+	port.wrkdir = wrkdir
 	port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
 	port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
-        yield port
+	yield port
 
 
 class Buildgroup(object):
