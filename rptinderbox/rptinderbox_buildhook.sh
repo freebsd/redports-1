@@ -38,7 +38,7 @@ if [ -f "${LOCK}" ]; then
   fi
 fi
 
-if [ "${STATUS}" = "SUCCESS" ]; then
+if [ "${STATUS}" = "SUCCESS" -o "${STATUS}" = "LEFTOVERS" ]; then
   if [ -f "${LOCK}" -a "${PORTDIR}" = "${PORT}" ]; then
     echo "BUILDLOG=\"/logs/${BUILD}/${PACKAGE_NAME}.log\"" >> ${FINISHED}
   fi
