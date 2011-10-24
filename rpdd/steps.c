@@ -25,6 +25,8 @@
  */
 
 #include <stdio.h>
+#include <string.h>
+#include <libgen.h>
 
 #include "database.h"
 #include "remote.h"
@@ -210,24 +212,32 @@ int handleStep71(void)
 
         if(getenv("BUILDLOG") != NULL)
         {
-           sprintf(localfile, "%s/build.log", localdir);
+           sprintf(localfile, "%s/%s", localdir, basename(getenv("BUILDLOG")));
            sprintf(remotefile, "%s://%s%s", builds[1], builds[2], getenv("BUILDLOG"));
            printf("Downloading Log %s to %s\n", remotefile, localfile);
            if(downloadfile(remotefile, builds[4], localfile) != 0){
               printf("Download failed!");
               continue;
            }
+
+           sprintf(query, "UPDATE builds SET buildlog = \"%s\" WHERE id = %d", basename(localfile), atoi(builds[0]));
+           if(mysql_query(conn, query))
+              RETURN_ROLLBACK(conn);
         }
 
         if(getenv("WRKDIR") != NULL)
         {
-           sprintf(localfile, "%s/wrkdir.tar.gz", localdir);
+           sprintf(localfile, "%s/%s", localdir, basename(getenv("WRKDIR")));
            sprintf(remotefile, "%s://%s%s", builds[1], builds[2], getenv("WRKDIR"));
            printf("Downloading Wrkdir %s to %s\n", remotefile, localfile);
            if(downloadfile(remotefile, builds[4], localfile) != 0){
               printf("Download failed!");
               continue;
            }
+
+           sprintf(query, "UPDATE builds SET wrkdir = \"%s\" WHERE id = %d", basename(localfile), atoi(builds[0]));
+           if(mysql_query(conn, query))
+              RETURN_ROLLBACK(conn);
         }
 
         printf("Updating build status for %s to %s\n", builds[0], status);
@@ -535,7 +545,7 @@ int handleStep10(void)
         while((backends = mysql_fetch_row(result2)))
         {
             printf("adding build %s for %s\n", builds[0], builds[1]);
-            sprintf(query, "INSERT INTO builds VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 10, null, 0, 0, 0)", builds[0], backends[0]);
+            sprintf(query, "INSERT INTO builds VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 10, null, null, null, 0, 0, 0)", builds[0], backends[0]);
 	    if(mysql_query(conn, query))
                 RETURN_ROLLBACK(conn);
         }
