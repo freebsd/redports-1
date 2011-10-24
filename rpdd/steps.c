@@ -58,8 +58,31 @@ struct StepHandler stepreg[] = {
     { "71", handleStep71, 1, 0, 0 },
     { "80", handleStep80, 1, 0, 0 },
     { "91", handleStep91, 1, 120, 0 },
-    { "95", handleStep95, 1, 7200, 0 }
+    { "95", handleStep95, 1, 7200, 0 },
+    { "96", handleStep96, 1, 7200, 0 }
 };
+
+int handleStep96(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    char query[1000];
+
+    int cleandays = atoi(configget("cleandays"));
+
+    if((conn = mysql_autoconnect()) == NULL)
+        return 1;
+
+    sprintf(query, "DELETE FROM builds WHERE status >= 90 AND enddate < %lli", microtime()-(cleandays*86400*1000000L));
+    if(mysql_query(conn, query))
+        RETURN_ROLLBACK(conn);
+
+    sprintf(query, "DELETE FROM buildqueue WHERE status >= 90 AND enddate < %lli", microtime()-(cleandays*86400*1000000L));
+    if(mysql_query(conn, query))
+        RETURN_ROLLBACK(conn);
+
+    RETURN_COMMIT(conn);
+}
 
 int handleStep95(void)
 {

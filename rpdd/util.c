@@ -44,6 +44,7 @@ struct configparam
 };
 
 struct configparam config[] = {
+    { "cleandays",     "16" },
     { "dbHost",        "localhost" },
     { "dbUsername",    "root" },
     { "dbPassword",    "" },
@@ -197,6 +198,7 @@ int checkdir(char *directory)
 {
    struct tm tm;
    char *file;
+   int cleandays = atoi(configget("cleandays"));
 
    file = basename(directory);
 
@@ -212,7 +214,7 @@ int checkdir(char *directory)
    if(strptime(file, "%Y%m%d%H%M%S", &tm) == NULL)
       return 0;
 
-   return difftime(time(NULL), mktime(&tm)) > 30*3600*24;
+   return difftime(time(NULL), mktime(&tm)) > cleandays*3600*24;
 }
 
 int cleanolddir(char *directory)
