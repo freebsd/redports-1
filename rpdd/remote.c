@@ -37,7 +37,8 @@ char *remotevars[] = {
     "FAIL_REASON",
     "OK",
     "STATUS",
-    "WRKDIR"
+    "WRKDIR",
+    ""
 };
 
 /* Internals */
