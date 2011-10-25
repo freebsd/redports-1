@@ -58,10 +58,13 @@ struct StepHandler stepreg[] = {
     { "71", handleStep71, 1, 0, 0 },
     { "80", handleStep80, 1, 0, 0 },
     { "91", handleStep91, 1, 120, 0 },
+    { "92", handleStep92, 1, 7200, 0 },
     { "95", handleStep95, 1, 7200, 0 },
     { "96", handleStep96, 1, 7200, 0 }
 };
 
+
+/* Clean database from old entries */
 int handleStep96(void)
 {
     MYSQL *conn;
@@ -84,6 +87,8 @@ int handleStep96(void)
     RETURN_COMMIT(conn);
 }
 
+
+/* Clean filesystem from old logfiles and wrkdirs */
 int handleStep95(void)
 {
     printf("Cleaning old directories in %s\n", configget("wwwroot"));
@@ -93,6 +98,49 @@ int handleStep95(void)
     return 0;
 }
 
+
+/* Checking builds */
+int handleStep92(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_ROW builds;
+    char url[250];
+    char query[1000];
+    int status;
+
+    if((conn = mysql_autoconnect()) == NULL)
+        return 1;
+
+    if(mysql_query(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE"))
+        RETURN_ROLLBACK(conn);
+
+    result = mysql_store_result(conn);
+
+    while ((builds = mysql_fetch_row(result)))
+    {
+        printf("Checking build %s on backend %s\n", builds[5], builds[2]);
+
+        sprintf(url, "%s://%s%sselftest?build=%s", builds[1], builds[2], builds[3], builds[5]);
+        if(getpage(url, builds[4]) == -1)
+           status = 2; /* Status failure */
+        else
+           status = 1; /* Status enabled */
+
+        printf("%s is %s\n", builds[5], status == 2 ? "not available" : "available");
+
+        sprintf(query, "UPDATE backendbuilds SET status = %d WHERE id = %d", status, atol(builds[6]));
+        if(mysql_query(conn, query))
+           RETURN_ROLLBACK(conn);
+    }
+
+    mysql_free_result(result);
+
+    RETURN_COMMIT(conn);
+}
+
+
+/* Ping Backends */
 int handleStep91(void)
 {
     MYSQL *conn;
@@ -132,6 +180,8 @@ int handleStep91(void)
     RETURN_COMMIT(conn);
 }
 
+
+/* Clean build on backend after everything was transferred */
 int handleStep80(void)
 {
     MYSQL *conn;
@@ -189,6 +239,8 @@ int handleStep80(void)
     RETURN_COMMIT(conn);
 }
 
+
+/* Transfer logfiles and wrkdirs from backends */
 int handleStep71(void)
 {
     MYSQL *conn;
@@ -274,6 +326,8 @@ int handleStep71(void)
     RETURN_COMMIT(conn);
 }
 
+
+/* Start transfers from backends but only one per backend to no overload the link */
 int handleStep70(void)
 {
     MYSQL *conn;
@@ -315,6 +369,8 @@ int handleStep70(void)
     RETURN_COMMIT(conn);
 }
 
+
+/* Check build status for a running job */
 int handleStep51(void)
 {
     MYSQL *conn;
@@ -360,6 +416,7 @@ int handleStep51(void)
 }
 
 
+/* Queue running jobs and periodicaly shift them to status 51 for actual checking  */
 int handleStep50(void)
 {
     MYSQL *conn;
@@ -374,6 +431,7 @@ int handleStep50(void)
 }
 
 
+/* Start new build on backend */
 int handleStep31(void)
 {
     MYSQL *conn;
@@ -412,6 +470,8 @@ int handleStep31(void)
     RETURN_COMMIT(conn);
 }
 
+
+/* Prepare backend for building a new job (checkout portstree, ZFS snapshot, ...) */
 int handleStep30(void)
 {
     MYSQL *conn;
@@ -464,6 +524,7 @@ int handleStep30(void)
 }
 
 
+/* Choose available backend for building */
 int handleStep20(void)
 {
     MYSQL *conn;
@@ -536,6 +597,8 @@ int handleStep20(void)
     RETURN_COMMIT(conn);
 }
 
+
+/* Create new jobs based on the buildgroups that the user joined */
 int handleStep10(void)
 {
     MYSQL *conn;
@@ -585,11 +648,13 @@ int handleStep10(void)
     RETURN_COMMIT(conn);
 }
 
+
 int nextstepindex(void)
 {
     static long step;
     return (step++%(sizeof(stepreg)/sizeof(struct StepHandler)));
 }
+
 
 int nextstep(int steps[], int max)
 {
@@ -632,6 +697,7 @@ int nextstep(int steps[], int max)
     return -1;
 }
 
+
 int handlestep(int step)
 {
     int rv;
@@ -647,6 +713,7 @@ int handlestep(int step)
  
     return rv;
 }
+
 
 int setlastrun(int step)
 {
