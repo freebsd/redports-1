@@ -213,6 +213,8 @@ status()
     echo "BUILDSTATUS=ERROR"
   elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s SUCCESS -r | egrep ":${BUILD}:" >/dev/null ; then
     echo "STATUS=finished"
+  elif [ -f "${WRKBASE}/${BUILD}/.lock" ]; then
+    echo "STATUS=busy"
   else
     echo "STATUS=idle"
 
@@ -250,6 +252,46 @@ status()
   return 0
 }
 
+update()
+{
+  BUILD=$1
+  LOCK=${WRKBASE}/${BUILD}/.lock
+
+  if [ -f "${WRKBASE}/.lock" ]; then
+    echo "Maintenance lock exists."
+    return 1
+  fi
+
+  if [ -f "${LOCK}" ]; then
+    echo "Lock for build ${BUILD} exists."
+    return 1
+  fi
+
+  if [ ! -d "${WRKBASE}/${BUILD}" ]; then
+    mkdir -p ${WRKBASE}/${BUILD} || return 1
+  fi
+
+  # create build lock
+  touch ${LOCK} || return 1
+
+  # determine portstree
+  PORTSTREE=`${TINDERBOX}/scripts/tc getPortsTreeForBuild -b ${BUILD} 2>/dev/null`
+
+  if [ -z "${PORTSTREE}" ]; then
+    echo "Unknown portstree for build ${BUILD}"
+    rm -f ${LOCK}
+    return 1
+  fi
+
+  # update portstree
+  if ! ${TINDERBOX}/scripts/tc updatePortsTree -p ${PORTSTREE} >/dev/null ; then
+    rm -f ${LOCK}
+    return 1
+  fi
+
+  rm -f ${LOCK}
+  return 0
+}
 
 case "$1" in
 'build')
@@ -289,8 +331,17 @@ case "$1" in
     return 1
   fi
 ;;
+'update')
+  if update $2 2>&1 ; then
+    echo "OK"
+    return 0
+  else
+    echo "ERROR"
+    return 1
+  fi
+;;
 *)
-  echo "Usage: $0 [build|checkout|clean|status] param"
+  echo "Usage: $0 [build|checkout|clean|status|update] param"
   exit 1
 ;;
 esac
