@@ -293,6 +293,31 @@ update()
   return 0
 }
 
+selftest()
+{
+  BUILD=$1
+
+  if [ ! -d "${TINDERBOX}/builds/${BUILD}" ]; then
+    echo "Unknown build ${BUILD}"
+    return 1
+  fi
+
+  PORTSTREE=`${TINDERBOX}/scripts/tc getPortsTreeForBuild -b ${BUILD} 2>/dev/null`
+
+  if [ -z "${PORTSTREE}" ]; then
+    echo "Unknown portstree for build ${BUILD}"
+    return 1
+  fi
+
+  ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
+  if ! zfs list ${ZFSVOLUME} >/dev/null ; then
+    echo "ZFS volume ${ZFSVOLUME} does not exist"
+    return 1
+  fi
+
+  return 0
+}
+
 case "$1" in
 'build')
   if build $2 $3 $4 $5 2>&1 ; then
@@ -340,8 +365,17 @@ case "$1" in
     return 1
   fi
 ;;
+'selftest')
+  if selftest $2 2>&1 ; then
+    echo "OK"
+    return 0
+  else
+    echo "ERROR"
+    return 1
+  fi
+;;
 *)
-  echo "Usage: $0 [build|checkout|clean|status|update] param"
+  echo "Usage: $0 [build|checkout|clean|status|update|selftest] param"
   exit 1
 ;;
 esac
