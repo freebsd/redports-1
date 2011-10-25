@@ -59,6 +59,7 @@ struct StepHandler stepreg[] = {
     { "80", handleStep80, 1, 0, 0 },
     { "91", handleStep91, 1, 120, 0 },
     { "92", handleStep92, 1, 7200, 0 },
+    { "93", handleStep93, 1, 600, 0 },
     { "95", handleStep95, 1, 7200, 0 },
     { "96", handleStep96, 1, 7200, 0 }
 };
@@ -96,6 +97,74 @@ int handleStep95(void)
     cleanolddir(configget("wwwroot"));
 
     return 0;
+}
+
+
+/* Update portstrees on backend */
+int handleStep93(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_ROW builds;
+    char url[250];
+    char query[1000];
+    int status;
+    struct tm tm;
+
+    int maxage = atoi(configget("tbPortsTreeMaxAge"));
+
+    if((conn = mysql_autoconnect()) == NULL)
+        return 1;
+
+    if(mysql_query(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE"))
+        RETURN_ROLLBACK(conn);
+
+    result = mysql_store_result(conn);
+
+    while ((builds = mysql_fetch_row(result)))
+    {
+        printf("Checking build %s on backend %s\n", builds[5], builds[2]);
+
+        sprintf(url, "%s://%s%sstatus?build=%s", builds[1], builds[2], builds[3], builds[5]);
+        if(!getpage(url, builds[4]))
+        {
+           printf("CGI Error: %s\n", getenv("ERROR"));
+           continue;
+        }
+
+        if(strcmp(getenv("STATUS"), "idle") != 0 || getenv("PORTSTREELASTBUILT") == NULL)
+           continue;
+
+        if(strptime(getenv("PORTSTREELASTBUILT"), "%Y-%m-%d %H:%M:%S", &tm) == NULL)
+        {
+           printf("converting portstreelastbuilt failed!");
+           continue;
+        }
+
+        if(difftime(time(NULL), mktime(&tm)) < 3600*maxage)
+        {
+           printf("Portstree last built %s does not exceed max. age of %d hours\n", getenv("PORTSTREELASTBUILT"), maxage);
+           continue;
+        }
+
+        printf("Updating portstree for build %s on backend %s\n", builds[5], builds[2]);
+
+        sprintf(url, "%s://%s%supdate?build=%s", builds[1], builds[2], builds[3], builds[5]);
+        if(!getpage(url, builds[4]))
+        {
+           printf("CGI Error: %s\n", getenv("ERROR"));
+           continue;
+        }
+
+        printf("Updating portstree for build %s finished.\n", builds[5]);
+
+        /* only 1 at a time */
+        break;
+    }
+
+    mysql_free_result(result);
+
+    RETURN_COMMIT(conn);
 }
 
 

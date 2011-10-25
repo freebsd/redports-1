@@ -49,6 +49,7 @@ struct configparam config[] = {
     { "dbUsername",    "root" },
     { "dbPassword",    "" },
     { "dbDatabase",    "trac" },
+    { "tbPortsTreeMaxAge", "48" },
     { "wwwurl",        "" },
     { "wwwroot",       "" },
     { "", "" }

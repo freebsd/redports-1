@@ -36,6 +36,7 @@ char *remotevars[] = {
     "ERROR",
     "FAIL_REASON",
     "OK",
+    "PORTSTREELASTBUILT",
     "STATUS",
     "WRKDIR",
     ""
