@@ -31,8 +31,13 @@ if [ -f "${LOCK}" ]; then
     touch ${FINISHED}
 
     echo "BUILDSTATUS=\"${STATUS}\"" >> ${FINISHED}
-    echo "FAIL_REASON=\"${FAIL_REASON}\"" >> ${FINISHED}
     echo "PACKAGE_NAME=\"${PACKAGE_NAME}\"" >> ${FINISHED}
+
+    if [ "${PORTDIR}" = "${PORT}" ]; then
+      echo "FAIL_REASON=\"${FAIL_REASON}\"" >> ${FINISHED}
+    else
+      echo "FAIL_REASON=\"depend (${FAIL_REASON} in ${PORT})\"" >> ${FINISHED}
+    fi
 
     curl -s "${FINISHURL}" >/dev/null
   fi
