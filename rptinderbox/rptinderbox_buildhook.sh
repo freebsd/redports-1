@@ -36,7 +36,7 @@ if [ -f "${LOCK}" ]; then
     if [ "${PORTDIR}" = "${PORT}" ]; then
       echo "FAIL_REASON=\"${FAIL_REASON}\"" >> ${FINISHED}
     else
-      echo "FAIL_REASON=\"depend (${FAIL_REASON} in ${PORT})\"" >> ${FINISHED}
+      echo "FAIL_REASON=\"depend (${FAIL_REASON} in ${PORTDIR})\"" >> ${FINISHED}
     fi
 
     curl -s "${FINISHURL}" >/dev/null
