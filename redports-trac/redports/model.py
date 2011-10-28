@@ -16,7 +16,7 @@ class Port(object):
 	self.group = None
         self.portname = None
         self.status = None
-        self.buildstatus = None
+        self.buildstatus = 'unknown'
         self.statusname = None
         self.reason = None
         self.buildlog = None
@@ -141,7 +141,7 @@ class Buildgroup(object):
         self.type = None
         self.description = None
         self.available = None
-        self.status = None
+        self.status = 'fail'
         self.priority = None
         self.priorityname = None
         self.joined = None
@@ -191,7 +191,6 @@ def BuildgroupsIterator(env, req):
         buildgroup.type = type
         buildgroup.description = description
         buildgroup.available = available
-        buildgroup.status = 'fail'
         if available > 0:
             buildgroup.status = 'success'
         if req.authname and req.authname != 'anonymous':

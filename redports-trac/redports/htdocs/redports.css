@@ -4,6 +4,7 @@
 }
 
 #buildqueue_list td {
+    height: 2.5em;
     vertical-align: middle;
 }
 
@@ -30,11 +31,15 @@
 }
 
 .status-success {
-    background: #E8FFE8;
+    background: #D5FFD5;
 }
 
 .status-leftovers {
     background: #FFFFD8;
+}
+
+.status-dud {
+    background: #FBF9AA;
 }
 
 
