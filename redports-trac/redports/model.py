@@ -16,7 +16,9 @@ class Port(object):
 	self.group = None
         self.portname = None
         self.status = None
+        self.buildstatus = None
         self.statusname = None
+        self.reason = None
         self.buildlog = None
         self.wrkdir = None
         self.startdate = None
@@ -47,7 +49,7 @@ class Port(object):
         cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES (%s, %s, %s, %s, %s, %s, UNIX_TIMESTAMP()*1000000, 0)", ( self.queueid, self.owner, self.repository, self.revision, self.portname, self.status ))
 
         if self.status == 20:
-             cursor.execute("INSERT INTO builds VALUES ( null, '%s', SUBSTRING(MD5(RAND()), 1, 25), '%s', 10, null, null, null, 0, 0, 0 )" % ( self.queueid, self.group ))
+             cursor.execute("INSERT INTO builds VALUES ( null, '%s', SUBSTRING(MD5(RAND()), 1, 25), '%s', 10, null, null, null, null, 0, 0, 0 )" % ( self.queueid, self.group ))
         db.commit()
 
     def setStatus(self, status, statusname=None):
@@ -106,8 +108,8 @@ class Port(object):
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
     #   Using the prepared db statement won't work if we have more than one entry in order_by
-    cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status), builds.buildstatus, builds.buildlog, builds.wrkdir, builds.startdate, IF(builds.enddate<builds.startdate,UNIX_TIMESTAMP()*1000000,builds.enddate) FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND owner = %s ORDER BY builds.id DESC", req.authname )
-    for id, owner, repository, revision, queueid, group, portname, status, statusname, buildlog, wrkdir, startdate, enddate in cursor:
+    cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, IF(builds.enddate<builds.startdate,UNIX_TIMESTAMP()*1000000,builds.enddate) FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND owner = %s ORDER BY builds.id DESC", req.authname )
+    for id, owner, repository, revision, queueid, group, portname, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate in cursor:
 	port = Port(env)
  	port.id = id
 	port.queueid = queueid
@@ -116,7 +118,9 @@ def PortsQueueIterator(env, req):
 	port.revision = revision
 	port.group = group
 	port.portname = portname
-	port.setStatus(status, statusname)
+        if buildstatus:
+            port.buildstatus = buildstatus.lower()
+	port.setStatus(status, buildreason)
 	port.buildlog = buildlog
 	port.wrkdir = wrkdir
 	port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
@@ -187,9 +191,9 @@ def BuildgroupsIterator(env, req):
         buildgroup.type = type
         buildgroup.description = description
         buildgroup.available = available
-        buildgroup.status = 'error'
+        buildgroup.status = 'fail'
         if available > 0:
-            buildgroup.status = 'ok'
+            buildgroup.status = 'success'
         if req.authname and req.authname != 'anonymous':
             cursor2.execute("SELECT priority FROM automaticbuildgroups WHERE username = %s AND buildgroup = %s", ( req.authname, name ) )
             if cursor2.rowcount > 0:

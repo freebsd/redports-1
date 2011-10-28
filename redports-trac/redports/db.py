@@ -24,6 +24,7 @@ class RedportsEnvironment(Component):
                 Column('group', type='varchar(50)', size=50),
                 Column('status', type='int'),
                 Column('buildstatus', type='varchar(25)', size=25),
+                Column('buildreason', type='varchar(50)', size=50),
                 Column('buildlog', type='varchar(50)', size=50),
                 Column('wrkdir', type='varchar(50)', size=50),
                 Column('backendid', type='int'),

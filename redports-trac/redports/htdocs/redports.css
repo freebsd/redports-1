@@ -24,29 +24,9 @@
 }
 
 
-/* Status */
-.status-committed {
-}
-
-.status-building {
-}
-
-.status-warning {
-    background: yellow;
-}
-
-.status-error {
-    background: red;
-}
-
-.status-ok {
-    background: green;
-}
-
-
 /* Buildstatus */
 .status-fail {
-    background: red;
+    background: #F9B5B5;
 }
 
 .status-success {
