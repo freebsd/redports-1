@@ -322,7 +322,6 @@ int handleStep71(void)
     char remotefile[255];
     char localfile[255];
     char localdir[255];
-    char *status = "error";
 
     if((conn = mysql_autoconnect()) == NULL)
         return -1;
@@ -339,14 +338,6 @@ int handleStep71(void)
         {
            printf("CGI Error: %s\n", getenv("ERROR"));
            continue;
-        }
-
-        if(strcmp(getenv("STATUS"), "finished") == 0)
-        {
-           if(getenv("BUILDSTATUS") != NULL)
-              status = getenv("BUILDSTATUS");
-           if(getenv("FAIL_REASON") != NULL)
-              status = getenv("FAIL_REASON");
         }
 
         sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), builds[6], builds[7], builds[0]);
@@ -384,8 +375,8 @@ int handleStep71(void)
               RETURN_ROLLBACK(conn);
         }
 
-        printf("Updating build status for %s to %s\n", builds[0], status);
-        sprintf(query, "UPDATE builds SET buildstatus = \"%s\", enddate = %lli, status = 80 WHERE id = %d", status, microtime(), atoi(builds[0]));
+        printf("Updating build status for %s\n", builds[0]);
+        sprintf(query, "UPDATE builds SET buildstatus = \"%s\", buildreason = \"%s\", enddate = %lli, status = 80 WHERE id = %d", getenv("BUILDSTATUS") != NULL ? getenv("BUILDSTATUS") : "", getenv("FAIL_REASON") != NULL ? getenv("FAIL_REASON") : "", microtime(), atoi(builds[0]));
         if(mysql_query(conn, query))
            RETURN_ROLLBACK(conn);
     }
@@ -570,6 +561,10 @@ int handleStep30(void)
            if(mysql_query(conn, query))
               RETURN_ROLLBACK(conn);
 
+           sprintf(query, "UPDATE builds SET status = 90, buildstatus = \"FAIL\" WHERE id = %d", atoi(builds[0]));
+           if(mysql_query(conn, query))
+              RETURN_ROLLBACK(conn);
+
            continue;
         }
 
@@ -700,7 +695,7 @@ int handleStep10(void)
         while((backends = mysql_fetch_row(result2)))
         {
             printf("adding build %s for %s\n", builds[0], builds[1]);
-            sprintf(query, "INSERT INTO builds VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 10, null, null, null, 0, 0, 0)", builds[0], backends[0]);
+            sprintf(query, "INSERT INTO builds (id, queueid, backendkey, `group`, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 10, null, null, null, null, 0, 0, 0)", builds[0], backends[0]);
 	    if(mysql_query(conn, query))
                 RETURN_ROLLBACK(conn);
         }
