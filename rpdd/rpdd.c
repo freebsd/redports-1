@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Bernhard Froehlich <decke@FreeBSD.org>
+ * Copyright (C) 2011 Bernhard Froehlich <decke@bluelife.at>
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
