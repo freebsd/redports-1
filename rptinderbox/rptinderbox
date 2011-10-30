@@ -214,7 +214,7 @@ status()
     echo "STATUS=building"
   elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s FAIL -r | egrep ":${BUILD}:" >/dev/null ; then
     echo "STATUS=finished"
-    echo "BUILDSTATUS=ERROR"
+    echo "BUILDSTATUS=FAIL"
   elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s SUCCESS -r | egrep ":${BUILD}:" >/dev/null ; then
     echo "STATUS=finished"
   elif [ -f "${WRKBASE}/${BUILD}/.lock" ]; then
