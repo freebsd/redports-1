@@ -120,6 +120,8 @@ def PortsQueueIterator(env, req):
 	port.portname = portname
         if buildstatus:
             port.buildstatus = buildstatus.lower()
+        if not buildreason:
+            buildreason = buildstatus.lower()
 	port.setStatus(status, buildreason)
 	port.buildlog = buildlog
 	port.wrkdir = wrkdir
