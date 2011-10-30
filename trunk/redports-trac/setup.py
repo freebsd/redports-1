@@ -10,7 +10,7 @@ setup(
     keywords='trac plugin freebsd tinderbox redports',
     version='0.8.92',
     url='http://www.bluelife.at/',
-    license='http://www.opensource.org/licenses/mit-license.php',
+    license='http://www.opensource.org/licenses/bsd-license.php',
     author='Bernhard Froehlich',
     author_email='decke@bluelife.at',
     long_description="""
