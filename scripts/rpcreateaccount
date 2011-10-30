@@ -1,0 +1,62 @@
+#!/bin/sh
+
+#
+# RedPorts User creation script
+#
+# $Id$
+#
+
+HTPASSWD=/var/db/trac/redports/conf/htpasswd
+SVNACCESS=/var/db/trac/redports/conf/svnaccess
+TMP=/tmp/redportsrepo
+
+USER=$1
+REPOSITORY=file:///var/subversion/redports
+SVNUSER=redports
+
+if [ -z "$USER" ]; then
+   echo "Usage: rpcreateaccount <username>"
+   exit 1
+fi
+
+if ! egrep "^${USER}:" ${HTPASSWD} >/dev/null ; then
+   echo "User ${USER} doest not exist"
+   exit 1
+fi
+
+# create svn folder for user
+rm -rf ${TMP}
+svn checkout --username ${SVNUSER} --non-interactive --non-recursive ${REPOSITORY} ${TMP} >/dev/null && \
+svn update --non-interactive ${TMP}/${USER} >/dev/null
+
+if [ $? != 0 ]; then
+   echo "Repository checkout failed"
+   exit 1
+fi
+
+if [ ! -d "${TMP}/${USER}" ]; then
+   mkdir ${TMP}/${USER} && \
+   svn add ${TMP}/${USER} >/dev/null && \
+   svn commit --username ${SVNUSER} --non-interactive --message "Welcome ${USER}!" ${TMP}/${USER} >/dev/null
+
+   if [ $? != 0 ]; then
+      echo "Failed creating SVN directory"
+      exit 1
+   fi
+else
+   echo "SVN directory already exists"
+fi
+
+rm -rf ${TMP}
+
+
+# grant permissions on it
+if ! egrep "^\[/${USER}\]" ${SVNACCESS} >/dev/null ; then
+   echo "[/${USER}]" >> ${SVNACCESS}
+   echo "${USER} = rw" >> ${SVNACCESS}
+   echo "" >> ${SVNACCESS}
+else
+   echo "SVN permissions already granted"
+fi
+
+exit 0

@@ -1,0 +1,16 @@
+#!/bin/sh
+
+SCRIPTROOT=/usr/local/www/remote
+
+echo "Content-Type: text/plain"
+echo ""
+
+PORT=`echo ${QUERY_STRING} | cut -d'&' -f 1 | cut -d'=' -f 2`
+BUILD=`echo ${QUERY_STRING} | cut -d'&' -f 2 | cut -d'=' -f 2`
+PRIORITY=`echo ${QUERY_STRING} | cut -d'&' -f 3 | cut -d'=' -f 2`
+FINISHURL=`echo ${QUERY_STRING} | cut -d'&' -f 4 | cut -d'=' -f 2`
+
+sudo -n ${SCRIPTROOT}/rptinderbox build ${PORT} ${BUILD} ${PRIORITY} ${FINISHURL}
+
+exit 0
+

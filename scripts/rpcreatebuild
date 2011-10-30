@@ -1,0 +1,48 @@
+#!/bin/sh
+
+# Requirements:
+#   lftp (ftp/lftp)
+#   tinderbox (ports-mgmt/tinderbox)
+#   zfs
+
+FTP=ftp2.freebsd.org
+
+VERSION=$1
+ARCH=$2
+
+BUILD=${VERSION}-FreeBSD-${ARCH}
+TINDERBOX=/usr/local/tinderbox
+
+if ! echo ${VERSION} | grep "\." > /dev/null ; then
+   OPTIONS="-t . -u CSUP"
+else
+   OPTIONS="-t ${VERSION}-RELEASE -u LFTP -H ${FTP}"
+fi
+
+if ! zfs list zroot/tinderbox >/dev/null ; then
+   zfs create -o compression=lzjb -o setuid=off zroot/tinderbox
+   zfs set mountpoint=legacy zroot/tinderbox
+fi
+
+if ! zfs list zroot/tinderbox/${BUILD} >/dev/null ; then
+   zfs create -o compression=lzjb -o setuid=on zroot/tinderbox/${BUILD}
+   zfs create -o compression=lzjb -o setuid=off zroot/tinderbox/${BUILD}/portstree
+   zfs create -o compression=lzjb -o setuid=off zroot/tinderbox/${BUILD}/jail
+
+   zfs set mountpoint=legacy zroot/tinderbox/${BUILD}
+   zfs set mountpoint=${TINDERBOX}/portstrees/${BUILD} zroot/tinderbox/${BUILD}/portstree
+   zfs set mountpoint=${TINDERBOX}/jails/${BUILD} zroot/tinderbox/${BUILD}/jail
+fi
+
+if [ `uname -m` != "${ARCH}" ]; then
+   echo "export ARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
+   echo "export MACHINE_ARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
+   echo "export UNAME_m=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
+   echo "export UNAME_p=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
+fi
+
+${TINDERBOX}/scripts/tc createPortsTree -p ${BUILD} -u CSUP -d "FreeBSD Portstree" || exit 1
+${TINDERBOX}/scripts/tc createJail -j ${BUILD} ${OPTIONS} -d "FreeBSD ${VERSION}/${ARCH}" -a ${ARCH} || exit 1
+${TINDERBOX}/scripts/tc createBuild -b ${BUILD} -j ${BUILD} -p ${BUILD} -d "FreeBSD ${VERSION}/${ARCH} for redports" || exit 1
+
+exit 0

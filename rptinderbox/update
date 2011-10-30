@@ -1,0 +1,13 @@
+#!/bin/sh
+
+SCRIPTROOT=/usr/local/www/remote
+
+echo "Content-Type: text/plain"
+echo ""
+
+BUILD=`echo ${QUERY_STRING} | cut -d'&' -f 1 | cut -d'=' -f 2`
+
+sudo -n ${SCRIPTROOT}/rptinderbox update ${BUILD}
+
+exit 0
+

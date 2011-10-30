@@ -1,0 +1,51 @@
+#!/bin/sh
+
+#
+# RedPorts Subversion post-commit hook script
+#
+# $Id$
+#
+
+PATH=${PATH}:/usr/local/bin
+
+REPOSITORY=https://svn.redports.org/
+DBNAME=trac
+DBUSER=root
+LOG=/var/log/redports.log
+
+REPOS=$1
+REV=$2
+USER=`svnlook author -r ${REV} ${REPOS}`
+
+# add affected ports to buildqueue
+for PORT in `svnlook changed ${REPOS} -r ${REV} | grep -v "D   " | cut -b5- | cut -d'/' -f2-3 | uniq`
+do
+    REPOSITORYPATH=`svnlook changed ${REPOS} -r ${REV} | cut -b5- | cut -d'/' -f1 | uniq`
+    REPOSITORYBASE=${REPOSITORY}${REPOSITORYPATH}
+    START=`date +"%s"`000000
+    TMP=`echo "${PORT}" | cut -d'/' -f2`
+
+    # skip lines with category only
+    if [ ! -n "${TMP}" ]; then
+        echo "Skipping ${PORT}"
+        continue;
+    fi
+
+    # skip commits to Mk
+    if [ "${TMP}" = "Mk" ]; then
+       continue;
+    fi
+
+    BUILDDATE=`date "+%Y%m%d%H%M%S"`
+    RAND=`hexdump -n2 -e\"%u\" /dev/random`
+    BUILDID=${BUILDDATE}-${RAND}
+
+    echo "INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES (\"${BUILDID}\", \"${USER}\", \"${REPOSITORYBASE}\", ${REV}, \"${PORT}\", 10, ${START}, 0);" | mysql -u ${DBUSER} ${DBNAME}
+    if [ $? != 0 ]; then
+        echo "ERROR: Failed adding ${PORT} with r${REV} to buildqueue"
+    else
+        echo "Added ${PORT} with r${REV} to buildqueue"
+    fi
+done
+
+exit 0

@@ -1,0 +1,387 @@
+#!/bin/sh
+
+# RedPorts tinderbox backend
+#
+# $Id$
+#
+# /tmp/rptinderbox/.lock              Global lock for maintenance
+# /tmp/rptinderbox/<build>/.lock      Build lock including shellscript variables
+# /tmp/rptinderbox/<build>/.checkout  Checkout done
+# /tmp/rptinderbox/<build>/.build     Build started
+# /tmp/rptinderbox/<build>/.finished  Build finished
+# /tmp/rptinderbox/<build>/ports/     Portstree overlay
+#
+# /usr/local/tinderbox/portstrees/<portstree>/ports/   Tinderbox portstree
+# 
+
+RPTB_VERSION="0.8.92"
+
+ZFSROOT="zroot/tinderbox/%s/portstree"
+
+WRKBASE=/tmp/rptinderbox
+TINDERBOX=/usr/local/tinderbox
+
+checkout()
+{
+  REPOSITORY=$1
+  REVISION=$2
+  BUILD=$3
+
+  if [ -f "${WRKBASE}/.lock" ]; then
+    echo "Maintenance lock exists."
+    return 1
+  fi
+
+  LOCK=${WRKBASE}/${BUILD}/.lock
+
+  if [ -f "${LOCK}" ]; then
+    echo "Lock ${LOCK} exists."
+    return 1
+  fi
+
+  if [ ! -d "${WRKBASE}/${BUILD}" ]; then
+    mkdir -p ${WRKBASE}/${BUILD} || return 1
+  fi
+
+  # create build lock
+  touch ${LOCK} || return 1
+
+  PORTSTREE=`${TINDERBOX}/scripts/tc getPortsTreeForBuild -b ${BUILD} 2>/dev/null`
+
+  if [ -z "${PORTSTREE}" ]; then
+    echo "Unknown portstree for build ${BUILD}"
+    return 1
+  fi
+
+  # populate lock
+  echo "REPOSITORY=\"${REPOSITORY}\"" >> ${LOCK}
+  echo "REVISION=\"${REVISION}\"" >> ${LOCK}
+  echo "BUILD=\"${BUILD}\"" >> ${LOCK}
+  echo "PORTSTREE=\"${PORTSTREE}\"" >> ${LOCK}
+  echo "LOCK=\"${LOCK}\"" >> ${LOCK}
+
+  # checkout overlay ports
+  svn export --non-interactive --revision ${REVISION} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports || return 2
+
+  # create snapshot of original tree
+  ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
+  zfs snapshot ${ZFSVOLUME}@work || return 3
+
+  # apply overlay ports
+  find ${WRKBASE}/${BUILD}/ports -type d -d 2 | sed -e "s|^${WRKBASE}/${BUILD}/ports/|${TINDERBOX}/portstrees/${PORTSTREE}/ports/|" | xargs rm -Rf || return 1
+  cp -pr ${WRKBASE}/${BUILD}/ports/* ${TINDERBOX}/portstrees/${PORTSTREE}/ports/
+  
+  # checkout finished
+  touch ${WRKBASE}/${BUILD}/.checkout || return 1
+  
+  return 0
+}
+
+clean()
+{
+  BUILD=$1
+  LOCK=${WRKBASE}/${BUILD}/.lock
+
+  if [ ! -f "${LOCK}" ]; then
+    echo "No lock for build ${BUILD}"
+    return 1
+  fi
+
+  . ${LOCK}
+
+  if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
+      if [ ! -f "${WRKBASE}/${BUILD}/.finished" ]; then
+        ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -b ${BUILD} -d ${PORT}
+      fi
+  fi
+
+  ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
+  zfs rollback ${ZFSVOLUME}@work
+  zfs destroy ${ZFSVOLUME}@work
+
+  if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
+    NEWPACKAGES=`cd ${TINDERBOX}/packages/${PORTSTREE}/All/ && find * -type f -newermt "${LASTPACKAGEDATE}" -print`
+
+    for package in ${NEWPACKAGES}
+    do
+      PKGPORT=`pkg_info -oq ${TINDERBOX}/packages/${PORTSTREE}/All/${package}`
+        
+      if [ ! -z "${CLEANROOM_MODE}" ]; then
+        if [ -d "${WRKBASE}/${BUILD}/ports/${PKGPORT}" ]; then
+          rm ${TINDERBOX}/packages/${PORTSTREE}/${PKGPORT%${PKGPORT##*/}}/${package}
+          rm ${TINDERBOX}/packages/${PORTSTREE}/All/${package}
+        fi
+      else
+        if [ "${PKGPORT}" = "${PORT}" ]; then
+          rm ${TINDERBOX}/packages/${PORTSTREE}/${PKGPORT%${PKGPORT##*/}}/${package}
+          rm ${TINDERBOX}/packages/${PORTSTREE}/All/${package}
+        fi
+      fi
+    done
+  fi
+
+  rm -rf ${WRKBASE}/${BUILD} || return 1
+
+  # WORKAROUND: Remove tinderdlock in case tinderbox parallel patch is active and
+  #             lock has been left over. (happens if you build a non existing port)
+  rm -f ${TINDERBOX}/builds/${BUILD}/tinderdlock
+
+  # clean buildqueue from failed builds
+  for ENTRY in `${TINDERBOX}/scripts/tc listBuildPortsQueue -s FAIL -r | egrep ":${BUILD}:"`
+  do
+    ID=`echo ${ENTRY} | cut -d: -f1`
+
+    ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -i ${ID}
+  done
+
+  # clean buildqueue from succeeded builds
+  for ENTRY in `${TINDERBOX}/scripts/tc listBuildPortsQueue -s SUCCESS -r | egrep ":${BUILD}:"`
+  do
+    ID=`echo ${ENTRY} | cut -d: -f1`
+
+    ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -i ${ID}
+  done
+
+  return 0
+}
+
+build()
+{
+  PORT=$1
+  BUILD=$2
+  PRIORITY=$3
+  FINISHURL=$4
+  LOCK=${WRKBASE}/${BUILD}/.lock
+
+  if [ -f "${WRKBASE}/.lock" ]; then
+    echo "Maintenance lock exists."
+    return 1
+  fi
+
+  if [ ! -f "${LOCK}" ]; then
+    echo "No lock for build ${BUILD}"
+    return 1
+  fi
+
+  . ${LOCK}
+
+  if [ ! -f "${WRKBASE}/${BUILD}/.checkout" ]; then
+    echo "No checkout for build ${BUILD}"
+    return 1
+  fi
+
+  if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
+    echo "Build already running"
+    return 1
+  fi
+
+  if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
+    echo "Build already finished"
+    return 1
+  fi
+
+  # aktuellstes package von build merken
+  if [ -d "${TINDERBOX}/packages/${BUILD}/All" ]; then
+    LASTPACKAGE=`ls -tr ${TINDERBOX}/packages/${BUILD}/All | tail -1`
+    LASTPACKAGEDATE=`stat -f %m ${TINDERBOX}/packages/${BUILD}/All/${LASTPACKAGE}`
+    LASTPACKAGEDATE=`date -r ${LASTPACKAGEDATE} "+%Y-%m-%d %H:%M:%S"`
+  else
+    LASTPACKAGE=""
+    LASTPACKAGEDATE=`date "+%Y-%m-%d %H:%M:%S"`
+  fi
+
+  echo "PORT=\"${PORT}\"" >> ${LOCK}
+  echo "PRIORITY=\"${PRIORITY}\"" >> ${LOCK}
+  echo "FINISHURL=\"${FINISHURL}\"" >> ${LOCK}
+  echo "LASTPACKAGE=\"${LASTPACKAGE}\"" >> ${LOCK}
+  echo "LASTPACKAGEDATE=\"${LASTPACKAGEDATE}\"" >> ${LOCK}
+
+  ${TINDERBOX}/scripts/tc addBuildPortsQueueEntry -b ${BUILD} -d ${PORT} -p ${PRIORITY} 2>/dev/null || return 1
+
+  touch ${WRKBASE}/${BUILD}/.build || return 1
+
+  return 0
+}
+
+
+status()
+{
+  BUILD=$1
+
+  if ${TINDERBOX}/scripts/tc listBuildPortsQueue -s ENQUEUED -r | egrep ":${BUILD}:" >/dev/null ; then
+    echo "STATUS=building"
+  elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s PROCESSING -r | egrep ":${BUILD}:" >/dev/null ; then
+    echo "STATUS=building"
+  elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s FAIL -r | egrep ":${BUILD}:" >/dev/null ; then
+    echo "STATUS=finished"
+    echo "BUILDSTATUS=FAIL"
+  elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s SUCCESS -r | egrep ":${BUILD}:" >/dev/null ; then
+    echo "STATUS=finished"
+  elif [ -f "${WRKBASE}/${BUILD}/.lock" ]; then
+    echo "STATUS=busy"
+  else
+    echo "STATUS=idle"
+
+    # Portstree last builtdate
+    PORTSTREE=`${TINDERBOX}/scripts/tc getPortsTreeForBuild -b ${BUILD} 2>/dev/null`
+
+    if [ -z "${PORTSTREE}" ]; then
+      echo "Unknown portstree for build ${BUILD}"
+      return 1
+    fi
+
+    PORTSTREELASTBUILT=`${TINDERBOX}/scripts/tc dumpObject -t ${PORTSTREE} | grep ports_tree_last_built | cut -d":" -f2- | cut -d" " -f2- 2>/dev/null`
+
+    echo "PORTSTREELASTBUILT=${PORTSTREELASTBUILT}"
+  fi
+
+  if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
+    . ${WRKBASE}/${BUILD}/.finished
+
+    echo "BUILDSTATUS=${BUILDSTATUS}"
+
+    if [ -n "${FAIL_REASON}" ]; then
+      echo "FAIL_REASON=${FAIL_REASON}"
+    fi
+
+    if [ -n "${BUILDLOG}" ]; then
+      echo "BUILDLOG=${BUILDLOG}"
+    fi
+
+    if [ -n "${WRKDIR}" ]; then
+      echo "WRKDIR=${WRKDIR}"
+    fi
+  fi
+
+  return 0
+}
+
+update()
+{
+  BUILD=$1
+  LOCK=${WRKBASE}/${BUILD}/.lock
+
+  if [ -f "${WRKBASE}/.lock" ]; then
+    echo "Maintenance lock exists."
+    return 1
+  fi
+
+  if [ -f "${LOCK}" ]; then
+    echo "Lock for build ${BUILD} exists."
+    return 1
+  fi
+
+  if [ ! -d "${WRKBASE}/${BUILD}" ]; then
+    mkdir -p ${WRKBASE}/${BUILD} || return 1
+  fi
+
+  # create build lock
+  touch ${LOCK} || return 1
+
+  # determine portstree
+  PORTSTREE=`${TINDERBOX}/scripts/tc getPortsTreeForBuild -b ${BUILD} 2>/dev/null`
+
+  if [ -z "${PORTSTREE}" ]; then
+    echo "Unknown portstree for build ${BUILD}"
+    rm -f ${LOCK}
+    return 1
+  fi
+
+  # update portstree
+  if ! ${TINDERBOX}/scripts/tc updatePortsTree -p ${PORTSTREE} >/dev/null ; then
+    rm -f ${LOCK}
+    return 1
+  fi
+
+  rm -f ${LOCK}
+  return 0
+}
+
+selftest()
+{
+  BUILD=$1
+
+  if [ ! -d "${TINDERBOX}/builds/${BUILD}" ]; then
+    echo "Unknown build ${BUILD}"
+    return 1
+  fi
+
+  PORTSTREE=`${TINDERBOX}/scripts/tc getPortsTreeForBuild -b ${BUILD} 2>/dev/null`
+
+  if [ -z "${PORTSTREE}" ]; then
+    echo "Unknown portstree for build ${BUILD}"
+    return 1
+  fi
+
+  ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
+  if ! zfs list ${ZFSVOLUME} >/dev/null ; then
+    echo "ZFS volume ${ZFSVOLUME} does not exist"
+    return 1
+  fi
+
+  return 0
+}
+
+case "$1" in
+'build')
+  if build $2 $3 $4 $5 2>&1 ; then
+    echo "OK"
+    return 0
+  else
+    echo "ERROR"
+    return 1
+  fi
+;;
+'checkout')
+  if checkout $2 $3 $4 2>&1 ; then
+    echo "OK"
+    return 0
+  else
+    echo "ERROR"
+    return 1
+  fi
+;;
+'clean')
+  if clean $2 2>&1 ; then
+    echo "OK"
+    return 0
+  else
+    echo "ERROR"
+    return 1
+  fi
+  return $?
+;;
+'status')
+  if status $2 2>&1 ; then
+    echo "OK"
+    return 0
+  else
+    echo "ERROR"
+    return 1
+  fi
+;;
+'update')
+  if update $2 2>&1 ; then
+    echo "OK"
+    return 0
+  else
+    echo "ERROR"
+    return 1
+  fi
+;;
+'selftest')
+  if selftest $2 2>&1 ; then
+    echo "OK"
+    return 0
+  else
+    echo "ERROR"
+    return 1
+  fi
+;;
+*)
+  echo "Usage: $0 [build|checkout|clean|status|update|selftest] param"
+  exit 1
+;;
+esac
+
+exit 0

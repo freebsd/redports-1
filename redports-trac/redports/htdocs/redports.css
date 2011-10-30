@@ -1,0 +1,52 @@
+/* Buildqueue */
+#buildqueue_list {
+    max-width: 70%;
+}
+
+#buildqueue_list td {
+    height: 2.5em;
+    vertical-align: middle;
+}
+
+
+/* Buildgroups */
+#buildgroups_list {
+    max-width: 70%;
+}
+
+#buildgroups_list th {
+    height: 2.5em;
+    vertical-align: middle;
+}
+
+#buildgroups_list td {
+    height: 2.8em;
+    vertical-align: middle;
+}
+
+
+/* Buildstatus */
+.status-fail {
+    background: #F9B5B5;
+}
+
+.status-success {
+    background: #D5FFD5;
+}
+
+.status-leftovers {
+    background: #FFFFD8;
+}
+
+.status-dud {
+    background: #FBF9AA;
+}
+
+
+#tabcontent {
+    margin-left: 0;
+}
+
+#tabcontent form.addnew {
+    width: 25%;
+}

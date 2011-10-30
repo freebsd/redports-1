@@ -1,0 +1,73 @@
+#!/bin/sh
+
+# RedPorts sanity checking script
+#
+# $Id: rpsanity 6 2011-08-09 15:09:43Z decke $
+
+REPOBASE=http://svn.redports.org/
+WRKBASE=/tmp/rpsanity
+WRKSRC=${WRKBASE}/work
+LOG=${WRKBASE}/rpsanity.log
+
+checkout()
+{
+  REPOSITORY=$1
+  REVISION=$2
+
+  mkdir -p ${WRKBASE} && \
+  svn export --non-interactive --revision ${REVISION} ${REPOBASE}${REPOSITORY} ${WRKSRC} >> ${LOG}
+  
+  return $?
+}
+
+clean()
+{
+  rm -rf ${WRKBASE}
+  return $?
+}
+
+build()
+{
+  PORT=$1
+
+  cd ${WRKSRC}/${PORT} && portlint -C >> ${LOG}
+  return $?
+}
+
+status()
+{
+  if [ -d "${WRKBASE}" ]; then
+    echo "used"
+    return 1
+  fi
+
+  echo "idle"
+  return 0
+}
+
+
+case "$1" in
+'build')
+  build $2
+  return $?
+;;
+'checkout')
+  clean && \
+  checkout $2 $3
+  return $?
+;;
+'clean')
+  clean
+  return $?
+;;
+'status')
+  status
+  return $?
+;;
+*)
+  echo "Usage: $0 [build|checkout|clean] param"
+  exit 1
+;;
+esac
+
+exit 0

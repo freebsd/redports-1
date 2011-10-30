@@ -1,0 +1,79 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="layout.html" />
+  <xi:include href="macros.html" />
+  <head>
+    <title>Redports Buildgroups</title>
+  </head>
+
+  <body>
+      <div id="tabcontent">
+      <h2>Buildgroups</h2>
+
+        <form py:if="authenticated" class="addnew" method="post" action="">
+        <fieldset>
+          <legend>Join Buildgroup:</legend>
+          <table>
+            <tr class="field">
+              <th><label for="group">Buildgroup:</label></th>
+              <td>
+                <select id="group" name="group">
+                  <option py:for="groups in availablegroups">$groups.name</option>
+                </select>
+              </td>
+            </tr>
+            <tr class="field">
+              <th><label for="priority">Priority:</label></th>
+              <td>
+                <select id="priority" name="priority">
+                  <option value="1">highest</option>
+                  <option value="3">high</option>
+                  <option value="5" selected="selected">normal</option>
+                  <option value="7">low</option>
+                  <option value="9">lowest</option>
+                </select>
+              </td>
+            </tr>
+          </table>
+          <p class="help">
+            Join a buildgroup to automaticaly build all changed ports after
+            a commit to the repository.
+          </p>
+          <div class="buttons">
+            <input type="submit" name="join" value="Join" />
+          </div>
+        </fieldset>
+        </form>
+
+        <table class="listing" id="buildgroups_list">
+          <thead>
+            <tr><th py:if="authenticated">Status</th><th py:if="authenticated">Priority</th><th>Name</th><th>Version</th><th>Architecture</th><th>Backends</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr py:for="group in buildgroups">
+              <td py:if="authenticated">
+                <form py:if="group.joined" method="post" action="">
+                  <input type="hidden" name="group" value="$group.name" />
+                  <input type="submit" name="leave" value="leave" />
+                </form>
+              </td>
+              <td py:if="authenticated">$group.priorityname</td>
+              <td><a href="#id-$group.name" id="id-$group.name">$group.name</a></td>
+              <td>FreeBSD $group.version</td>
+              <td>$group.arch</td>
+              <td class="status-$group.status">$group.available available</td>
+              <td>$group.description</td>
+            </tr>
+          </tbody>
+        </table>
+        <br style="clear: right" />
+
+      </div>
+
+      <br />
+  </body>
+</html>

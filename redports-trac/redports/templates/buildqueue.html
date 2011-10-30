@@ -1,0 +1,82 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="layout.html" />
+  <xi:include href="macros.html" />
+  <head>
+    <title>Your Builds</title>
+  </head>
+
+  <body>
+    <h1>Your Builds</h1>
+    <div id="tabcontent">
+
+        <form class="addnew" method="post" action="">
+        <fieldset>
+          <legend>Rebuild Port:</legend>
+          <table>
+            <tr class="field">
+              <th><label for="repository">Repository:</label></th>
+              <td><a href="/browser/$authname">$repository</a></td>
+            </tr>
+            <tr class="field">
+              <th><label for="revision">Revision:</label></th>
+              <td><input type="text" name="revision" size="5" value="$revision" /></td>
+            </tr>
+            <tr class="field">
+              <th><label for="portname">Port:</label></th>
+              <td><input type="text" name="portname" /></td>
+            </tr>
+            <tr class="field">
+              <th><label for="group">Buildgroup:</label></th>
+              <td>
+                <select id="group" name="group">
+                  <option value="automatic">automatic</option>
+                  <option py:for="groups in allbuildgroups">$groups.name</option>
+                </select>
+              </td>
+            </tr>
+          </table>
+          <p class="help">
+            Trigger a rebuild for a specific port in your repository.
+          </p>
+          <div class="buttons">
+            <input type="submit" name="addbuild" value="Add" />
+          </div>
+        </fieldset>
+        </form>
+
+
+        <table class="listing" id="buildqueue_list">
+            <thead>
+                <tr><th>Rev.</th><th>Port</th><th>Status</th><th>Buildgroup</th><th>Buildtime</th><th>Links</th><th>Options</th></tr>
+            </thead>
+            <tbody>
+                <tr py:for="port in buildqueue">
+                    <td><a href="/changeset/$port.revision/">r$port.revision</a></td>
+                    <td>$port.portname</td>
+                    <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
+                    <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
+                    <td>$port.startdate</td>
+                    <td>
+                      <py:if test="port.buildlog"><a href="$port.directory/$port.buildlog">log</a></py:if>
+                      <py:if test="port.wrkdir"><a href="$port.directory/$port.wrkdir">wrkdir</a></py:if>
+                    </td>
+                    <td>
+                      <py:if test="port.deletable">
+                        <form method="post" action="">
+                          <input type="hidden" name="id" value="$port.id" />
+                          <input type="submit" name="deletebuild" value="Delete" />
+                        </form>
+                      </py:if>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+	<br />
+    </div>
+  </body>
+</html>
