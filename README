@@ -4,6 +4,7 @@ Redports is the infrastructure to build your own FreeBSD ports buildcluster
 and is build on top of the great FreeBSD Ports Tinderbox.
 
 
-Author:  Bernhard Froehlich <decke@bluelife.at>
-License: 2-clause BSD License
+Author:   Bernhard Froehlich <decke@bluelife.at>
+License:  2-clause BSD License
+Homepage: http://www.redports.org/
 
