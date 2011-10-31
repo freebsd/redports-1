@@ -125,7 +125,7 @@ class Port(object):
 
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status, 0), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, IF(builds.enddate<builds.startdate,UNIX_TIMESTAMP()*1000000,builds.enddate) FROM buildqueue LEFT OUTER JOIN builds ON buildqueue.id = builds.queueid WHERE owner = %s ORDER BY buildqueue.id DESC", req.authname )
+    cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status, 0), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, IF(builds.enddate<builds.startdate,UNIX_TIMESTAMP()*1000000,builds.enddate) FROM buildqueue LEFT OUTER JOIN builds ON buildqueue.id = builds.queueid WHERE owner = %s ORDER BY buildqueue.id DESC, builds.id", req.authname )
     lastid = None
     for id, owner, repository, revision, queueid, group, portname, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate in cursor:
 	port = Port(env)
