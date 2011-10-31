@@ -3,11 +3,19 @@
     max-width: 70%;
 }
 
+#buildqueue_list th {
+    vertical-align: middle;
+}
+
 #buildqueue_list td {
     height: 2.5em;
     vertical-align: middle;
 }
 
+#buildqueue_list tr.head {
+    background: #F7F7F0;
+    border-top: 1px dashed grey;
+}
 
 /* Buildgroups */
 #buildgroups_list {
