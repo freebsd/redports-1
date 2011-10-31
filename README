@@ -3,6 +3,20 @@ Redports
 Redports is the infrastructure to build your own FreeBSD ports buildcluster
 and is build on top of the great FreeBSD Ports Tinderbox.
 
+The source consists of a few source directories:
+
+redports-trac:
+- Trac Plugin for the userinterface (view jobstatus and schedule new jobs)
+
+rpdd:
+- Dispatcher that controls and starts new jobs on the backends
+
+rptinderbox:
+- Tinderbox backend integration scripts
+
+scripts:
+- Various scripts
+
 
 Author:   Bernhard Froehlich <decke@bluelife.at>
 License:  2-clause BSD License
