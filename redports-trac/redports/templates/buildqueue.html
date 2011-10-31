@@ -52,14 +52,26 @@
 
         <table class="listing" id="buildqueue_list">
             <thead>
-                <tr><th>Rev.</th><th>Port</th><th>Status</th><th>Buildgroup</th><th>Buildtime</th><th>Links</th><th>Options</th></tr>
+                <tr>
+                    <th colspan="5">Port / Source</th><th rowspan="2">Options</th>
+                </tr>
+                <tr>
+                    <th>&nbsp; &nbsp;</th><th>Buildgroup</th><th>Status</th><th>Buildtime</th><th>Links</th>
+                </tr>
             </thead>
             <tbody>
-                <tr py:for="port in buildqueue">
-                    <td><a href="/changeset/$port.revision/">r$port.revision</a></td>
-                    <td>$port.portname</td>
-                    <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
+              <py:for each="port in buildqueue">
+                <tr py:if="port.head" class="head">
+                    <td colspan="5">
+                      <a href="http://www.freshports.org/$port.portname"><strong>$port.portname</strong></a>
+                      (<a href="/changeset/$port.revision/">r$port.revision</a>)
+                    </td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td></td>
                     <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
+                    <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
                     <td>$port.startdate</td>
                     <td>
                       <py:if test="port.buildlog"><a href="$port.directory/$port.buildlog">log</a></py:if>
@@ -74,6 +86,7 @@
                       </py:if>
                     </td>
                 </tr>
+              </py:for>
             </tbody>
         </table>
 	<br />

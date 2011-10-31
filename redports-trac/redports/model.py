@@ -22,6 +22,7 @@ class Port(object):
         self.buildlog = None
         self.wrkdir = None
         self.startdate = None
+        self.head = None
 
     def addPort(self):
         db = self.env.get_db_cnx()
@@ -107,8 +108,8 @@ class Port(object):
 
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
-    #   Using the prepared db statement won't work if we have more than one entry in order_by
     cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, IF(builds.enddate<builds.startdate,UNIX_TIMESTAMP()*1000000,builds.enddate) FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND owner = %s ORDER BY builds.id DESC", req.authname )
+    lastid = None
     for id, owner, repository, revision, queueid, group, portname, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate in cursor:
 	port = Port(env)
  	port.id = id
@@ -120,13 +121,16 @@ def PortsQueueIterator(env, req):
 	port.portname = portname
         if buildstatus:
             port.buildstatus = buildstatus.lower()
-        if not buildreason:
+        if buildstatus and not buildreason:
             buildreason = buildstatus.lower()
 	port.setStatus(status, buildreason)
 	port.buildlog = buildlog
 	port.wrkdir = wrkdir
 	port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
 	port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
+        if lastid != queueid:
+            port.head = True
+            lastid = queueid
 	yield port
 
 
