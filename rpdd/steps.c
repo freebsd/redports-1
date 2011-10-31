@@ -119,7 +119,8 @@ int handleStep93(void)
     if(mysql_query(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
-    result = mysql_store_result(conn);
+    if((result = mysql_store_result(conn)) == NULL)
+        RETURN_ROLLBACK(conn);
 
     while ((builds = mysql_fetch_row(result)))
     {
@@ -184,7 +185,8 @@ int handleStep92(void)
     if(mysql_query(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
-    result = mysql_store_result(conn);
+    if((result = mysql_store_result(conn)) == NULL)
+        RETURN_ROLLBACK(conn);
 
     while ((builds = mysql_fetch_row(result)))
     {
@@ -225,7 +227,8 @@ int handleStep91(void)
     if(mysql_query(conn, "SELECT id, protocol, host, uri, credentials FROM backends WHERE status > 0 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
-    result = mysql_store_result(conn);
+    if((result = mysql_store_result(conn)) == NULL)
+        RETURN_ROLLBACK(conn);
 
     while ((builds = mysql_fetch_row(result)))
     {
@@ -268,7 +271,8 @@ int handleStep80(void)
     if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, backendbuilds.id, buildqueue.id FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 80 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
-    result = mysql_store_result(conn);
+    if((result = mysql_store_result(conn)) == NULL)
+        RETURN_ROLLBACK(conn);
 
     while ((builds = mysql_fetch_row(result)))
     {
@@ -292,7 +296,9 @@ int handleStep80(void)
         if(mysql_query(conn, query))
            RETURN_ROLLBACK(conn);
 
-        result2 = mysql_store_result(conn);
+        if((result2 = mysql_store_result(conn)) == NULL)
+            RETURN_ROLLBACK(conn);
+
         active = mysql_fetch_row(result2);
 
         if(atoi(active[0]) == 0)
@@ -329,7 +335,8 @@ int handleStep71(void)
     if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, owner, queueid FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 71 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
-    result = mysql_store_result(conn);
+    if((result = mysql_store_result(conn)) == NULL)
+        RETURN_ROLLBACK(conn);
 
     while ((builds = mysql_fetch_row(result)))
     {
@@ -403,7 +410,8 @@ int handleStep70(void)
     if(mysql_query(conn, "SELECT builds.id, builds.backendid FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status >= 70 AND builds.status < 80 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
-    result = mysql_store_result(conn);
+    if((result = mysql_store_result(conn)) == NULL)
+        RETURN_ROLLBACK(conn);
 
     while ((builds = mysql_fetch_row(result)))
     {
@@ -411,7 +419,9 @@ int handleStep70(void)
         if(mysql_query(conn, query))
            RETURN_ROLLBACK(conn);
 
-        result2 = mysql_store_result(conn);
+        if((result2 = mysql_store_result(conn)) == NULL)
+            RETURN_ROLLBACK(conn);
+
         runningdownloads = mysql_fetch_row(result2);
 
         if(atoi(runningdownloads[0]) == 0)
@@ -445,7 +455,8 @@ int handleStep51(void)
     if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 51 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
-    result = mysql_store_result(conn);
+    if((result = mysql_store_result(conn)) == NULL)
+        RETURN_ROLLBACK(conn);
 
     while ((builds = mysql_fetch_row(result)))
     {
@@ -507,7 +518,8 @@ int handleStep31(void)
     if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, portname, buildname, backendkey FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 31 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
-    result = mysql_store_result(conn);
+    if((result = mysql_store_result(conn)) == NULL)
+        RETURN_ROLLBACK(conn);
 
     while ((builds = mysql_fetch_row(result)))
     {
@@ -547,7 +559,8 @@ int handleStep30(void)
     if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, repository, revision, backendbuilds.id FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
-    result = mysql_store_result(conn);
+    if((result = mysql_store_result(conn)) == NULL)
+        RETURN_ROLLBACK(conn);
 
     while ((builds = mysql_fetch_row(result)))
     {
@@ -606,7 +619,8 @@ int handleStep20(void)
     if(mysql_query(conn, "SELECT builds.id, builds.group, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 20 AND builds.backendid = 0 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
-    result = mysql_store_result(conn);
+    if((result = mysql_store_result(conn)) == NULL)
+        RETURN_ROLLBACK(conn);
 
     while ((builds = mysql_fetch_row(result)))
     {
@@ -615,7 +629,8 @@ int handleStep20(void)
         if(mysql_query(conn, query))
             RETURN_ROLLBACK(conn);
 
-        result2 = mysql_store_result(conn);
+        if((result2 = mysql_store_result(conn)) == NULL)
+            RETURN_ROLLBACK(conn);
 
         while((backends = mysql_fetch_row(result2)))
         {
@@ -623,7 +638,9 @@ int handleStep20(void)
             if(mysql_query(conn, query))
                 RETURN_ROLLBACK(conn);
 
-            result3 = mysql_store_result(conn);
+            if((result3 = mysql_store_result(conn)) == NULL)
+                RETURN_ROLLBACK(conn);
+
             runningjobs = mysql_fetch_row(result3);
 
             if(atoi(runningjobs[0]) < atoi(backends[1]))
@@ -643,7 +660,9 @@ int handleStep20(void)
         if(mysql_query(conn, query))
             RETURN_ROLLBACK(conn);
 
-        result2 = mysql_store_result(conn);
+        if((result2 = mysql_store_result(conn)) == NULL)
+            RETURN_ROLLBACK(conn);
+
         runningjobs = mysql_fetch_row(result2);
 
         if(atoi(runningjobs[0]) == 0)
@@ -681,7 +700,8 @@ int handleStep10(void)
     if(mysql_query(conn, "SELECT id, owner FROM buildqueue WHERE status = 10 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
-    result = mysql_store_result(conn);
+    if((result = mysql_store_result(conn)) == NULL)
+        RETURN_ROLLBACK(conn);
 
     while ((builds = mysql_fetch_row(result)))
     {
@@ -690,7 +710,8 @@ int handleStep10(void)
         if(mysql_query(conn, query))
             RETURN_ROLLBACK(conn);
 
-        result2 = mysql_store_result(conn);
+        if((result2 = mysql_store_result(conn)) == NULL)
+            RETURN_ROLLBACK(conn);
 
         while((backends = mysql_fetch_row(result2)))
         {
