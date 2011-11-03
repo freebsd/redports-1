@@ -616,7 +616,7 @@ int handleStep20(void)
     if((conn = mysql_autoconnect()) == NULL)
         return -1;
 
-    if(mysql_query(conn, "SELECT builds.id, builds.group, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 20 AND builds.backendid = 0 FOR UPDATE"))
+    if(mysql_query(conn, "SELECT builds.id, builds.group, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 20 AND builds.status = 20 AND builds.backendid = 0 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
     if((result = mysql_store_result(conn)) == NULL)
@@ -716,7 +716,7 @@ int handleStep10(void)
         while((backends = mysql_fetch_row(result2)))
         {
             printf("adding build %s for %s\n", builds[0], builds[1]);
-            sprintf(query, "INSERT INTO builds (id, queueid, backendkey, `group`, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 10, null, null, null, null, 0, 0, 0)", builds[0], backends[0]);
+            sprintf(query, "INSERT INTO builds (id, queueid, backendkey, `group`, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 20, null, null, null, null, 0, 0, 0)", builds[0], backends[0]);
 	    if(mysql_query(conn, query))
                 RETURN_ROLLBACK(conn);
         }
