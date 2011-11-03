@@ -254,8 +254,6 @@ int handleStep95(void)
     {
         sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), builds[2], builds[1], builds[0]);
 
-        printf("Removing %s\n", localdir);
-
         if(rmdirrec(localdir) != 0)
            printf("Failure when deleting %s\n", localdir);
 
