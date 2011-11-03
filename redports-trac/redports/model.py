@@ -112,20 +112,20 @@ class Port(object):
 
         self.queueid = row[0]
         
-        cursor.execute("DELETE FROM builds WHERE id = %s AND (status < 30 OR status > 89)", self.id )
+        cursor.execute("UPDATE builds SET status = 95 WHERE id = %s AND (status < 30 OR status > 89)", self.id )
 
-        cursor.execute("SELECT count(*) FROM builds WHERE builds.queueid = %s", self.queueid )
+        cursor.execute("SELECT count(*) FROM builds WHERE queueid = %s AND status <= 90", self.queueid )
         row = cursor.fetchone()
         if not row:
             raise TracError('SQL Error')
         if row[0] == 0:
-            cursor.execute("DELETE FROM buildqueue WHERE id = %s", self.queueid )
+            cursor.execute("UPDATE buildqueue SET status = 95 WHERE id = %s", self.queueid )
         db.commit()
         
 
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status, 0), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, IF(builds.enddate<builds.startdate,UNIX_TIMESTAMP()*1000000,builds.enddate) FROM buildqueue LEFT OUTER JOIN builds ON buildqueue.id = builds.queueid WHERE owner = %s ORDER BY buildqueue.id DESC, builds.id", req.authname )
+    cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status, 0), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, IF(builds.enddate<builds.startdate,UNIX_TIMESTAMP()*1000000,builds.enddate) FROM buildqueue LEFT OUTER JOIN builds ON buildqueue.id = builds.queueid WHERE owner = %s AND buildqueue.status <= 90 AND (builds.status IS NULL OR builds.status <= 90) ORDER BY buildqueue.id DESC, builds.id", req.authname )
     lastid = None
     for id, owner, repository, revision, queueid, group, portname, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate in cursor:
 	port = Port(env)
