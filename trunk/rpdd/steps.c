@@ -57,46 +57,79 @@ struct StepHandler stepreg[] = {
     { "70", handleStep70, 1, 0, 0 },
     { "71", handleStep71, 1, 0, 0 },
     { "80", handleStep80, 1, 0, 0 },
+    { "90", handleStep90, 1, 7200, 0 },
     { "91", handleStep91, 1, 120, 0 },
     { "92", handleStep92, 1, 7200, 0 },
     { "93", handleStep93, 1, 600, 0 },
-    { "95", handleStep95, 1, 7200, 0 },
-    { "96", handleStep96, 1, 7200, 0 }
+    { "95", handleStep95, 1, 3600, 0 },
+    { "99", handleStep99, 1, 7200, 0 }
 };
 
 
-/* Clean database from old entries */
-int handleStep96(void)
-{
-    MYSQL *conn;
-    MYSQL_RES *result;
-    char query[1000];
-
-    int cleandays = atoi(configget("cleandays"));
-
-    if((conn = mysql_autoconnect()) == NULL)
-        return 1;
-
-    sprintf(query, "DELETE FROM builds WHERE status >= 90 AND enddate < %lli", microtime()-(cleandays*86400*1000000L));
-    if(mysql_query(conn, query))
-        RETURN_ROLLBACK(conn);
-
-    sprintf(query, "DELETE FROM buildqueue WHERE status >= 90 AND enddate < %lli", microtime()-(cleandays*86400*1000000L));
-    if(mysql_query(conn, query))
-        RETURN_ROLLBACK(conn);
-
-    RETURN_COMMIT(conn);
-}
-
-
 /* Clean filesystem from old logfiles and wrkdirs */
-int handleStep95(void)
+int handleStep99(void)
 {
     printf("Cleaning old directories in %s\n", configget("wwwroot"));
 
     cleanolddir(configget("wwwroot"));
 
     return 0;
+}
+
+
+/* Clean filesystem and database from deleted builds */
+int handleStep95(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_RES *result2;
+    MYSQL_ROW builds;
+    MYSQL_ROW active;
+    char query[1000];
+    char localdir[PATH_MAX];
+
+    if((conn = mysql_autoconnect()) == NULL)
+        return 1;
+
+    if(mysql_query(conn, "SELECT builds.id, buildqueue.id, buildqueue.owner FROM builds, buildqueue WHERE builds.status = 95 FOR UPDATE"))
+        RETURN_ROLLBACK(conn);
+
+    if((result = mysql_store_result(conn)) == NULL)
+        RETURN_ROLLBACK(conn);
+
+    while ((builds = mysql_fetch_row(result)))
+    {
+        sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), builds[2], builds[1], builds[0]);
+
+        printf("Removing %s\n", localdir);
+
+        if(rmdirrec(localdir) != 0)
+           continue;
+
+        sprintf(query, "DELETE FROM builds WHERE id = %d", atol(builds[0]));
+        if(mysql_query(conn, query))
+           RETURN_ROLLBACK(conn);
+
+        sprintf(query, "SELECT count(*) FROM builds WHERE queueid = \"%s\"", builds[1]);
+        if(mysql_query(conn, query))
+           RETURN_ROLLBACK(conn);
+
+        if((result2 = mysql_store_result(conn)) == NULL)
+            RETURN_ROLLBACK(conn);
+
+        active = mysql_fetch_row(result2);
+
+        if(atoi(active[0]) == 0)
+        {
+           sprintf(query, "DELETE FROM buildqueue WHERE id = \"%s\" AND status >= 90", builds[1]);
+           if(mysql_query(conn, query))
+              RETURN_ROLLBACK(conn);
+        }
+    }
+
+    mysql_free_result(result);
+
+    RETURN_COMMIT(conn);
 }
 
 
@@ -253,6 +286,30 @@ int handleStep91(void)
 }
 
 
+/* Automatically mark finished entries as deleted after $cleandays */
+int handleStep90(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    char query[1000];
+
+    int cleandays = atoi(configget("cleandays"));
+
+    if((conn = mysql_autoconnect()) == NULL)
+        return 1;
+
+    sprintf(query, "UPDATE builds SET status = 95 WHERE status = 90 AND enddate < %lli", microtime()-(cleandays*86400*1000000L));
+    if(mysql_query(conn, query))
+        RETURN_ROLLBACK(conn);
+
+    sprintf(query, "UPDATE buildqueue SET status = 95 WHERE status = 90 AND enddate < %lli", microtime()-(cleandays*86400*1000000L));
+    if(mysql_query(conn, query))
+        RETURN_ROLLBACK(conn);
+
+    RETURN_COMMIT(conn);
+}
+
+
 /* Clean build on backend after everything was transferred */
 int handleStep80(void)
 {
@@ -326,8 +383,8 @@ int handleStep71(void)
     char url[250];
     char query[1000];
     char remotefile[255];
-    char localfile[255];
-    char localdir[255];
+    char localfile[PATH_MAX];
+    char localdir[PATH_MAX];
 
     if((conn = mysql_autoconnect()) == NULL)
         return -1;
