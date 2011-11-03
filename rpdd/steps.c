@@ -257,7 +257,7 @@ int handleStep95(void)
         printf("Removing %s\n", localdir);
 
         if(rmdirrec(localdir) != 0)
-           continue;
+           printf("Failure when deleting %s\n", localdir);
 
         sprintf(query, "DELETE FROM builds WHERE id = %d", atol(builds[0]));
         if(mysql_query(conn, query))
@@ -294,15 +294,16 @@ int handleStep90(void)
     char query[1000];
 
     int cleandays = atoi(configget("cleandays"));
+    unsigned long long limit = microtime()-(cleandays*86400*1000000L);
 
     if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
-    sprintf(query, "UPDATE builds SET status = 95 WHERE status = 90 AND enddate < %lli", microtime()-(cleandays*86400*1000000L));
+    sprintf(query, "UPDATE builds SET status = 95 WHERE status = 90 AND (enddate > 0 AND enddate < %lli) OR startdate < %lli", limit, limit);
     if(mysql_query(conn, query))
         RETURN_ROLLBACK(conn);
 
-    sprintf(query, "UPDATE buildqueue SET status = 95 WHERE status = 90 AND enddate < %lli", microtime()-(cleandays*86400*1000000L));
+    sprintf(query, "UPDATE buildqueue SET status = 95 WHERE status = 90 AND (enddate > 0 AND enddate < %lli) OR startdate < %lli", limit, limit);
     if(mysql_query(conn, query))
         RETURN_ROLLBACK(conn);
 
