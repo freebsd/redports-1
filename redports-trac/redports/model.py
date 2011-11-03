@@ -50,7 +50,7 @@ class Port(object):
         cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES (%s, %s, %s, %s, %s, %s, UNIX_TIMESTAMP()*1000000, 0)", ( self.queueid, self.owner, self.repository, self.revision, self.portname, self.status ))
 
         if self.status == 20:
-             cursor.execute("INSERT INTO builds VALUES ( null, '%s', SUBSTRING(MD5(RAND()), 1, 25), '%s', 10, null, null, null, null, 0, 0, 0 )" % ( self.queueid, self.group ))
+             cursor.execute("INSERT INTO builds VALUES ( null, '%s', SUBSTRING(MD5(RAND()), 1, 25), '%s', 20, null, null, null, null, 0, 0, 0 )" % ( self.queueid, self.group ))
         db.commit()
 
     def setStatus(self, status, statusname=None):
