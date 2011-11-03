@@ -58,83 +58,16 @@ struct StepHandler stepreg[] = {
     { "71", handleStep71, 1, 0, 0 },
     { "80", handleStep80, 1, 0, 0 },
     { "90", handleStep90, 1, 7200, 0 },
-    { "91", handleStep91, 1, 120, 0 },
-    { "92", handleStep92, 1, 7200, 0 },
-    { "93", handleStep93, 1, 600, 0 },
     { "95", handleStep95, 1, 3600, 0 },
-    { "99", handleStep99, 1, 7200, 0 }
+    { "99", handleStep99, 1, 7200, 0 },
+    { "100", handleStep100, 1, 120, 0 },
+    { "101", handleStep101, 1, 7200, 0 },
+    { "102", handleStep102, 1, 600, 0 },
 };
 
 
-/* Clean filesystem from old logfiles and wrkdirs */
-int handleStep99(void)
-{
-    printf("Cleaning old directories in %s\n", configget("wwwroot"));
-
-    cleanolddir(configget("wwwroot"));
-
-    return 0;
-}
-
-
-/* Clean filesystem and database from deleted builds */
-int handleStep95(void)
-{
-    MYSQL *conn;
-    MYSQL_RES *result;
-    MYSQL_RES *result2;
-    MYSQL_ROW builds;
-    MYSQL_ROW active;
-    char query[1000];
-    char localdir[PATH_MAX];
-
-    if((conn = mysql_autoconnect()) == NULL)
-        return 1;
-
-    if(mysql_query(conn, "SELECT builds.id, buildqueue.id, buildqueue.owner FROM builds, buildqueue WHERE builds.status = 95 FOR UPDATE"))
-        RETURN_ROLLBACK(conn);
-
-    if((result = mysql_store_result(conn)) == NULL)
-        RETURN_ROLLBACK(conn);
-
-    while ((builds = mysql_fetch_row(result)))
-    {
-        sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), builds[2], builds[1], builds[0]);
-
-        printf("Removing %s\n", localdir);
-
-        if(rmdirrec(localdir) != 0)
-           continue;
-
-        sprintf(query, "DELETE FROM builds WHERE id = %d", atol(builds[0]));
-        if(mysql_query(conn, query))
-           RETURN_ROLLBACK(conn);
-
-        sprintf(query, "SELECT count(*) FROM builds WHERE queueid = \"%s\"", builds[1]);
-        if(mysql_query(conn, query))
-           RETURN_ROLLBACK(conn);
-
-        if((result2 = mysql_store_result(conn)) == NULL)
-            RETURN_ROLLBACK(conn);
-
-        active = mysql_fetch_row(result2);
-
-        if(atoi(active[0]) == 0)
-        {
-           sprintf(query, "DELETE FROM buildqueue WHERE id = \"%s\" AND status >= 90", builds[1]);
-           if(mysql_query(conn, query))
-              RETURN_ROLLBACK(conn);
-        }
-    }
-
-    mysql_free_result(result);
-
-    RETURN_COMMIT(conn);
-}
-
-
 /* Update portstrees on backend */
-int handleStep93(void)
+int handleStep102(void)
 {
     MYSQL *conn;
     MYSQL_RES *result;
@@ -203,7 +136,7 @@ int handleStep93(void)
 
 
 /* Checking builds */
-int handleStep92(void)
+int handleStep101(void)
 {
     MYSQL *conn;
     MYSQL_RES *result;
@@ -245,7 +178,7 @@ int handleStep92(void)
 
 
 /* Ping Backends */
-int handleStep91(void)
+int handleStep100(void)
 {
     MYSQL *conn;
     MYSQL_RES *result;
@@ -278,6 +211,73 @@ int handleStep91(void)
         sprintf(query, "UPDATE backends SET status = %d WHERE id = %d", status, atol(builds[0]));
         if(mysql_query(conn, query))
            RETURN_ROLLBACK(conn);
+    }
+
+    mysql_free_result(result);
+
+    RETURN_COMMIT(conn);
+}
+
+
+/* Clean filesystem from old logfiles and wrkdirs */
+int handleStep99(void)
+{
+    printf("Cleaning old directories in %s\n", configget("wwwroot"));
+
+    cleanolddir(configget("wwwroot"));
+
+    return 0;
+}
+
+
+/* Clean filesystem and database from deleted builds */
+int handleStep95(void)
+{
+    MYSQL *conn;
+    MYSQL_RES *result;
+    MYSQL_RES *result2;
+    MYSQL_ROW builds;
+    MYSQL_ROW active;
+    char query[1000];
+    char localdir[PATH_MAX];
+
+    if((conn = mysql_autoconnect()) == NULL)
+        return 1;
+
+    if(mysql_query(conn, "SELECT builds.id, buildqueue.id, buildqueue.owner FROM builds, buildqueue WHERE builds.status = 95 FOR UPDATE"))
+        RETURN_ROLLBACK(conn);
+
+    if((result = mysql_store_result(conn)) == NULL)
+        RETURN_ROLLBACK(conn);
+
+    while ((builds = mysql_fetch_row(result)))
+    {
+        sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), builds[2], builds[1], builds[0]);
+
+        printf("Removing %s\n", localdir);
+
+        if(rmdirrec(localdir) != 0)
+           continue;
+
+        sprintf(query, "DELETE FROM builds WHERE id = %d", atol(builds[0]));
+        if(mysql_query(conn, query))
+           RETURN_ROLLBACK(conn);
+
+        sprintf(query, "SELECT count(*) FROM builds WHERE queueid = \"%s\"", builds[1]);
+        if(mysql_query(conn, query))
+           RETURN_ROLLBACK(conn);
+
+        if((result2 = mysql_store_result(conn)) == NULL)
+            RETURN_ROLLBACK(conn);
+
+        active = mysql_fetch_row(result2);
+
+        if(atoi(active[0]) == 0)
+        {
+           sprintf(query, "DELETE FROM buildqueue WHERE id = \"%s\" AND status >= 90", builds[1]);
+           if(mysql_query(conn, query))
+              RETURN_ROLLBACK(conn);
+        }
     }
 
     mysql_free_result(result);
