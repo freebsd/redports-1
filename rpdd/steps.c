@@ -244,7 +244,7 @@ int handleStep95(void)
     if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
-    if(mysql_query(conn, "SELECT builds.id, buildqueue.id, buildqueue.owner FROM builds, buildqueue WHERE builds.status = 95 FOR UPDATE"))
+    if(mysql_query(conn, "SELECT builds.id, buildqueue.id, buildqueue.owner FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND builds.status = 95 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
     if((result = mysql_store_result(conn)) == NULL)
