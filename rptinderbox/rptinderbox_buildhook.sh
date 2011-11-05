@@ -54,7 +54,7 @@ if [ "${STATUS}" = "SUCCESS" -o "${STATUS}" = "LEFTOVERS" ]; then
     compress_wrkdir
   fi
 elif [ "${STATUS}" != "DUD" ]; then
-  if [ -f "${LOCK}" -a "${PORTDIR}" = "${PORT}" ]; then
+  if [ -f "${LOCK}" ]; then
     echo "BUILDLOG=\"/errors/${BUILD}/${PACKAGE_NAME}.log\"" >> ${FINISHED}
   fi
   compress_wrkdir
