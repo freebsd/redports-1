@@ -297,11 +297,11 @@ int handleStep90(void)
     if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
-    sprintf(query, "UPDATE builds SET status = 95 WHERE status = 90 AND (enddate > 0 AND enddate < %lli) OR startdate < %lli", limit, limit);
+    sprintf(query, "UPDATE builds SET status = 95 WHERE status = 90 AND (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli)", limit, limit);
     if(mysql_query(conn, query))
         RETURN_ROLLBACK(conn);
 
-    sprintf(query, "UPDATE buildqueue SET status = 95 WHERE status = 90 AND (enddate > 0 AND enddate < %lli) OR startdate < %lli", limit, limit);
+    sprintf(query, "UPDATE buildqueue SET status = 95 WHERE status = 90 AND (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli)", limit, limit);
     if(mysql_query(conn, query))
         RETURN_ROLLBACK(conn);
 
@@ -664,9 +664,11 @@ int handleStep20(void)
     MYSQL_RES *result;
     MYSQL_RES *result2;
     MYSQL_RES *result3;
+    MYSQL_RES *result4;
     MYSQL_ROW builds;
     MYSQL_ROW backends;
     MYSQL_ROW runningjobs;
+    MYSQL_ROW runningjobs2;
     char query[1000];
 
     if((conn = mysql_autoconnect()) == NULL)
@@ -701,9 +703,26 @@ int handleStep20(void)
 
             if(atoi(runningjobs[0]) < atoi(backends[1]))
             {
-                sprintf(query, "UPDATE builds SET backendid = %d, status = 30, startdate = %lli WHERE id = %d", atoi(backends[0]), microtime(), atoi(builds[0]));
+                sprintf(query, "SELECT count(*) FROM builds WHERE backendid = %d AND `group` = \"%s\" AND status >= 30 AND status < 90", atoi(backends[0]), builds[1]);
+
                 if(mysql_query(conn, query))
                     RETURN_ROLLBACK(conn);
+
+                if((result4 = mysql_store_result(conn)) == NULL)
+                    RETURN_ROLLBACK(conn);
+
+                runningjobs2 = mysql_fetch_row(result4);
+
+                printf("Running %d jobs for group %s\n", atoi(runningjobs2[0]), builds[1]);
+
+                if(atoi(runningjobs2[0]) == 0)
+                {
+                    sprintf(query, "UPDATE builds SET backendid = %d, status = 30, startdate = %lli WHERE id = %d", atoi(backends[0]), microtime(), atoi(builds[0]));
+                    if(mysql_query(conn, query))
+                        RETURN_ROLLBACK(conn);
+                }
+
+                mysql_free_result(result4);
             }
 
             mysql_free_result(result3);
