@@ -344,7 +344,7 @@ int handleStep80(void)
                 RETURN_ROLLBACK(conn);
         }
 
-        sprintf(query, "UPDATE builds SET status = 90 WHERE id = %d", atoi(builds[0]));
+        sprintf(query, "UPDATE builds SET status = 90 WHERE id = %ld", atol(builds[0]));
         if(mysql_query(conn, query))
            RETURN_ROLLBACK(conn);
 
@@ -418,7 +418,7 @@ int handleStep71(void)
               continue;
            }
 
-           sprintf(query, "UPDATE builds SET buildlog = \"%s\" WHERE id = %d", basename(localfile), atoi(builds[0]));
+           sprintf(query, "UPDATE builds SET buildlog = \"%s\" WHERE id = %ld", basename(localfile), atol(builds[0]));
            if(mysql_query(conn, query))
               RETURN_ROLLBACK(conn);
         }
@@ -433,13 +433,13 @@ int handleStep71(void)
               continue;
            }
 
-           sprintf(query, "UPDATE builds SET wrkdir = \"%s\" WHERE id = %d", basename(localfile), atoi(builds[0]));
+           sprintf(query, "UPDATE builds SET wrkdir = \"%s\" WHERE id = %ld", basename(localfile), atol(builds[0]));
            if(mysql_query(conn, query))
               RETURN_ROLLBACK(conn);
         }
 
         printf("Updating build status for %s\n", builds[0]);
-        sprintf(query, "UPDATE builds SET buildstatus = \"%s\", buildreason = \"%s\", enddate = %lli, status = 80 WHERE id = %d", getenv("BUILDSTATUS") != NULL ? getenv("BUILDSTATUS") : "", getenv("FAIL_REASON") != NULL ? getenv("FAIL_REASON") : "", microtime(), atoi(builds[0]));
+        sprintf(query, "UPDATE builds SET buildstatus = \"%s\", buildreason = \"%s\", enddate = %lli, status = 80 WHERE id = %ld", getenv("BUILDSTATUS") != NULL ? getenv("BUILDSTATUS") : "", getenv("FAIL_REASON") != NULL ? getenv("FAIL_REASON") : "", microtime(), atol(builds[0]));
         if(mysql_query(conn, query))
            RETURN_ROLLBACK(conn);
     }
@@ -471,7 +471,7 @@ int handleStep70(void)
 
     while ((builds = mysql_fetch_row(result)))
     {
-        sprintf(query, "SELECT count(*) FROM builds WHERE status = 71 AND backendid = %d", atoi(builds[1]));
+        sprintf(query, "SELECT count(*) FROM builds WHERE status = 71 AND backendid = %ld", atol(builds[1]));
         if(mysql_query(conn, query))
            RETURN_ROLLBACK(conn);
 
@@ -482,7 +482,7 @@ int handleStep70(void)
 
         if(atoi(runningdownloads[0]) == 0)
         {
-           sprintf(query, "UPDATE builds SET status = 71 WHERE id = %d", atoi(builds[0]));
+           sprintf(query, "UPDATE builds SET status = 71 WHERE id = %ld", atol(builds[0]));
            if(mysql_query(conn, query))
                RETURN_ROLLBACK(conn);
         }
@@ -525,13 +525,13 @@ int handleStep51(void)
 
         if(strcmp(getenv("STATUS"), "finished") == 0 || strcmp(getenv("STATUS"), "idle") == 0)
         {
-           sprintf(query, "UPDATE builds SET status = 70 WHERE id = %d", atoi(builds[0]));
+           sprintf(query, "UPDATE builds SET status = 70 WHERE id = %ld", atol(builds[0]));
            if(mysql_query(conn, query))
                RETURN_ROLLBACK(conn);
         }
         else
         {
-           sprintf(query, "UPDATE builds SET status = 50 WHERE id = %d", atoi(builds[0]));
+           sprintf(query, "UPDATE builds SET status = 50 WHERE id = %ld", atol(builds[0]));
            if(mysql_query(conn, query))
                RETURN_ROLLBACK(conn);
         }
@@ -588,7 +588,7 @@ int handleStep31(void)
            printf("CGI Error: %s\n", getenv("ERROR"));
         }
 
-        sprintf(query, "UPDATE builds SET status = %d WHERE id = %d", status, atoi(builds[0]));
+        sprintf(query, "UPDATE builds SET status = %d WHERE id = %ld", status, atol(builds[0]));
         if(mysql_query(conn, query))
            RETURN_ROLLBACK(conn);
     }
@@ -604,7 +604,9 @@ int handleStep30(void)
 {
     MYSQL *conn;
     MYSQL_RES *result;
+    MYSQL_RES *result2;
     MYSQL_ROW builds;
+    MYSQL_ROW backend;
     char query[1000];
     char url[250];
     int status;
@@ -612,7 +614,7 @@ int handleStep30(void)
     if((conn = mysql_autoconnect()) == NULL)
         return -1;
 
-    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, buildname, repository, revision, backendbuilds.id FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 30 FOR UPDATE"))
+    if(mysql_query(conn, "SELECT id, backendid FROM builds WHERE status = 30 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
     if((result = mysql_store_result(conn)) == NULL)
@@ -620,25 +622,34 @@ int handleStep30(void)
 
     while ((builds = mysql_fetch_row(result)))
     {
-        sprintf(url, "%s://%s%sstatus?build=%s", builds[1], builds[2], builds[3], builds[5]);
-        if(!getpage(url, builds[4]) || strcmp(getenv("STATUS"), "idle") != 0)
+        sprintf(query, "SELECT protocol, host, uri, credentials, buildname, repository, revision, backendbuilds.id WHERE backendbuilds.backendid = backends.id AND backends.id = %ld", atol(builds[1]));
+        if(mysql_query(conn, query))
+           RETURN_ROLLBACK(conn);
+
+        if((result2 = mysql_store_result(conn)) == NULL)
+            RETURN_ROLLBACK(conn);
+
+        backend = mysql_fetch_row(result2);
+
+        sprintf(url, "%s://%s%sstatus?build=%s", backend[0], backend[1], backend[2], backend[4]);
+        if(!getpage(url, backend[3]) || strcmp(getenv("STATUS"), "idle") != 0)
         {
            if(getenv("ERROR") != NULL)
               printf("CGI Error: %s\n", getenv("ERROR"));
            
-           sprintf(query, "UPDATE backendbuilds SET status = 2 WHERE id = %d", atoi(builds[8]));
+           sprintf(query, "UPDATE backendbuilds SET status = 2 WHERE id = %ld", atol(backend[7]));
            if(mysql_query(conn, query))
               RETURN_ROLLBACK(conn);
 
-           sprintf(query, "UPDATE builds SET status = 90, buildstatus = \"FAIL\" WHERE id = %d", atoi(builds[0]));
+           sprintf(query, "UPDATE builds SET status = 90, buildstatus = \"FAIL\" WHERE id = %ld", atol(builds[0]));
            if(mysql_query(conn, query))
               RETURN_ROLLBACK(conn);
 
            continue;
         }
 
-        sprintf(url, "%s://%s%scheckout?repository=%s&revision=%s&build=%s", builds[1], builds[2], builds[3], builds[6], builds[7], builds[5]);
-        if(getpage(url, builds[4]))
+        sprintf(url, "%s://%s%scheckout?repository=%s&revision=%s&build=%s", backend[0], backend[1], backend[2], backend[5], backend[6], backend[4]);
+        if(getpage(url, backend[3]))
            status = 31;
         else
         {
@@ -646,7 +657,7 @@ int handleStep30(void)
            printf("CGI Error: %s\n", getenv("ERROR"));
         }
 
-        sprintf(query, "UPDATE builds SET status = %d WHERE id = %d", status, atoi(builds[0]));
+        sprintf(query, "UPDATE builds SET status = %d WHERE id = %ld", status, atol(builds[0]));
         if(mysql_query(conn, query))
            RETURN_ROLLBACK(conn);
     }
@@ -692,7 +703,7 @@ int handleStep20(void)
 
         while((backends = mysql_fetch_row(result2)))
         {
-            sprintf(query, "SELECT count(*) FROM builds WHERE backendid = %d AND status < 90", atoi(backends[0]));
+            sprintf(query, "SELECT count(*) FROM builds WHERE backendid = %ld AND status < 90", atol(backends[0]));
             if(mysql_query(conn, query))
                 RETURN_ROLLBACK(conn);
 
@@ -703,7 +714,7 @@ int handleStep20(void)
 
             if(atoi(runningjobs[0]) < atoi(backends[1]))
             {
-                sprintf(query, "SELECT count(*) FROM builds WHERE backendid = %d AND `group` = \"%s\" AND status >= 30 AND status < 90", atoi(backends[0]), builds[1]);
+                sprintf(query, "SELECT count(*) FROM builds WHERE backendid = %ld AND `group` = \"%s\" AND status >= 30 AND status < 90", atol(backends[0]), builds[1]);
 
                 if(mysql_query(conn, query))
                     RETURN_ROLLBACK(conn);
@@ -717,7 +728,7 @@ int handleStep20(void)
 
                 if(atoi(runningjobs2[0]) == 0)
                 {
-                    sprintf(query, "UPDATE builds SET backendid = %d, status = 30, startdate = %lli WHERE id = %d", atoi(backends[0]), microtime(), atoi(builds[0]));
+                    sprintf(query, "UPDATE builds SET backendid = %ld, status = 30, startdate = %lli WHERE id = %ld", atol(backends[0]), microtime(), atol(builds[0]));
                     if(mysql_query(conn, query))
                         RETURN_ROLLBACK(conn);
                 }
