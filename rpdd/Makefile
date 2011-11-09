@@ -9,6 +9,10 @@ LDFLAGS=-L${LOCALBASE}/lib
 
 all:	rpdd
 
+install: rpdd
+	install -o root -g wheel -m 0755 rpdd /usr/local/bin/rpdd
+	install -o root -g wheel -m 0644 rpdd.conf /usr/local/etc/rpdd.conf-dist
+
 clean:
 	@rm -f *.o *.core
 
