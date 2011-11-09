@@ -24,12 +24,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <syslog.h>
 #include <signal.h>
 #include <string.h>
+#include <limits.h>
 
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -40,7 +42,6 @@
 
 #define RPD_VERSION "0.8.92"
 #define DAEMON_NAME "rpd"
-#define PID_FILE "/var/run/rpd.pid"
 #define CONF_FILE "rpdd.conf"
 
 #define MAXCHILDS 2
@@ -110,9 +111,10 @@ void run(void)
 void usage(void){
     printf("Usage: %s [options]\n", DAEMON_NAME);
     printf("Options:\n");
-    printf("    -n   Don't fork off as a daemon.\n");
-    printf("    -h   Show this help screen.\n");
-    printf("    -v   Show version information.\n");
+    printf("    -c file  Config file\n");
+    printf("    -n       Don't fork off as a daemon\n");
+    printf("    -h       Show this help screen\n");
+    printf("    -v       Show version information\n");
 }
 
 void version(void){
@@ -147,6 +149,8 @@ int main(int argc, char *argv[]) {
 #else
     int daemonize = 1;
 #endif
+    char config[PATH_MAX] = CONF_FILE;
+    pid_t pid, sid;
  
     // Setup signal handling before we start
     signal(SIGHUP, signal_handler);
@@ -155,8 +159,12 @@ int main(int argc, char *argv[]) {
     signal(SIGQUIT, signal_handler);
  
     int c;
-    while( (c = getopt(argc, argv, "nhv")) != -1) {
+    while( (c = getopt(argc, argv, "c:hnv")) != -1) {
         switch(c){
+            case 'c':
+                strncpy(config, optarg, sizeof(config)-1);
+                config[sizeof(config)] = '\0';
+                break;
             case 'h':
                 usage();
                 exit(0);
@@ -168,17 +176,18 @@ int main(int argc, char *argv[]) {
                 version();
                 exit(0);
                 break;
+            case '?':
             default:
                 usage();
-                exit(0);
+                exit(1);
                 break;
         }
     }
 
-    configparse(CONF_FILE);
- 
-    /* Our process ID and Session ID */
-    pid_t pid, sid;
+    if(configparse(config)){
+        printf("Could not load config file %s\n", config);
+        exit(1);
+    }
  
     if (daemonize) {
         /* Fork off the parent process */
