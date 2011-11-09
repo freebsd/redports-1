@@ -1,6 +1,6 @@
 from trac.core import *
 from trac.web.api import IRequestHandler
-from trac.web.chrome import add_script, add_stylesheet, INavigationContributor, ITemplateProvider
+from trac.web.chrome import add_script, add_stylesheet, add_warning, add_notice, INavigationContributor, ITemplateProvider
 from trac.perm import IPermissionRequestor
 from trac.util.translation import _
 from trac.versioncontrol import RepositoryManager
@@ -60,10 +60,15 @@ class BuildqueuePanel(Component):
         Note that if template processing should not occur, this method can
         simply send the response itself and not return anything.
         """
+        req.perm('redports').assert_permission('BUILDQUEUE_VIEW')
+
         repopath = RepositoryManager(self.env).get_repository(None).get_path_url(req.authname, 1)
         reponame, repos, repopath2 = RepositoryManager(self.env).get_repository_by_path(repopath)
 
-        if req.method == 'POST' and req.args.get('addbuild'):
+        if not repos.has_node(req.authname):
+            add_warning(req, 'Your account was not activated yet '
+                             'so scheduling new builds will not work.')
+        elif req.method == 'POST' and req.args.get('addbuild'):
             port = Port(self.env)
             port.owner = req.authname
             port.repository = repopath
@@ -71,15 +76,13 @@ class BuildqueuePanel(Component):
             port.portname = req.args.get('portname')
             port.group = req.args.get('group')
             port.addPort()
+            add_notice(req, 'New builds for port %s have been scheduled', req.args.get('portname'))
             req.redirect(req.href.buildqueue())
-
-        if req.method == 'POST' and req.args.get('deletebuild'):
+        elif req.method == 'POST' and req.args.get('deletebuild'):
             port = Port(self.env)
             port.id = req.args.get('id')
             port.deleteBuildQueueEntry(req)
             req.redirect(req.href.buildqueue())
-
-        req.perm('redports').assert_permission('BUILDQUEUE_VIEW')
 
         add_stylesheet(req, 'common/css/admin.css')
         add_stylesheet(req, 'redports/redports.css')
