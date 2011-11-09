@@ -7,7 +7,7 @@ class RedportsEnvironment(Component):
     
     def __init__(self):
         self.schema = [
-            Table('buildqueue', key=('id'))[
+            Table('buildqueue', key=('id', 'owner', 'status'))[
                 Column('id', type='varchar(25)', size=25),
                 Column('owner', type='varchar(50)', size=50),
                 Column('repository', type='varchar(255)', size=255),
@@ -17,7 +17,7 @@ class RedportsEnvironment(Component):
                 Column('startdate', type='bigint'),
                 Column('enddate', type='bigint')
             ],
-            Table('builds', key=('id'))[
+            Table('builds', key=('id', 'queueid', 'backendkey', 'group', 'status', 'backendid'))[
                 Column('id', type='int', auto_increment=True),
                 Column('queueid', type='varchar(25)', size=25),
                 Column('backendkey', type='varchar(25)', size=25),
@@ -31,7 +31,7 @@ class RedportsEnvironment(Component):
                 Column('startdate', type='bigint'),
                 Column('enddate', type='bigint')
             ],
-            Table('backends', key=('id'))[
+            Table('backends', key=('id', 'status'))[
                 Column('id', type='int', auto_increment=True),
                 Column('host', type='varchar(50)', size=50),
                 Column('protocol', type='varchar(10)', size=10),
@@ -41,7 +41,7 @@ class RedportsEnvironment(Component):
                 Column('status', type='int'),
                 Column('type', type='varchar(25)', size=25)
             ],
-            Table('backendbuilds', key=('id'))[
+            Table('backendbuilds', key=('id', 'status', 'backendid', 'buildgroup'))[
                 Column('id', type='int', auto_increment=True),
                 Column('buildgroup', type='varchar(25)', size=25),
                 Column('backendid', type='int'),
