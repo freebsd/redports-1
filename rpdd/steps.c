@@ -563,7 +563,9 @@ int handleStep31(void)
 {
     MYSQL *conn;
     MYSQL_RES *result;
+    MYSQL_RES *result2;
     MYSQL_ROW builds;
+    MYSQL_ROW backend;
     char query[1000];
     char url[500];
     int status;
@@ -571,7 +573,7 @@ int handleStep31(void)
     if((conn = mysql_autoconnect()) == NULL)
         return -1;
 
-    if(mysql_query(conn, "SELECT builds.id, protocol, host, uri, credentials, portname, buildname, backendkey FROM builds, buildqueue, backends, backendbuilds WHERE builds.queueid = buildqueue.id AND builds.backendid = backends.id AND builds.backendid = backendbuilds.backendid AND builds.group = backendbuilds.buildgroup AND builds.status = 31 FOR UPDATE"))
+    if(mysql_query(conn, "SELECT id, backendid FROM builds WHERE status = 31 FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
     if((result = mysql_store_result(conn)) == NULL)
@@ -579,8 +581,17 @@ int handleStep31(void)
 
     while ((builds = mysql_fetch_row(result)))
     {
-        sprintf(url, "%s://%s%sbuild?port=%s&build=%s&priority=%s&finishurl=%s/backend/finished/%s", builds[1], builds[2], builds[3], builds[5], builds[6], "5", configget("wwwurl"), builds[7]);
-        if(getpage(url, builds[4]))
+        sprintf(query, "SELECT protocol, host, uri, credentials, portname, buildname, backendkey WHERE backendbuilds.backendid = backends.id AND backends.id = %ld", atol(builds[1]));
+        if(mysql_query(conn, query))
+           RETURN_ROLLBACK(conn);
+
+        if((result2 = mysql_store_result(conn)) == NULL)
+            RETURN_ROLLBACK(conn);
+
+        backend = mysql_fetch_row(result2);
+
+        sprintf(url, "%s://%s%sbuild?port=%s&build=%s&priority=%s&finishurl=%s/backend/finished/%s", backend[0], backend[1], backend[2], backend[4], backend[5], "5", configget("wwwurl"), backend[6]);
+        if(getpage(url, backend[3]))
            status = 50;
         else
         {
