@@ -44,7 +44,7 @@
 #define DAEMON_NAME "rpd"
 #define CONF_FILE "rpdd.conf"
 
-#define MAXCHILDS 2
+#define MAXCHILDS 5
 
 void usage(void);
 void version(void);
