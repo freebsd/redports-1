@@ -1,0 +1,43 @@
+#!/bin/sh
+
+# $FreeBSD$
+#
+# PROVIDE: rpdd
+# REQUIRE: DAEMON
+# BEFORE: LOGIN mysql
+# KEYWORD: shutdown
+#
+# Add the following line to /etc/rc.conf[.local] to enable rpdd.
+#
+# rpdd_enable (bool):	Set to "NO" by default.
+#			Set it to "YES" to enable rpdd.
+# rpdd_user (str):	User account to run with.
+# rpdd_flags (str):	Custom flags for rpdd.
+
+. /etc/rc.subr
+
+name=rpdd
+rcvar=`set_rcvar`
+
+command="/usr/local/bin/rpdd"
+pidfile="/var/run/${name}.pid"
+logfile="/var/log/${name}.log"
+
+start_cmd="${name}_start"
+
+rpdd_start()
+{
+	echo -n "Starting ${name}"
+	/usr/bin/install -o ${rpdd_user} -g wheel -m 644 /dev/null ${pidfile}
+	/usr/bin/install -o ${rpdd_user} -g wheel -m 644 /dev/null ${logfile}
+	/usr/sbin/daemon -p ${pidfile} -u ${rpdd_user} ${command} ${rpdd_flags} >${logfile} 2>&1
+	echo '.'
+}
+
+load_rc_config $name
+
+: ${rpdd_enable="NO"}
+: ${rpdd_user="www"}
+: ${rpdd_flags="-c /usr/local/etc/rpdd.conf"}
+
+run_rc_command "$1"
