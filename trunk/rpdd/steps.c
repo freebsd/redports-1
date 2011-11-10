@@ -853,8 +853,7 @@ int handleStep10(void)
     MYSQL_RES *result2;
     MYSQL_ROW builds;
     MYSQL_ROW backends;
-    int num_fields;
-    int i;
+    int status;
     char query[1000];
 
 
@@ -877,6 +876,11 @@ int handleStep10(void)
         if((result2 = mysql_store_result(conn)) == NULL)
             RETURN_ROLLBACK(conn);
 
+        if(mysql_num_rows(result2) > 0)
+            status = 20;
+        else
+            status = 95;
+
         while((backends = mysql_fetch_row(result2)))
         {
             printf("adding build %s for %s\n", builds[0], builds[1]);
@@ -887,7 +891,7 @@ int handleStep10(void)
 
         mysql_free_result(result2);
 
-        sprintf(query, "UPDATE buildqueue SET status = 20 WHERE id = \"%s\"", builds[0]);
+        sprintf(query, "UPDATE buildqueue SET status = %d WHERE id = \"%s\"", status, builds[0]);
         if(mysql_query(conn, query))
             RETURN_ROLLBACK(conn);
     }
