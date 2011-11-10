@@ -122,8 +122,8 @@ if [ "${CLEANJAILREMOVE}" = "yes" ]; then
   rm -rf ${TINDERBOX}/errors/${BUILD}
   rm -rf ${TINDERBOX}/logs/${BUILD}
   rm -rf ${TINDERBOX}/options/${BUILD}
-  rm -rf ${TINDERBOX}/scripts/etc/env/build.${BUILD}
   rm -rf ${TINDERBOX}/wrkdirs/${BUILD}
+  mv ${TINDERBOX}/scripts/etc/env/build.${BUILD} ${TINDERBOX}/scripts/etc/env/build.${BUILD}.bak
 
   echo "Removing ZFS filesystems"
   zfs destroy zroot/tinderbox/${BUILD}/portstree
