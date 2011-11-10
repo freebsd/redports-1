@@ -2,7 +2,7 @@ from trac.core import *
 from trac.web.api import IRequestHandler
 from trac.web.chrome import add_script, add_stylesheet, add_warning, add_notice, INavigationContributor, ITemplateProvider
 from trac.perm import IPermissionRequestor
-from trac.util.translation import _
+from trac.util.translation import _, tag_
 from trac.versioncontrol import RepositoryManager
 
 from genshi.builder import tag
@@ -75,8 +75,11 @@ class BuildqueuePanel(Component):
             port.revision = req.args.get('revision')
             port.portname = req.args.get('portname')
             port.group = req.args.get('group')
-            port.addPort()
-            add_notice(req, 'New builds for port %s have been scheduled', req.args.get('portname'))
+            if port.addPort():
+                add_notice(req, 'New builds for port %s have been scheduled', req.args.get('portname'))
+            else:
+                buildgroup = tag.a("Buildgroup", href=req.href.buildgroups())
+                add_warning(req, tag_("Cannot schedule automatic builds. You need to join a %(buildgroup)s first.", buildgroup=buildgroup))
             req.redirect(req.href.buildqueue())
         elif req.method == 'POST' and req.args.get('deletebuild'):
             port = Port(self.env)

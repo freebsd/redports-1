@@ -37,6 +37,13 @@ class Port(object):
 
         if self.group == 'automatic':
             self.setStatus(10)
+
+            cursor.execute("SELECT count(*) FROM automaticbuildgroups WHERE username = %s", self.owner )
+            row = cursor.fetchone()
+            if not row:
+                raise TracError('SQL Error')
+            if row[0] < 1:
+                return False
         else:
             self.setStatus(20)
 
@@ -52,6 +59,7 @@ class Port(object):
         if self.status == 20:
              cursor.execute("INSERT INTO builds VALUES ( null, '%s', SUBSTRING(MD5(RAND()), 1, 25), '%s', 20, null, null, null, null, 0, 0, 0 )" % ( self.queueid, self.group ))
         db.commit()
+        return True
 
     def setStatus(self, status, statusname=None):
         self.status = status
