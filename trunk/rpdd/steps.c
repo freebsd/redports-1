@@ -291,7 +291,7 @@ int handleStep90(void)
     MYSQL_RES *result;
     char query[1000];
 
-    int cleandays = atoi(configget("cleandays"));
+    unsigned long long cleandays = atoi(configget("cleandays"));
     unsigned long long limit = microtime()-(cleandays*86400*1000000L);
 
     if((conn = mysql_autoconnect()) == NULL)
