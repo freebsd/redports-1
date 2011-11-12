@@ -37,8 +37,10 @@
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
 
 #include "steps.h"
+#include "util.h"
 
 #define RPD_VERSION "0.8.92"
 #define DAEMON_NAME "rpd"
@@ -137,7 +139,7 @@ void signal_handler(int sig) {
             exit(1);
             break;
         default:
-            syslog(LOG_WARNING, "Unhandled signal (%d) %s", strsignal(sig));
+            syslog(LOG_WARNING, "Unhandled signal %s", strsignal(sig));
             break;
     }
 }
@@ -163,7 +165,7 @@ int main(int argc, char *argv[]) {
         switch(c){
             case 'c':
                 strncpy(config, optarg, sizeof(config)-1);
-                config[sizeof(config)] = '\0';
+                config[sizeof(config)-1] = '\0';
                 break;
             case 'h':
                 usage();
