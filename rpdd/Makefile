@@ -17,11 +17,14 @@ install: rpdd
 clean:
 	@rm -f *.o *.core
 
-rpdd:	database.o remote.o rpdd.o steps.o util.o
-	$(CC) $(LDFLAGS) -lcurl `mysql_config --libs` database.o remote.o rpdd.o steps.o util.o -o rpdd
+rpdd:	database.o log.o remote.o rpdd.o steps.o util.o
+	$(CC) $(LDFLAGS) -lcurl `mysql_config --libs` database.o log.o remote.o rpdd.o steps.o util.o -o rpdd
 
 database.o: database.c
 	$(CC) $(CPPFLAGS) `mysql_config --cflags` -c database.c
+
+log.o: log.c
+	$(CC) $(CPPFLAGS) -c log.c
 
 remote.o: remote.c
 	$(CC) $(CPPFLAGS) -c remote.c

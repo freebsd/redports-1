@@ -90,12 +90,12 @@ int handleStep102(void)
 
     while ((builds = mysql_fetch_row(result)))
     {
-        printf("Checking build %s on backend %s\n", builds[5], builds[2]);
+        loginfo("Checking build %s on backend %s", builds[5], builds[2]);
 
         sprintf(url, "%s://%s%sstatus?build=%s", builds[1], builds[2], builds[3], builds[5]);
         if(!getpage(url, builds[4]))
         {
-           printf("CGI Error: %s\n", getenv("ERROR"));
+           logcgi(url, getenv("ERROR"));
            continue;
         }
 
@@ -104,26 +104,26 @@ int handleStep102(void)
 
         if(strptime(getenv("PORTSTREELASTBUILT"), "%Y-%m-%d %H:%M:%S", &tm) == NULL)
         {
-           printf("converting portstreelastbuilt failed!");
+           logerror("converting portstreelastbuilt failed!");
            continue;
         }
 
         if(difftime(time(NULL), mktime(&tm)) < 3600*maxage)
         {
-           printf("Portstree last built %s does not exceed max. age of %d hours\n", getenv("PORTSTREELASTBUILT"), maxage);
+           loginfo("Portstree last built %s does not exceed max. age of %d hours", getenv("PORTSTREELASTBUILT"), maxage);
            continue;
         }
 
-        printf("Updating portstree for build %s on backend %s\n", builds[5], builds[2]);
+        loginfo("Updating portstree for build %s on backend %s", builds[5], builds[2]);
 
         sprintf(url, "%s://%s%supdate?build=%s", builds[1], builds[2], builds[3], builds[5]);
         if(!getpage(url, builds[4]))
         {
-           printf("CGI Error: %s\n", getenv("ERROR"));
+           logcgi(url, getenv("ERROR"));
            continue;
         }
 
-        printf("Updating portstree for build %s finished.\n", builds[5]);
+        loginfo("Updating portstree for build %s finished.", builds[5]);
 
         /* only 1 at a time */
         break;
@@ -156,7 +156,7 @@ int handleStep101(void)
 
     while ((builds = mysql_fetch_row(result)))
     {
-        printf("Checking build %s on backend %s\n", builds[5], builds[2]);
+        loginfo("Checking build %s on backend %s", builds[5], builds[2]);
 
         sprintf(url, "%s://%s%sselftest?build=%s", builds[1], builds[2], builds[3], builds[5]);
         if(getpage(url, builds[4]) == -1)
@@ -164,7 +164,7 @@ int handleStep101(void)
         else
            status = 1; /* Status enabled */
 
-        printf("%s is %s\n", builds[5], status == 2 ? "not available" : "available");
+        loginfo("%s is %s", builds[5], status == 2 ? "not available" : "available");
 
         sprintf(query, "UPDATE backendbuilds SET status = %d WHERE id = %ld", status, atol(builds[6]));
         if(mysql_query(conn, query))
@@ -198,7 +198,7 @@ int handleStep100(void)
 
     while ((builds = mysql_fetch_row(result)))
     {
-        printf("Checking backend %s\n", builds[2]);
+        loginfo("Checking backend %s", builds[2]);
 
         sprintf(url, "%s://%s%sping", builds[1], builds[2], builds[3]);
         if(getpage(url, builds[4]) == -1)
@@ -206,7 +206,7 @@ int handleStep100(void)
         else
            status = 1; /* Status enabled */
 
-        printf("%s is %s\n", builds[2], status == 2 ? "not available" : "available");
+        loginfo("%s is %s", builds[2], status == 2 ? "not available" : "available");
 
         sprintf(query, "UPDATE backends SET status = %d WHERE id = %ld", status, atol(builds[0]));
         if(mysql_query(conn, query))
@@ -222,7 +222,7 @@ int handleStep100(void)
 /* Clean filesystem from old logfiles and wrkdirs */
 int handleStep99(void)
 {
-    printf("Cleaning old directories in %s\n", configget("wwwroot"));
+    loginfo("Cleaning old directories in %s", configget("wwwroot"));
 
     cleanolddir(configget("wwwroot"));
 
@@ -255,7 +255,7 @@ int handleStep95(void)
         sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), builds[2], builds[1], builds[0]);
 
         if(rmdirrec(localdir) != 0)
-           printf("Failure when deleting %s\n", localdir);
+           logerror("Failure while deleting %s", localdir);
 
         sprintf(query, "DELETE FROM builds WHERE id = %ld", atol(builds[0]));
         if(mysql_query(conn, query))
@@ -339,12 +339,12 @@ int handleStep80(void)
 
         backend = mysql_fetch_row(result2);
 
-        printf("Cleaning build %s on backend %s\n", backend[4], backend[1]);
+        loginfo("Cleaning build %s on backend %s", backend[4], backend[1]);
 
         sprintf(url, "%s://%s%sclean?build=%s", backend[0], backend[1], backend[2], backend[4]);
         if(!getpage(url, backend[3]))
         {
-            printf("CGI Error: %s\n", getenv("ERROR"));
+            logcgi(url, getenv("ERROR"));
 
             sprintf(query, "UPDATE backendbuilds SET status = 2 WHERE id = %ld", atol(backend[5]));
             if(mysql_query(conn, query))
@@ -429,12 +429,11 @@ int handleStep71(void)
         sprintf(url, "%s://%s%sstatus?build=%s", backend[0], backend[1], backend[2], backend[4]);
         if(!getpage(url, backend[3]))
         {
-           printf("CGI Error: %s\n", getenv("ERROR"));
+           logcgi(url, getenv("ERROR"));
            continue;
         }
 
         sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), buildqueue[0], buildqueue[1], builds[0]);
-        printf("Log dir: %s\n", localdir);
         if(mkdirrec(localdir) != 0)
            continue;
 
@@ -442,9 +441,9 @@ int handleStep71(void)
         {
            sprintf(localfile, "%s/%s", localdir, basename(getenv("BUILDLOG")));
            sprintf(remotefile, "%s://%s%s", backend[0], backend[1], getenv("BUILDLOG"));
-           printf("Downloading Log %s to %s\n", remotefile, localfile);
+           loginfo("Downloading Log %s to %s", remotefile, localfile);
            if(downloadfile(remotefile, backend[3], localfile) != 0){
-              printf("Download failed!");
+              logerror("Download of %s failed", remotefile);
               continue;
            }
 
@@ -457,9 +456,9 @@ int handleStep71(void)
         {
            sprintf(localfile, "%s/%s", localdir, basename(getenv("WRKDIR")));
            sprintf(remotefile, "%s://%s%s", backend[0], backend[1], getenv("WRKDIR"));
-           printf("Downloading Wrkdir %s to %s\n", remotefile, localfile);
+           loginfo("Downloading Wrkdir %s to %s", remotefile, localfile);
            if(downloadfile(remotefile, backend[3], localfile) != 0){
-              printf("Download failed!");
+              logerror("Download of %s failed", remotefile);
               continue;
            }
 
@@ -468,7 +467,7 @@ int handleStep71(void)
               RETURN_ROLLBACK(conn);
         }
 
-        printf("Updating build status for build #%ld\n", atol(builds[0]));
+        loginfo("Updating build status for build #%ld", atol(builds[0]));
         sprintf(query, "UPDATE builds SET buildstatus = \"%s\", buildreason = \"%s\", enddate = %lli, status = 80 WHERE id = %ld", getenv("BUILDSTATUS") != NULL ? getenv("BUILDSTATUS") : "", getenv("FAIL_REASON") != NULL ? getenv("FAIL_REASON") : "", microtime(), atol(builds[0]));
         if(mysql_query(conn, query))
            RETURN_ROLLBACK(conn);
@@ -562,7 +561,7 @@ int handleStep51(void)
         sprintf(url, "%s://%s%sstatus?build=%s", backend[0], backend[1], backend[2], backend[4]);
         if(!getpage(url, backend[3]))
         {
-           printf("CGI Error: %s\n", getenv("ERROR"));
+           logcgi(url, getenv("ERROR"));
            continue;
         }
 
@@ -652,7 +651,7 @@ int handleStep31(void)
         else
         {
            status = 80;
-           printf("CGI Error: %s\n", getenv("ERROR"));
+           logcgi(url, getenv("ERROR"));
         }
 
         sprintf(query, "UPDATE builds SET status = %d WHERE id = %ld", status, atol(builds[0]));
@@ -705,7 +704,7 @@ int handleStep30(void)
         if(!getpage(url, backend[3]) || strcmp(getenv("STATUS"), "idle") != 0)
         {
            if(getenv("ERROR") != NULL)
-              printf("CGI Error: %s\n", getenv("ERROR"));
+              logcgi(url, getenv("ERROR"));
            
            sprintf(query, "UPDATE backendbuilds SET status = 2 WHERE id = %ld", atol(backend[5]));
            if(mysql_query(conn, query))
@@ -726,7 +725,7 @@ int handleStep30(void)
         else
         {
            status = 80;
-           printf("CGI Error: %s\n", getenv("ERROR"));
+           logcgi(url, getenv("ERROR"));
         }
 
         sprintf(query, "UPDATE builds SET status = %d WHERE id = %ld", status, atol(builds[0]));
@@ -798,7 +797,7 @@ int handleStep20(void)
 
                 runningjobs2 = mysql_fetch_row(result4);
 
-                printf("Running %d jobs for group %s\n", atoi(runningjobs2[0]), builds[1]);
+                loginfo("Running %d jobs for group %s", atoi(runningjobs2[0]), builds[1]);
 
                 if(atoi(runningjobs2[0]) == 0)
                 {
@@ -879,7 +878,7 @@ int handleStep10(void)
 
         while((backends = mysql_fetch_row(result2)))
         {
-            printf("adding build %s for %s\n", builds[0], builds[1]);
+            loginfo("adding build %s for %s", builds[0], builds[1]);
             sprintf(query, "INSERT INTO builds (id, queueid, backendkey, `group`, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 20, null, null, null, null, 0, 0, 0)", builds[0], backends[0]);
 	    if(mysql_query(conn, query))
                 RETURN_ROLLBACK(conn);
@@ -954,11 +953,11 @@ int handlestep(int step)
     if(step < 0 || step >= (sizeof(stepreg)/sizeof(struct StepHandler)))
         return -1;
 
-    printf("- Step %s -------------------------\n", stepreg[step].name);
+    loginfo("- Step %s -------------------------", stepreg[step].name);
 
     rv = stepreg[step].handler();
 
-    printf("- End Step %s = %s -----------\n", stepreg[step].name, (rv == 0) ? "success" : "failure" );
+    loginfo("- End Step %s = %s -----------", stepreg[step].name, (rv == 0) ? "success" : "failure" );
  
     return rv;
 }

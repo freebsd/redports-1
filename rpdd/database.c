@@ -28,6 +28,7 @@
 #include <mysql.h>
 
 #include "database.h"
+#include "log.h"
 #include "util.h"
 
 MYSQL* mysql_autoconnect(void)
@@ -36,18 +37,18 @@ MYSQL* mysql_autoconnect(void)
 
     conn = mysql_init(NULL);
     if(conn == NULL){
-        LOGSQL(conn);
+        logsql(conn);
         return NULL;
     }
 
     if(mysql_real_connect(conn, configget("dbHost"), configget("dbUsername"), configget("dbPassword"),
                           configget("dbDatabase"), 0, NULL, 0) == NULL){
-        LOGSQL(conn);
+        logsql(conn);
         return NULL;
     }
 
     if(mysql_query(conn, "BEGIN")){
-        LOGSQL(conn);
+        logsql(conn);
         mysql_close(conn);
         return NULL;
     }
