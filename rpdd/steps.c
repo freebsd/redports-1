@@ -953,11 +953,11 @@ int handlestep(int step)
     if(step < 0 || step >= (sizeof(stepreg)/sizeof(struct StepHandler)))
         return -1;
 
-    loginfo("- Step %s -------------------------", stepreg[step].name);
+    loginfo("Step %s -------------------------", stepreg[step].name);
 
     rv = stepreg[step].handler();
 
-    loginfo("- End Step %s = %s -----------", stepreg[step].name, (rv == 0) ? "success" : "failure" );
+    loginfo("End Step %s = %s -----------", stepreg[step].name, (rv == 0) ? "success" : "failure" );
  
     return rv;
 }
