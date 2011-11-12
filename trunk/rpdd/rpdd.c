@@ -25,26 +25,30 @@
  */
 
 #include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <syslog.h>
 #include <signal.h>
 #include <string.h>
 #include <limits.h>
+#include <libutil.h>
 
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/time.h>
 #include <sys/resource.h>
 #include <sys/stat.h>
+#include <sys/param.h>
 
+#include "log.h"
 #include "steps.h"
 #include "util.h"
 
 #define RPD_VERSION "0.8.92"
 #define DAEMON_NAME "rpd"
 #define CONF_FILE "rpdd.conf"
+#define PID_FILE "/var/run/rpdd.pid"
 
 #define MAXCHILDS 5
 
@@ -125,8 +129,6 @@ void version(void){
  
 void signal_handler(int sig) {
      
-    syslog(LOG_WARNING, "Received signal %s", strsignal(sig));
-
     switch(sig) {
         case SIGINT:
             exit(1);
@@ -139,28 +141,25 @@ void signal_handler(int sig) {
             exit(1);
             break;
         default:
-            syslog(LOG_WARNING, "Unhandled signal %s", strsignal(sig));
+            logwarn("Unhandled signal %s", strsignal(sig));
             break;
     }
 }
  
-int main(int argc, char *argv[]) {
- 
-#if defined(DEBUG)
-    int daemonize = 0;
-#else
-    int daemonize = 1;
-#endif
+int main(int argc, char *argv[])
+{
     char config[PATH_MAX] = CONF_FILE;
-    pid_t pid, sid;
+    struct pidfh *pfh;
+    pid_t otherpid;
+    int daemonize = 1;
+    int c;
  
-    // Setup signal handling before we start
+    /* Setup signal handling before we start */
     signal(SIGHUP, signal_handler);
     signal(SIGTERM, signal_handler);
     signal(SIGINT, signal_handler);
     signal(SIGQUIT, signal_handler);
  
-    int c;
     while( (c = getopt(argc, argv, "c:hnv")) != -1) {
         switch(c){
             case 'c':
@@ -188,49 +187,38 @@ int main(int argc, char *argv[]) {
 
     if(configparse(config)){
         printf("Could not load config file %s\n", config);
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if(logopen(configget("logFile")) != 0)
-        exit(1);
- 
-    if (daemonize) {
-        /* Fork off the parent process */
-        pid = fork();
-        if (pid < 0) {
+        exit(EXIT_FAILURE);
+
+    if(daemonize)
+    {
+        pfh = pidfile_open(PID_FILE, 0600, &otherpid);
+        if(pfh == NULL)
+        {
+            if(errno == EEXIST)
+                printf("Daemon already running, pid: %jd.", (pid_t)otherpid);
+
+            printf("Cannot open or create pidfile");
+        }
+
+        if (daemon(0, 0) == -1)
+        {
+            logwarn("Cannot daemonize");
+            pidfile_remove(pfh);
             exit(EXIT_FAILURE);
         }
-        /* If we got a good PID, then
-           we can exit the parent process. */
-        if (pid > 0) {
-            exit(EXIT_SUCCESS);
-        }
- 
-        /* Change the file mode mask */
-        umask(0);
- 
-        /* Create a new SID for the child process */
-        sid = setsid();
-        if (sid < 0) {
-            /* Log the failure */
-            exit(EXIT_FAILURE);
-        }
- 
-        /* Change the current working directory */
-        if ((chdir("/")) < 0) {
-            /* Log the failure */
-            exit(EXIT_FAILURE);
-        }
- 
-        /* Close out the standard file descriptors */
-        close(STDIN_FILENO);
-        close(STDOUT_FILENO);
-        close(STDERR_FILENO);
+
+        pidfile_write(pfh);
+        pidfile_close(pfh);
     }
  
     run();
  
     logclose();
-    exit(0);
+    pidfile_remove(pfh);
+    exit(EXIT_SUCCESS);
 }
 

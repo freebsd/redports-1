@@ -18,7 +18,7 @@ clean:
 	@rm -f *.o *.core
 
 rpdd:	database.o log.o remote.o rpdd.o steps.o util.o
-	$(CC) $(LDFLAGS) -lcurl `mysql_config --libs` database.o log.o remote.o rpdd.o steps.o util.o -o rpdd
+	$(CC) $(LDFLAGS) -lutil -lcurl `mysql_config --libs` database.o log.o remote.o rpdd.o steps.o util.o -o rpdd
 
 database.o: database.c
 	$(CC) $(CPPFLAGS) `mysql_config --cflags` -c database.c
