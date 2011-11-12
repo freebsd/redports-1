@@ -25,6 +25,7 @@
  */
 
 #include <string.h>
+#include <stdlib.h>
 #include <curl/curl.h>
 
 char pagebuffer[1024];

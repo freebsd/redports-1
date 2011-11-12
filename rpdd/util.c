@@ -25,6 +25,7 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -35,6 +36,7 @@
 #include <libgen.h>
 #include <limits.h>
 
+#include "log.h"
 #include "util.h"
 
 struct configparam
@@ -166,7 +168,7 @@ int rmdirrec(char *directory)
    if(dp == NULL)
       return 1;
 
-   while(ep = readdir(dp))
+   while((ep = readdir(dp)))
    {
        if(strcmp(ep->d_name, ".") == 0)
           continue;
@@ -190,7 +192,7 @@ int rmdirrec(char *directory)
 
    closedir(dp);
 
-   printf("Removing %s\n", directory);
+   loginfo("Removing %s", directory);
 
    return rmdir(directory);
 }
@@ -229,7 +231,7 @@ int cleanolddir(char *directory)
    if(dp == NULL)
       return 1;
 
-   while(ep = readdir(dp))
+   while((ep = readdir(dp)))
    {
        if(ep->d_name[0] == '.')
           continue;
