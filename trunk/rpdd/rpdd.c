@@ -124,18 +124,18 @@ void version(void){
 }
  
 void signal_handler(int sig) {
- 
+     
+    syslog(LOG_WARNING, "Received signal %s", strsignal(sig));
+
     switch(sig) {
         case SIGINT:
-            syslog(LOG_WARNING, "Received SIGINT signal.");
             exit(1);
             break;
         case SIGHUP:
-            syslog(LOG_WARNING, "Received SIGHUP signal.");
-            exit(1);
+            logclose();
+            logopen(configget("logFile"));
             break;
         case SIGTERM:
-            syslog(LOG_WARNING, "Received SIGTERM signal.");
             exit(1);
             break;
         default:
@@ -190,6 +190,9 @@ int main(int argc, char *argv[]) {
         printf("Could not load config file %s\n", config);
         exit(1);
     }
+
+    if(logopen(configget("logFile")) != 0)
+        exit(1);
  
     if (daemonize) {
         /* Fork off the parent process */
@@ -227,6 +230,7 @@ int main(int argc, char *argv[]) {
  
     run();
  
+    logclose();
     exit(0);
 }
 

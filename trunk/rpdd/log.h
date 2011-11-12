@@ -24,33 +24,32 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _DATABASE_H_
-#define _DATABASE_H_
+#ifndef _LOG_H_
+#define _LOG_H_
 
-#include <my_global.h>
-#include <mysql.h>
-#include "log.h"
+enum loglevels
+{
+   LOG_ERROR = 0,
+   LOG_WARN,
+   LOG_INFO
+};
 
-#define RETURN_ROLLBACK(conn) \
+#define loginfo(format, args...) logwrite(LOG_INFO, format, ##args)
+#define logwarn(format, args...) logwrite(LOG_WARN, format, ##args)
+#define logerror(format, args...) logwrite(LOG_ERROR, format, ##args)
+#define logcgi(url, error) \
 { \
-   logsql(conn); \
-   if(mysql_query(conn, "ROLLBACK") != 0) \
-      logsql(conn); \
-   mysql_close(conn); \
-   return -1; \
+   logwrite(LOG_ERROR, "CGI Error in %s#%d, %s: %s", __FILE__, __LINE__, url, error); \
+}
+#define logsql(con) \
+{ \
+   logwrite(LOG_ERROR, "SQL Error %u in %s#%d: %s", \
+      mysql_errno(con), __FILE__, __LINE__, mysql_error(con)); \
 }
 
-#define RETURN_COMMIT(conn) \
-{ \
-   if(mysql_query(conn, "COMMIT") != 0) \
-   { \
-      RETURN_ROLLBACK(conn); \
-   } \
-   mysql_close(conn); \
-   return 0; \
-}
-   
+extern int logopen(char *filename);
+extern int logclose(void);
+extern int logsetlevel(int loglvl);
+extern int logwrite(int loglvl, char *logfmt, ...);
 
-extern MYSQL* mysql_autoconnect(void);
-
-#endif /* _DATABASE_H */
+#endif /* _LOG_H_ */

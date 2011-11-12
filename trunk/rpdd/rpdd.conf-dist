@@ -8,6 +8,9 @@ dbUsername root
 dbPassword 
 dbDatabase trac
 
+# Logfile
+logFile    /var/log/rpdd.log
+
 # Www frontend URL
 wwwurl     http://YOUR_HOST/
 

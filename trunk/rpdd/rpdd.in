@@ -30,7 +30,7 @@ rpdd_start()
 	echo -n "Starting ${name}"
 	/usr/bin/install -o ${rpdd_user} -g wheel -m 644 /dev/null ${pidfile}
 	/usr/bin/install -o ${rpdd_user} -g wheel -m 644 /dev/null ${logfile}
-	/usr/sbin/daemon -p ${pidfile} -u ${rpdd_user} ${command} ${rpdd_flags} >${logfile} 2>&1
+	/usr/sbin/daemon -p ${pidfile} -u ${rpdd_user} ${command} ${rpdd_flags}
 	echo '.'
 }
 

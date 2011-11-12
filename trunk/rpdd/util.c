@@ -51,6 +51,7 @@ struct configparam config[] = {
     { "dbUsername",    "root" },
     { "dbPassword",    "" },
     { "dbDatabase",    "trac" },
+    { "logFile",       "/var/log/rpdd.log" },
     { "tbPortsTreeMaxAge", "48" },
     { "wwwurl",        "" },
     { "wwwroot",       "" },
