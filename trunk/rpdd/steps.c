@@ -244,7 +244,7 @@ int handleStep95(void)
     if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
-    if(mysql_query(conn, "SELECT builds.id, buildqueue.id, buildqueue.owner FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND builds.status = 95 FOR UPDATE"))
+    if(mysql_query(conn, "SELECT builds.id, buildqueue.id, buildqueue.owner FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND (builds.status >= 90 OR buildqueue.status = 95) FOR UPDATE"))
         RETURN_ROLLBACK(conn);
 
     if((result = mysql_store_result(conn)) == NULL)
@@ -297,11 +297,7 @@ int handleStep90(void)
     if((conn = mysql_autoconnect()) == NULL)
         return 1;
 
-    sprintf(query, "UPDATE builds SET status = 95 WHERE status = 90 AND (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli)", limit, limit);
-    if(mysql_query(conn, query))
-        RETURN_ROLLBACK(conn);
-
-    sprintf(query, "UPDATE buildqueue SET status = 95 WHERE status = 90 AND (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli)", limit, limit);
+    sprintf(query, "UPDATE buildqueue SET status = 95 WHERE status = 90 AND ( (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli) )", limit, limit);
     if(mysql_query(conn, query))
         RETURN_ROLLBACK(conn);
 
