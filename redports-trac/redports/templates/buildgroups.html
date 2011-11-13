@@ -51,7 +51,7 @@
 
         <table class="listing" id="buildgroups_list">
           <thead>
-            <tr><th py:if="authenticated">Status</th><th py:if="authenticated">Priority</th><th>Name</th><th>Version</th><th>Architecture</th><th>Backends</th><th>Description</th></tr>
+            <tr><th py:if="authenticated">Status</th><th py:if="authenticated">Priority</th><th>Name</th><th>Version</th><th>Architecture</th><th>Backends</th><th>Queued Jobs</th><th>Description</th></tr>
           </thead>
           <tbody>
             <tr py:for="group in buildgroups">
@@ -66,6 +66,7 @@
               <td>FreeBSD $group.version</td>
               <td>$group.arch</td>
               <td class="status-$group.status">$group.available available</td>
+              <td>$group.queued</td>
               <td>$group.description</td>
             </tr>
           </tbody>
