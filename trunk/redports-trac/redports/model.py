@@ -176,6 +176,7 @@ class Buildgroup(object):
         self.priority = None
         self.priorityname = None
         self.joined = None
+        self.queued = None
 
    def setPriority(self, priority):
         self.priority = 0
@@ -229,6 +230,9 @@ def BuildgroupsIterator(env, req):
             if cursor2.rowcount > 0:
                 buildgroup.joined = 'true'
                 buildgroup.setPriority(cursor2.fetchall()[0][0])
+        cursor2.execute("SELECT count(*) FROM builds WHERE `group` = %s AND status < 90", name)
+        if cursor2.rowcount > 0:
+            buildgroup.queued = cursor2.fetchall()[0][0]
         
         yield buildgroup
 
