@@ -43,8 +43,8 @@ enum loglevels
 }
 #define logsql(con) \
 { \
-   logwrite(LOG_ERROR, "SQL Error %u in %s#%d: %s", \
-      mysql_errno(con), __FILE__, __LINE__, mysql_error(con)); \
+   logwrite(LOG_ERROR, "SQL Error in %s#%d: %s", \
+      __FILE__, __LINE__, PQerrorMessage(con)); \
 }
 
 extern int logopen(char *filename);

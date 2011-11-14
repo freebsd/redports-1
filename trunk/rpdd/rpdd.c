@@ -24,6 +24,11 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <sys/stat.h>
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -32,14 +37,8 @@
 #include <signal.h>
 #include <string.h>
 #include <limits.h>
-#include <libutil.h>
-
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-#include <sys/stat.h>
 #include <sys/param.h>
+#include <libutil.h>
 
 #include "log.h"
 #include "steps.h"

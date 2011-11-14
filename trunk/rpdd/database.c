@@ -24,35 +24,74 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <my_global.h>
-#include <mysql.h>
+#include <stdarg.h>
 
 #include "database.h"
 #include "log.h"
 #include "util.h"
 
-MYSQL* mysql_autoconnect(void)
+PGconn* PQautoconnect(void)
 {
-    MYSQL *conn = NULL;
+    char conninfo[255];
+    PGconn *conn = NULL;
+    PGresult *res;
 
-    conn = mysql_init(NULL);
-    if(conn == NULL){
+    sprintf(conninfo, "user=%s password=%s dbname=%s hostaddr=%s port=%s",
+        configget("dbUsername"), configget("dbPassword"), configget("dbDatabase"),
+        configget("dbHost"), "5432");
+
+    conn = PQconnectdb(conninfo);
+    if(PQstatus(conn) != CONNECTION_OK)
+    {
         logsql(conn);
         return NULL;
     }
 
-    if(mysql_real_connect(conn, configget("dbHost"), configget("dbUsername"), configget("dbPassword"),
-                          configget("dbDatabase"), 0, NULL, 0) == NULL){
+    res = PQexec(conn, "BEGIN");
+    if(PQresultStatus(res) != PGRES_COMMAND_OK)
+    {
         logsql(conn);
+        PQclear(res);
+        PQfinish(conn);
         return NULL;
     }
 
-    if(mysql_query(conn, "BEGIN")){
-        logsql(conn);
-        mysql_close(conn);
-        return NULL;
-    }
+    PQclear(res);
 
     return conn;
 }
 
+int PQupdate(PGconn *conn, char *queryfmt, ...)
+{
+	PGresult *res;
+	char query[4096];
+	va_list args;
+
+	va_start(args, queryfmt);
+	vsprintf(query, queryfmt, args);
+
+	res = PQexec(conn, query);
+
+	va_end(args);
+
+	if(PQresultStatus(res) != PGRES_COMMAND_OK)
+		return 0;
+
+	return 1;
+}
+
+PGresult* PQselect(PGconn *conn, char *queryfmt, ...)
+{
+	PGresult *res;
+	char query[4096];
+	va_list args;
+
+	va_start(args, queryfmt);
+	vsprintf(query, queryfmt, args);
+
+	res = PQexec(conn, query);
+
+	va_end(args);
+
+	return res;
+}

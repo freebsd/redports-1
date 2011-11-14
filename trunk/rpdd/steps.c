@@ -25,8 +25,11 @@
  */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <libgen.h>
+#include <limits.h>
+#include <time.h>
 
 #include "database.h"
 #include "remote.h"
@@ -69,31 +72,29 @@ struct StepHandler stepreg[] = {
 /* Update portstrees on backend */
 int handleStep102(void)
 {
-    MYSQL *conn;
-    MYSQL_RES *result;
-    MYSQL_ROW builds;
+    PGconn *conn;
+    PGresult *result;
     char url[250];
-    char query[1000];
     int status;
     struct tm tm;
+    int i;
 
     int maxage = atoi(configget("tbPortsTreeMaxAge"));
 
-    if((conn = mysql_autoconnect()) == NULL)
+    if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    if(mysql_query(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE"))
-        RETURN_ROLLBACK(conn);
+    result = PQexec(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
+    	RETURN_ROLLBACK(conn);
 
-    if((result = mysql_store_result(conn)) == NULL)
-        RETURN_ROLLBACK(conn);
-
-    while ((builds = mysql_fetch_row(result)))
+    for(i=0; i < PQntuples(result); i++)
     {
-        loginfo("Checking build %s on backend %s", builds[5], builds[2]);
+        loginfo("Checking build %s on backend %s", PQgetvalue(result, i, 5), PQgetvalue(result, i, 2));
 
-        sprintf(url, "%s://%s%sstatus?build=%s", builds[1], builds[2], builds[3], builds[5]);
-        if(!getpage(url, builds[4]))
+        sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2),
+        		PQgetvalue(result, i, 3), PQgetvalue(result, i, 5));
+        if(!getpage(url, PQgetvalue(result, i, 4)))
         {
            logcgi(url, getenv("ERROR"));
            continue;
@@ -114,22 +115,23 @@ int handleStep102(void)
            continue;
         }
 
-        loginfo("Updating portstree for build %s on backend %s", builds[5], builds[2]);
+        loginfo("Updating portstree for build %s on backend %s", PQgetvalue(result, i, 5), PQgetvalue(result, i, 2));
 
-        sprintf(url, "%s://%s%supdate?build=%s", builds[1], builds[2], builds[3], builds[5]);
-        if(!getpage(url, builds[4]))
+        sprintf(url, "%s://%s%supdate?build=%s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2),
+        		PQgetvalue(result, i, 3), PQgetvalue(result, i, 5));
+        if(!getpage(url, PQgetvalue(result, i, 4)))
         {
            logcgi(url, getenv("ERROR"));
            continue;
         }
 
-        loginfo("Updating portstree for build %s finished.", builds[5]);
+        loginfo("Updating portstree for build %s finished.", PQgetvalue(result, i, 5));
 
         /* only 1 at a time */
         break;
     }
 
-    mysql_free_result(result);
+    PQclear(result);
 
     RETURN_COMMIT(conn);
 }
@@ -138,40 +140,37 @@ int handleStep102(void)
 /* Checking builds */
 int handleStep101(void)
 {
-    MYSQL *conn;
-    MYSQL_RES *result;
-    MYSQL_ROW builds;
+    PGconn *conn;
+    PGresult *result;
     char url[250];
-    char query[1000];
     int status;
+    int i;
 
-    if((conn = mysql_autoconnect()) == NULL)
+    if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    if(mysql_query(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE"))
-        RETURN_ROLLBACK(conn);
+    result = PQexec(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
+    	RETURN_ROLLBACK(conn);
 
-    if((result = mysql_store_result(conn)) == NULL)
-        RETURN_ROLLBACK(conn);
-
-    while ((builds = mysql_fetch_row(result)))
+    for(i=0; i < PQntuples(result); i++)
     {
-        loginfo("Checking build %s on backend %s", builds[5], builds[2]);
+        loginfo("Checking build %s on backend %s", PQgetvalue(result, i, 5), PQgetvalue(result, i, 2));
 
-        sprintf(url, "%s://%s%sselftest?build=%s", builds[1], builds[2], builds[3], builds[5]);
-        if(getpage(url, builds[4]) == -1)
+        sprintf(url, "%s://%s%sselftest?build=%s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2),
+        		PQgetvalue(result, i, 3), PQgetvalue(result, i, 5));
+        if(getpage(url, PQgetvalue(result, i, 4)) == -1)
            status = 2; /* Status failure */
         else
            status = 1; /* Status enabled */
 
-        loginfo("%s is %s", builds[5], status == 2 ? "not available" : "available");
+        loginfo("%s is %s", PQgetvalue(result, i, 5), status == 2 ? "not available" : "available");
 
-        sprintf(query, "UPDATE backendbuilds SET status = %d WHERE id = %ld", status, atol(builds[6]));
-        if(mysql_query(conn, query))
+        if(!PQupdate(conn, "UPDATE backendbuilds SET status = %d WHERE id = %ld", status, atol(PQgetvalue(result, i, 6))))
            RETURN_ROLLBACK(conn);
     }
 
-    mysql_free_result(result);
+    PQclear(result);
 
     RETURN_COMMIT(conn);
 }
@@ -180,40 +179,36 @@ int handleStep101(void)
 /* Ping Backends */
 int handleStep100(void)
 {
-    MYSQL *conn;
-    MYSQL_RES *result;
-    MYSQL_ROW builds;
+    PGconn *conn;
+    PGresult *result;
     char url[250];
-    char query[1000];
     int status;
+    int i;
 
-    if((conn = mysql_autoconnect()) == NULL)
+    if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    if(mysql_query(conn, "SELECT id, protocol, host, uri, credentials FROM backends WHERE status > 0 FOR UPDATE"))
+    result = PQexec(conn, "SELECT id, protocol, host, uri, credentials FROM backends WHERE status > 0 FOR UPDATE");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
-    if((result = mysql_store_result(conn)) == NULL)
-        RETURN_ROLLBACK(conn);
-
-    while ((builds = mysql_fetch_row(result)))
+    for(i=0; i < PQntuples(result); i++)
     {
-        loginfo("Checking backend %s", builds[2]);
+        loginfo("Checking backend %s", PQgetvalue(result, i, 2));
 
-        sprintf(url, "%s://%s%sping", builds[1], builds[2], builds[3]);
-        if(getpage(url, builds[4]) == -1)
+        sprintf(url, "%s://%s%sping", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2), PQgetvalue(result, i, 3));
+        if(getpage(url, PQgetvalue(result, i, 4)) == -1)
            status = 2; /* Status failure */
         else
            status = 1; /* Status enabled */
 
-        loginfo("%s is %s", builds[2], status == 2 ? "not available" : "available");
+        loginfo("%s is %s", PQgetvalue(result, i, 2), status == 2 ? "not available" : "available");
 
-        sprintf(query, "UPDATE backends SET status = %d WHERE id = %ld", status, atol(builds[0]));
-        if(mysql_query(conn, query))
+        if(!PQupdate(conn, "UPDATE backends SET status = %d WHERE id = %ld", status, atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
     }
 
-    mysql_free_result(result);
+    PQclear(result);
 
     RETURN_COMMIT(conn);
 }
@@ -233,52 +228,41 @@ int handleStep99(void)
 /* Clean filesystem and database from deleted builds */
 int handleStep95(void)
 {
-    MYSQL *conn;
-    MYSQL_RES *result;
-    MYSQL_RES *result2;
-    MYSQL_ROW builds;
-    MYSQL_ROW active;
-    char query[1000];
+    PGconn *conn;
+    PGresult *result;
+    PGresult *result2;
     char localdir[PATH_MAX];
+    int i;
 
-    if((conn = mysql_autoconnect()) == NULL)
+    if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    if(mysql_query(conn, "SELECT builds.id, buildqueue.id, buildqueue.owner FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND (builds.status >= 90 OR buildqueue.status = 95) FOR UPDATE"))
-        RETURN_ROLLBACK(conn);
+    result = PQexec(conn, "SELECT builds.id, buildqueue.id, buildqueue.owner FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND (builds.status >= 90 OR buildqueue.status = 95) FOR UPDATE");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
+    	RETURN_ROLLBACK(conn);
 
-    if((result = mysql_store_result(conn)) == NULL)
-        RETURN_ROLLBACK(conn);
-
-    while ((builds = mysql_fetch_row(result)))
+    for(i=0; i < PQntuples(result); i++)
     {
-        sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), builds[2], builds[1], builds[0]);
+        sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), PQgetvalue(result, i, 2), PQgetvalue(result, i, 1), PQgetvalue(result, i, 0));
 
         if(rmdirrec(localdir) != 0)
            logerror("Failure while deleting %s", localdir);
 
-        sprintf(query, "DELETE FROM builds WHERE id = %ld", atol(builds[0]));
-        if(mysql_query(conn, query))
+        if(!PQupdate(conn, "DELETE FROM builds WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
 
-        sprintf(query, "SELECT count(*) FROM builds WHERE queueid = \"%s\"", builds[1]);
-        if(mysql_query(conn, query))
+        result2 = PQselect(conn, "SELECT count(*) FROM builds WHERE queueid = \"%s\"", PQgetvalue(result, i, 1));
+        if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        if((result2 = mysql_store_result(conn)) == NULL)
-            RETURN_ROLLBACK(conn);
-
-        active = mysql_fetch_row(result2);
-
-        if(atoi(active[0]) == 0)
+        if(atoi(PQgetvalue(result2, 0, 0)) == 0)
         {
-           sprintf(query, "DELETE FROM buildqueue WHERE id = \"%s\" AND status >= 90", builds[1]);
-           if(mysql_query(conn, query))
+           if(!PQupdate(conn, "DELETE FROM buildqueue WHERE id = \"%s\" AND status >= 90", PQgetvalue(result, i, 1)))
               RETURN_ROLLBACK(conn);
         }
     }
 
-    mysql_free_result(result);
+    PQclear(result);
 
     RETURN_COMMIT(conn);
 }
@@ -287,18 +271,15 @@ int handleStep95(void)
 /* Automatically mark finished entries as deleted after $cleandays */
 int handleStep90(void)
 {
-    MYSQL *conn;
-    MYSQL_RES *result;
-    char query[1000];
+    PGconn *conn;
 
     unsigned long long cleandays = atoi(configget("cleandays"));
     unsigned long long limit = microtime()-(cleandays*86400*1000000L);
 
-    if((conn = mysql_autoconnect()) == NULL)
+    if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    sprintf(query, "UPDATE buildqueue SET status = 95 WHERE status = 90 AND ( (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli) )", limit, limit);
-    if(mysql_query(conn, query))
+    if(!PQupdate(conn, "UPDATE buildqueue SET status = 95 WHERE status = 90 AND ( (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli) )", limit, limit))
         RETURN_ROLLBACK(conn);
 
     RETURN_COMMIT(conn);
@@ -308,74 +289,57 @@ int handleStep90(void)
 /* Clean build on backend after everything was transferred */
 int handleStep80(void)
 {
-    MYSQL *conn;
-    MYSQL_RES *result;
-    MYSQL_RES *result2;
-    MYSQL_RES *result3;
-    MYSQL_ROW builds;
-    MYSQL_ROW backend;
-    MYSQL_ROW active;
+    PGconn *conn;
+    PGresult *result;
+    PGresult *result2;
+    PGresult *result3;
     char url[250];
-    char query[1000];
     int status;
+    int i;
 
-    if((conn = mysql_autoconnect()) == NULL)
+    if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    if(mysql_query(conn, "SELECT id, backendid, `group`, queueid FROM builds WHERE status = 80 FOR UPDATE"))
+    result = PQexec(conn, "SELECT id, backendid, `group`, queueid FROM builds WHERE status = 80 FOR UPDATE");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
-    if((result = mysql_store_result(conn)) == NULL)
-        RETURN_ROLLBACK(conn);
-
-    while ((builds = mysql_fetch_row(result)))
+    for(i=0; i < PQntuples(result); i++)
     {
-        sprintf(query, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = \"%s\"", atol(builds[1]), builds[2]);
-        if(mysql_query(conn, query))
+        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = \"%s\"", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+        if (PQresultStatus(result) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        if((result2 = mysql_store_result(conn)) == NULL)
-            RETURN_ROLLBACK(conn);
+        loginfo("Cleaning build %s on backend %s", PQgetvalue(result2, i, 4), PQgetvalue(result2, i, 1));
 
-        backend = mysql_fetch_row(result2);
-
-        loginfo("Cleaning build %s on backend %s", backend[4], backend[1]);
-
-        sprintf(url, "%s://%s%sclean?build=%s", backend[0], backend[1], backend[2], backend[4]);
-        if(!getpage(url, backend[3]))
+        sprintf(url, "%s://%s%sclean?build=%s", PQgetvalue(result2, i, 0), PQgetvalue(result2, i, 1),
+        		PQgetvalue(result2, i, 2), PQgetvalue(result2, i, 4));
+        if(!getpage(url, PQgetvalue(result2, i, 3)))
         {
             logcgi(url, getenv("ERROR"));
 
-            sprintf(query, "UPDATE backendbuilds SET status = 2 WHERE id = %ld", atol(backend[5]));
-            if(mysql_query(conn, query))
+            if(!PQupdate(conn, "UPDATE backendbuilds SET status = 2 WHERE id = %ld", atol(PQgetvalue(result2, i, 5))))
                 RETURN_ROLLBACK(conn);
         }
 
-        sprintf(query, "UPDATE builds SET status = 90 WHERE id = %ld", atol(builds[0]));
-        if(mysql_query(conn, query))
+        if(!PQupdate(conn, "UPDATE builds SET status = 90 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
 
-        sprintf(query, "SELECT count(*) FROM builds WHERE queueid = \"%s\" AND status < 90", builds[3]);
-        if(mysql_query(conn, query))
+        result3 = PQselect(conn, "SELECT count(*) FROM builds WHERE queueid = \"%s\" AND status < 90", PQgetvalue(result, i, 3));
+        if (PQresultStatus(result3) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        if((result3 = mysql_store_result(conn)) == NULL)
-            RETURN_ROLLBACK(conn);
-
-        active = mysql_fetch_row(result3);
-
-        if(atoi(active[0]) == 0)
+        if(atoi(PQgetvalue(result3, 0, 0)) == 0)
         {
-           sprintf(query, "UPDATE buildqueue SET status = 90, enddate = %lli WHERE id = \"%s\"", microtime(), builds[3]);
-           if(mysql_query(conn, query))
+           if(!PQupdate(conn, "UPDATE buildqueue SET status = 90, enddate = %lli WHERE id = \"%s\"", microtime(), PQgetvalue(result, i, 3)))
               RETURN_ROLLBACK(conn);
         }
 
-        mysql_free_result(result3);
-        mysql_free_result(result2);
+        PQclear(result3);
+        PQclear(result2);
     }
 
-    mysql_free_result(result);
+    PQclear(result);
 
     RETURN_COMMIT(conn);
 }
@@ -384,98 +348,84 @@ int handleStep80(void)
 /* Transfer logfiles and wrkdirs from backends */
 int handleStep71(void)
 {
-    MYSQL *conn;
-    MYSQL_RES *result;
-    MYSQL_RES *result2;
-    MYSQL_RES *result3;
-    MYSQL_ROW builds;
-    MYSQL_ROW backend;
-    MYSQL_ROW buildqueue;
+    PGconn *conn;
+    PGresult *result;
+    PGresult *result2;
+    PGresult *result3;
     char url[250];
-    char query[1000];
     char remotefile[255];
     char localfile[PATH_MAX];
     char localdir[PATH_MAX];
+    int i;
 
-    if((conn = mysql_autoconnect()) == NULL)
+    if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    if(mysql_query(conn, "SELECT id, backendid, `group` FROM builds WHERE status = 71 FOR UPDATE"))
+    result = PQexec(conn, "SELECT id, backendid, \"group\" FROM builds WHERE status = 71 FOR UPDATE");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
-    if((result = mysql_store_result(conn)) == NULL)
-        RETURN_ROLLBACK(conn);
-
-    while ((builds = mysql_fetch_row(result)))
+    for(i=0; i < PQntuples(result); i++)
     {
-        sprintf(query, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = \"%s\"", atol(builds[1]), builds[2]);
-        if(mysql_query(conn, query))
+    	result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = \"%s\"", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+        if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        if((result2 = mysql_store_result(conn)) == NULL)
-            RETURN_ROLLBACK(conn);
-
-        backend = mysql_fetch_row(result2);
-
-        sprintf(query, "SELECT owner, queueid FROM buildqueue, builds WHERE builds.queueid = buildqueue.id AND builds.id = %ld", atol(builds[0]));
-        if(mysql_query(conn, query))
+        result3 = PQselect(conn, "SELECT owner, queueid FROM buildqueue, builds WHERE builds.queueid = buildqueue.id AND builds.id = %ld", atol(PQgetvalue(result, i, 0)));
+        if (PQresultStatus(result3) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        if((result3 = mysql_store_result(conn)) == NULL)
-            RETURN_ROLLBACK(conn);
-
-        buildqueue = mysql_fetch_row(result3);
-
-        sprintf(url, "%s://%s%sstatus?build=%s", backend[0], backend[1], backend[2], backend[4]);
-        if(!getpage(url, backend[3]))
+        sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, i, 0), PQgetvalue(result2, i, 1),
+        		PQgetvalue(result2, i, 2), PQgetvalue(result2, i, 4));
+        if(!getpage(url, PQgetvalue(result2, i, 3)))
         {
            logcgi(url, getenv("ERROR"));
            continue;
         }
 
-        sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), buildqueue[0], buildqueue[1], builds[0]);
+        sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), PQgetvalue(result3, i, 0),
+        		PQgetvalue(result3, i, 1), PQgetvalue(result, i, 0));
         if(mkdirrec(localdir) != 0)
            continue;
 
         if(getenv("BUILDLOG") != NULL)
         {
            sprintf(localfile, "%s/%s", localdir, basename(getenv("BUILDLOG")));
-           sprintf(remotefile, "%s://%s%s", backend[0], backend[1], getenv("BUILDLOG"));
+           sprintf(remotefile, "%s://%s%s", PQgetvalue(result2, i, 0), PQgetvalue(result2, i, 1), getenv("BUILDLOG"));
            loginfo("Downloading Log %s to %s", remotefile, localfile);
-           if(downloadfile(remotefile, backend[3], localfile) != 0){
+           if(downloadfile(remotefile, PQgetvalue(result2, i, 3), localfile) != 0){
               logerror("Download of %s failed", remotefile);
               continue;
            }
 
-           sprintf(query, "UPDATE builds SET buildlog = \"%s\" WHERE id = %ld", basename(localfile), atol(builds[0]));
-           if(mysql_query(conn, query))
+           if(!PQupdate(conn, "UPDATE builds SET buildlog = \"%s\" WHERE id = %ld", basename(localfile), atol(PQgetvalue(result, i, 0))))
               RETURN_ROLLBACK(conn);
         }
 
         if(getenv("WRKDIR") != NULL)
         {
            sprintf(localfile, "%s/%s", localdir, basename(getenv("WRKDIR")));
-           sprintf(remotefile, "%s://%s%s", backend[0], backend[1], getenv("WRKDIR"));
+           sprintf(remotefile, "%s://%s%s", PQgetvalue(result2, i, 0), PQgetvalue(result2, i, 1), getenv("WRKDIR"));
            loginfo("Downloading Wrkdir %s to %s", remotefile, localfile);
-           if(downloadfile(remotefile, backend[3], localfile) != 0){
+           if(downloadfile(remotefile, PQgetvalue(result2, i, 3), localfile) != 0){
               logerror("Download of %s failed", remotefile);
               continue;
            }
 
-           sprintf(query, "UPDATE builds SET wrkdir = \"%s\" WHERE id = %ld", basename(localfile), atol(builds[0]));
-           if(mysql_query(conn, query))
+           if(!PQupdate(conn, "UPDATE builds SET wrkdir = \"%s\" WHERE id = %ld", basename(localfile), atol(PQgetvalue(result, i, 0))))
               RETURN_ROLLBACK(conn);
         }
 
-        loginfo("Updating build status for build #%ld", atol(builds[0]));
-        sprintf(query, "UPDATE builds SET buildstatus = \"%s\", buildreason = \"%s\", enddate = %lli, status = 80 WHERE id = %ld", getenv("BUILDSTATUS") != NULL ? getenv("BUILDSTATUS") : "", getenv("FAIL_REASON") != NULL ? getenv("FAIL_REASON") : "", microtime(), atol(builds[0]));
-        if(mysql_query(conn, query))
+        loginfo("Updating build status for build #%ld", atol(PQgetvalue(result, i, 0)));
+        if(!PQupdate(conn, "UPDATE builds SET buildstatus = \"%s\", buildreason = \"%s\", enddate = %lli, status = 80 WHERE id = %ld",
+        		getenv("BUILDSTATUS") != NULL ? getenv("BUILDSTATUS") : "",
+        		getenv("FAIL_REASON") != NULL ? getenv("FAIL_REASON") : "", microtime(), atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
 
-        mysql_free_result(result2);
+        PQclear(result2);
     }
 
-    mysql_free_result(result);
+    PQclear(result);
 
     RETURN_COMMIT(conn);
 }
@@ -484,44 +434,34 @@ int handleStep71(void)
 /* Start transfers from backends but only one per backend to no overload the link */
 int handleStep70(void)
 {
-    MYSQL *conn;
-    MYSQL_RES *result;
-    MYSQL_RES *result2;
-    MYSQL_ROW builds;
-    MYSQL_ROW runningdownloads;
-    char query[1000];
+    PGconn *conn;
+    PGresult *result;
+    PGresult *result2;
+    int i;
 
-    if((conn = mysql_autoconnect()) == NULL)
+    if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    if(mysql_query(conn, "SELECT id, backendid FROM builds WHERE status >= 70 AND status < 80 FOR UPDATE"))
+    result = PQexec(conn, "SELECT id, backendid FROM builds WHERE status >= 70 AND status < 80 FOR UPDATE");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
-    if((result = mysql_store_result(conn)) == NULL)
-        RETURN_ROLLBACK(conn);
-
-    while ((builds = mysql_fetch_row(result)))
+    for(i=0; i < PQntuples(result); i++)
     {
-        sprintf(query, "SELECT count(*) FROM builds WHERE status = 71 AND backendid = %ld", atol(builds[1]));
-        if(mysql_query(conn, query))
+        result2 = PQselect(conn, "SELECT count(*) FROM builds WHERE status = 71 AND backendid = %ld", atol(PQgetvalue(result, i, 1)));
+        if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        if((result2 = mysql_store_result(conn)) == NULL)
-            RETURN_ROLLBACK(conn);
-
-        runningdownloads = mysql_fetch_row(result2);
-
-        if(atoi(runningdownloads[0]) == 0)
+        if(atoi(PQgetvalue(result2, 0, 0)) == 0)
         {
-           sprintf(query, "UPDATE builds SET status = 71 WHERE id = %ld", atol(builds[0]));
-           if(mysql_query(conn, query))
+           if(!PQupdate(conn, "UPDATE builds SET status = 71 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
                RETURN_ROLLBACK(conn);
         }
 
-        mysql_free_result(result2);
+        PQclear(result2);
     }
 
-    mysql_free_result(result);
+    PQclear(result);
 
     RETURN_COMMIT(conn);
 }
@@ -530,36 +470,28 @@ int handleStep70(void)
 /* Check build status for a running job */
 int handleStep51(void)
 {
-    MYSQL *conn;
-    MYSQL_RES *result;
-    MYSQL_RES *result2;
-    MYSQL_ROW builds;
-    MYSQL_ROW backend;
-    char query[1000];
+    PGconn *conn;
+    PGresult *result;
+    PGresult *result2;
     char url[250];
+    int i;
 
-    if((conn = mysql_autoconnect()) == NULL)
+    if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    if(mysql_query(conn, "SELECT id, backendid, `group` FROM builds WHERE status = 51 FOR UPDATE"))
+    result = PQexec(conn, "SELECT id, backendid, `group` FROM builds WHERE status = 51 FOR UPDATE");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
-    if((result = mysql_store_result(conn)) == NULL)
-        RETURN_ROLLBACK(conn);
-
-    while ((builds = mysql_fetch_row(result)))
+    for(i=0; i < PQntuples(result); i++)
     {
-        sprintf(query, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = \"%s\"", atol(builds[1]), builds[2]);
-        if(mysql_query(conn, query))
+        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = \"%s\"", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+        if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        if((result2 = mysql_store_result(conn)) == NULL)
-            RETURN_ROLLBACK(conn);
-
-        backend = mysql_fetch_row(result2);
-
-        sprintf(url, "%s://%s%sstatus?build=%s", backend[0], backend[1], backend[2], backend[4]);
-        if(!getpage(url, backend[3]))
+        sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, i, 0), PQgetvalue(result2, i, 1),
+        		PQgetvalue(result2, i, 2), PQgetvalue(result2, i, 4));
+        if(!getpage(url, PQgetvalue(result2, i, 3)))
         {
            logcgi(url, getenv("ERROR"));
            continue;
@@ -567,21 +499,19 @@ int handleStep51(void)
 
         if(strcmp(getenv("STATUS"), "finished") == 0 || strcmp(getenv("STATUS"), "idle") == 0)
         {
-           sprintf(query, "UPDATE builds SET status = 70 WHERE id = %ld", atol(builds[0]));
-           if(mysql_query(conn, query))
+           if(!PQupdate(conn, "UPDATE builds SET status = 70 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
                RETURN_ROLLBACK(conn);
         }
         else
         {
-           sprintf(query, "UPDATE builds SET status = 50 WHERE id = %ld", atol(builds[0]));
-           if(mysql_query(conn, query))
+           if(!PQupdate(conn, "UPDATE builds SET status = 50 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
                RETURN_ROLLBACK(conn);
         }
 
-        mysql_free_result(result2);
+        PQclear(result2);
     }
 
-    mysql_free_result(result);
+    PQclear(result);
 
     RETURN_COMMIT(conn);
 }
@@ -590,12 +520,12 @@ int handleStep51(void)
 /* Queue running jobs and periodicaly shift them to status 51 for actual checking  */
 int handleStep50(void)
 {
-    MYSQL *conn;
+    PGconn *conn;
 
-    if((conn = mysql_autoconnect()) == NULL)
+    if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    if(mysql_query(conn, "UPDATE builds SET status = 51 WHERE status = 50"))
+    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50"))
         RETURN_ROLLBACK(conn);
 
     RETURN_COMMIT(conn);
@@ -605,48 +535,36 @@ int handleStep50(void)
 /* Start new build on backend */
 int handleStep31(void)
 {
-    MYSQL *conn;
-    MYSQL_RES *result;
-    MYSQL_RES *result2;
-    MYSQL_RES *result3;
-    MYSQL_ROW builds;
-    MYSQL_ROW backend;
-    MYSQL_ROW buildqueue;
-    char query[1000];
+    PGconn *conn;
+    PGresult *result;
+    PGresult *result2;
+    PGresult *result3;
     char url[500];
     int status;
+    int i;
 
-    if((conn = mysql_autoconnect()) == NULL)
+    if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    if(mysql_query(conn, "SELECT id, backendid, `group`, backendkey, queueid FROM builds WHERE status = 31 FOR UPDATE"))
+    result = PQexec(conn, "SELECT id, backendid, `group`, backendkey, queueid FROM builds WHERE status = 31 FOR UPDATE");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
-    if((result = mysql_store_result(conn)) == NULL)
-        RETURN_ROLLBACK(conn);
-
-    while ((builds = mysql_fetch_row(result)))
+    for(i=0; i < PQntuples(result); i++)
     {
-        sprintf(query, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = \"%s\"", atol(builds[1]), builds[2]);
-        if(mysql_query(conn, query))
+    	result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = \"%s\"", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+    	if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        if((result2 = mysql_store_result(conn)) == NULL)
-            RETURN_ROLLBACK(conn);
-
-        backend = mysql_fetch_row(result2);
-
-        sprintf(query, "SELECT portname FROM buildqueue WHERE id = \"%s\"", builds[4]);
-        if(mysql_query(conn, query))
+        result3 = PQselect(conn, "SELECT portname FROM buildqueue WHERE id = \"%s\"", PQgetvalue(result, i, 4));
+        if (PQresultStatus(result3) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        if((result3 = mysql_store_result(conn)) == NULL)
-            RETURN_ROLLBACK(conn);
-
-        buildqueue = mysql_fetch_row(result3);
-
-        sprintf(url, "%s://%s%sbuild?port=%s&build=%s&priority=%s&finishurl=%s/backend/finished/%s", backend[0], backend[1], backend[2], buildqueue[0], backend[4], "5", configget("wwwurl"), builds[3]);
-        if(getpage(url, backend[3]))
+        sprintf(url, "%s://%s%sbuild?port=%s&build=%s&priority=%s&finishurl=%s/backend/finished/%s",
+        		PQgetvalue(result2, i, 0), PQgetvalue(result2, i, 1), PQgetvalue(result2, i, 2),
+        		PQgetvalue(result3, 0, 0), PQgetvalue(result2, i, 4), "5", configget("wwwurl"),
+        		PQgetvalue(result, i, 3));
+        if(getpage(url, PQgetvalue(result2, i, 3)))
            status = 50;
         else
         {
@@ -654,15 +572,14 @@ int handleStep31(void)
            logcgi(url, getenv("ERROR"));
         }
 
-        sprintf(query, "UPDATE builds SET status = %d WHERE id = %ld", status, atol(builds[0]));
-        if(mysql_query(conn, query))
+        if(!PQupdate(conn, "UPDATE builds SET status = %d WHERE id = %ld", status, atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
 
-        mysql_free_result(result3);
-        mysql_free_result(result2);
+        PQclear(result3);
+        PQclear(result2);
     }
 
-    mysql_free_result(result);
+    PQclear(result);
 
     RETURN_COMMIT(conn);
 }
@@ -671,56 +588,47 @@ int handleStep31(void)
 /* Prepare backend for building a new job (checkout portstree, ZFS snapshot, ...) */
 int handleStep30(void)
 {
-    MYSQL *conn;
-    MYSQL_RES *result;
-    MYSQL_RES *result2;
-    MYSQL_ROW builds;
-    MYSQL_ROW backend;
-    char query[1000];
+    PGconn *conn;
+    PGresult *result;
+    PGresult *result2;
     char url[250];
     int status;
+    int i;
 
-    if((conn = mysql_autoconnect()) == NULL)
+    if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    if(mysql_query(conn, "SELECT builds.id, backendid, `group`, repository, revision FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND builds.status = 30 FOR UPDATE"))
-        RETURN_ROLLBACK(conn);
+    result = PQexec(conn, "SELECT builds.id, backendid, `group`, repository, revision FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND builds.status = 30 FOR UPDATE");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
+    	RETURN_ROLLBACK(conn);
 
-    if((result = mysql_store_result(conn)) == NULL)
-        RETURN_ROLLBACK(conn);
-
-    while ((builds = mysql_fetch_row(result)))
+    for(i=0; i < PQntuples(result); i++)
     {
-        sprintf(query, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = \"%s\"", atol(builds[1]), builds[2]);
-        if(mysql_query(conn, query))
+        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = \"%s\"", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+        if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        if((result2 = mysql_store_result(conn)) == NULL)
-            RETURN_ROLLBACK(conn);
-
-        backend = mysql_fetch_row(result2);
-
-        sprintf(url, "%s://%s%sstatus?build=%s", backend[0], backend[1], backend[2], backend[4]);
-        if(!getpage(url, backend[3]) || strcmp(getenv("STATUS"), "idle") != 0)
+        sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, i, 0), PQgetvalue(result2, i, 1),
+        		PQgetvalue(result2, i, 2), PQgetvalue(result2, i, 4));
+        if(!getpage(url, PQgetvalue(result2, i, 3)) || strcmp(getenv("STATUS"), "idle") != 0)
         {
            if(getenv("ERROR") != NULL)
               logcgi(url, getenv("ERROR"));
            
-           sprintf(query, "UPDATE backendbuilds SET status = 2 WHERE id = %ld", atol(backend[5]));
-           if(mysql_query(conn, query))
+           if(!PQupdate(conn, "UPDATE backendbuilds SET status = 2 WHERE id = %ld", atol(PQgetvalue(result2, i, 5))))
               RETURN_ROLLBACK(conn);
 
-           sprintf(query, "UPDATE builds SET status = 90, buildstatus = \"FAIL\" WHERE id = %ld", atol(builds[0]));
-           if(mysql_query(conn, query))
+           if(!PQupdate(conn, "UPDATE builds SET status = 90, buildstatus = \"FAIL\" WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
               RETURN_ROLLBACK(conn);
 
-
-           mysql_free_result(result2);
+           PQclear(result2);
            continue;
         }
 
-        sprintf(url, "%s://%s%scheckout?repository=%s&revision=%s&build=%s", backend[0], backend[1], backend[2], builds[3], builds[4], backend[4]);
-        if(getpage(url, backend[3]))
+        sprintf(url, "%s://%s%scheckout?repository=%s&revision=%s&build=%s", PQgetvalue(result2, i, 0),
+        		PQgetvalue(result2, i, 1), PQgetvalue(result2, i, 2), PQgetvalue(result, i, 3),
+        		PQgetvalue(result, i, 4), PQgetvalue(result2, i, 4));
+        if(getpage(url, PQgetvalue(result2, i, 3)))
            status = 31;
         else
         {
@@ -728,14 +636,13 @@ int handleStep30(void)
            logcgi(url, getenv("ERROR"));
         }
 
-        sprintf(query, "UPDATE builds SET status = %d WHERE id = %ld", status, atol(builds[0]));
-        if(mysql_query(conn, query))
+        if(!PQupdate(conn, "UPDATE builds SET status = %d WHERE id = %ld", status, atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
 
-        mysql_free_result(result2);
+        PQclear(result2);
     }
          
-    mysql_free_result(result);
+    PQclear(result);
 
     RETURN_COMMIT(conn);
 }
@@ -744,97 +651,69 @@ int handleStep30(void)
 /* Choose available backend for building */
 int handleStep20(void)
 {
-    MYSQL *conn;
-    MYSQL_RES *result;
-    MYSQL_RES *result2;
-    MYSQL_RES *result3;
-    MYSQL_RES *result4;
-    MYSQL_ROW builds;
-    MYSQL_ROW backends;
-    MYSQL_ROW runningjobs;
-    MYSQL_ROW runningjobs2;
-    char query[1000];
+    PGconn *conn;
+    PGresult *result;
+    PGresult *result2;
+    PGresult *result3;
+    PGresult *result4;
+    int i, j;
 
-    if((conn = mysql_autoconnect()) == NULL)
+    if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    if(mysql_query(conn, "SELECT builds.id, builds.group, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 20 AND builds.status = 20 AND builds.backendid = 0 FOR UPDATE"))
-        RETURN_ROLLBACK(conn);
+    result = PQexec(conn, "SELECT builds.id, builds.group, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 20 AND builds.status = 20 AND builds.backendid = 0 FOR UPDATE");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
+    	RETURN_ROLLBACK(conn);
 
-    if((result = mysql_store_result(conn)) == NULL)
-        RETURN_ROLLBACK(conn);
-
-    while ((builds = mysql_fetch_row(result)))
+    for(i=0; i < PQntuples(result); i++)
     {
-        sprintf(query, "SELECT backendid, maxparallel FROM backendbuilds, backends WHERE backendid = backends.id AND buildgroup = \"%s\" AND backendbuilds.status = 1 AND backends.status = 1 ORDER BY priority", builds[1]);
-
-        if(mysql_query(conn, query))
+        result2 = PQselect(conn, "SELECT backendid, maxparallel FROM backendbuilds, backends WHERE backendid = backends.id AND buildgroup = \"%s\" AND backendbuilds.status = 1 AND backends.status = 1 ORDER BY priority", PQgetvalue(result, i, 1));
+        if (PQresultStatus(result2) != PGRES_TUPLES_OK)
             RETURN_ROLLBACK(conn);
 
-        if((result2 = mysql_store_result(conn)) == NULL)
-            RETURN_ROLLBACK(conn);
-
-        while((backends = mysql_fetch_row(result2)))
+        for(j=0; j < PQntuples(result2); j++)
         {
-            sprintf(query, "SELECT count(*) FROM builds WHERE backendid = %ld AND status < 90", atol(backends[0]));
-            if(mysql_query(conn, query))
+            result3 = PQselect(conn, "SELECT count(*) FROM builds WHERE backendid = %ld AND status < 90", atol(PQgetvalue(result2, j, 0)));
+            if (PQresultStatus(result3) != PGRES_TUPLES_OK)
                 RETURN_ROLLBACK(conn);
 
-            if((result3 = mysql_store_result(conn)) == NULL)
-                RETURN_ROLLBACK(conn);
-
-            runningjobs = mysql_fetch_row(result3);
-
-            if(atoi(runningjobs[0]) < atoi(backends[1]))
+            if(atoi(PQgetvalue(result3, 0, 0)) < atoi(PQgetvalue(result2, j, 1)))
             {
-                sprintf(query, "SELECT count(*) FROM builds WHERE backendid = %ld AND `group` = \"%s\" AND status >= 30 AND status < 90", atol(backends[0]), builds[1]);
-
-                if(mysql_query(conn, query))
+                result4 = PQselect(conn, "SELECT count(*) FROM builds WHERE backendid = %ld AND `group` = \"%s\" AND status >= 30 AND status < 90", atol(PQgetvalue(result2, j, 0)), PQgetvalue(result, i, 1));
+                if (PQresultStatus(result4) != PGRES_TUPLES_OK)
                     RETURN_ROLLBACK(conn);
 
-                if((result4 = mysql_store_result(conn)) == NULL)
-                    RETURN_ROLLBACK(conn);
+                loginfo("Running %d jobs for group %s", atoi(PQgetvalue(result4, 0, 0)), PQgetvalue(result, i, 1));
 
-                runningjobs2 = mysql_fetch_row(result4);
-
-                loginfo("Running %d jobs for group %s", atoi(runningjobs2[0]), builds[1]);
-
-                if(atoi(runningjobs2[0]) == 0)
+                if(atoi(PQgetvalue(result4, 0, 0)) == 0)
                 {
-                    sprintf(query, "UPDATE builds SET backendid = %ld, status = 30, startdate = %lli WHERE id = %ld", atol(backends[0]), microtime(), atol(builds[0]));
-                    if(mysql_query(conn, query))
+                    if(!PQupdate(conn, "UPDATE builds SET backendid = %ld, status = 30, startdate = %lli WHERE id = %ld", atol(PQgetvalue(result2, j, 0)), microtime(), atol(PQgetvalue(result, i, 0))))
                         RETURN_ROLLBACK(conn);
                 }
 
-                mysql_free_result(result4);
+                PQclear(result4);
             }
 
-            mysql_free_result(result3);
+            PQclear(result3);
         }
 
-        mysql_free_result(result2);
+        PQclear(result2);
 
 
-        sprintf(query, "SELECT count(*) FROM builds WHERE queueid = \"%s\" AND backendid = 0", builds[2]);
-        if(mysql_query(conn, query))
+        result2 = PQselect(conn, "SELECT count(*) FROM builds WHERE queueid = \"%s\" AND backendid = 0", PQgetvalue(result, i, 2));
+        if (PQresultStatus(result2) != PGRES_TUPLES_OK)
             RETURN_ROLLBACK(conn);
 
-        if((result2 = mysql_store_result(conn)) == NULL)
-            RETURN_ROLLBACK(conn);
-
-        runningjobs = mysql_fetch_row(result2);
-
-        if(atoi(runningjobs[0]) == 0)
+        if(atoi(PQgetvalue(result2, 0, 0)) == 0)
         {
-            sprintf(query, "UPDATE buildqueue SET status = 30 WHERE id = \"%s\"", builds[2]);
-            if(mysql_query(conn, query))
+            if(!PQupdate(conn, "UPDATE buildqueue SET status = 30 WHERE id = \"%s\"", PQgetvalue(result, i, 2)))
                 RETURN_ROLLBACK(conn);
         }
         
-        mysql_free_result(result2);
+        PQclear(result2);
     }
 
-    mysql_free_result(result);
+    PQclear(result);
 
     RETURN_COMMIT(conn);
 }
@@ -843,55 +722,44 @@ int handleStep20(void)
 /* Create new jobs based on the buildgroups that the user joined */
 int handleStep10(void)
 {
-    MYSQL *conn;
-    MYSQL_RES *result;
-    MYSQL_RES *result2;
-    MYSQL_ROW builds;
-    MYSQL_ROW backends;
+    PGconn *conn;
+    PGresult *result;
+    PGresult *result2;
     int status;
-    char query[1000];
+    int i, j;
 
-
-    if((conn = mysql_autoconnect()) == NULL)
+    if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    if(mysql_query(conn, "SELECT id, owner FROM buildqueue WHERE status = 10 FOR UPDATE"))
+    result = PQexec(conn, "SELECT id, owner FROM buildqueue WHERE status = 10 FOR UPDATE");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
-    if((result = mysql_store_result(conn)) == NULL)
-        RETURN_ROLLBACK(conn);
-
-    while ((builds = mysql_fetch_row(result)))
+    for(i=0; i < PQntuples(result); i++)
     {
-        sprintf(query, "SELECT buildgroup FROM automaticbuildgroups WHERE username = \"%s\" ORDER BY priority", builds[1]);
-
-        if(mysql_query(conn, query))
+        result2 = PQselect(conn, "SELECT buildgroup FROM automaticbuildgroups WHERE username = \"%s\" ORDER BY priority", PQgetvalue(result, i, 1));
+        if (PQresultStatus(result2) != PGRES_TUPLES_OK)
             RETURN_ROLLBACK(conn);
 
-        if((result2 = mysql_store_result(conn)) == NULL)
-            RETURN_ROLLBACK(conn);
-
-        if(mysql_num_rows(result2) > 0)
+        if(PQntuples(result2) > 0)
             status = 20;
         else
             status = 95;
 
-        while((backends = mysql_fetch_row(result2)))
+        for(j=0; j < PQntuples(result2); j++)
         {
-            loginfo("adding build %s for %s", builds[0], builds[1]);
-            sprintf(query, "INSERT INTO builds (id, queueid, backendkey, `group`, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 20, null, null, null, null, 0, 0, 0)", builds[0], backends[0]);
-	    if(mysql_query(conn, query))
+            loginfo("adding build %s for %s", PQgetvalue(result, i, 0), PQgetvalue(result, i, 1));
+            if(!PQupdate(conn, "INSERT INTO builds (id, queueid, backendkey, `group`, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 20, null, null, null, null, 0, 0, 0)", PQgetvalue(result, i, 0), PQgetvalue(result2, j, 0)))
                 RETURN_ROLLBACK(conn);
         }
 
-        mysql_free_result(result2);
+        PQclear(result2);
 
-        sprintf(query, "UPDATE buildqueue SET status = %d WHERE id = \"%s\"", status, builds[0]);
-        if(mysql_query(conn, query))
+        if(!PQupdate(conn, "UPDATE buildqueue SET status = %d WHERE id = \"%s\"", status, PQgetvalue(result, i, 0)))
             RETURN_ROLLBACK(conn);
     }
 
-    mysql_free_result(result);
+    PQclear(result);
 
     RETURN_COMMIT(conn);
 }
