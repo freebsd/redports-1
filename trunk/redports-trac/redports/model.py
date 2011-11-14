@@ -38,7 +38,7 @@ class Port(object):
         if self.group == 'automatic':
             self.setStatus(10)
 
-            cursor.execute("SELECT count(*) FROM automaticbuildgroups WHERE username = %s", self.owner )
+            cursor.execute("SELECT count(*) FROM automaticbuildgroups WHERE username = %s", (self.owner,) )
             row = cursor.fetchone()
             if not row:
                 raise TracError('SQL Error')
@@ -47,7 +47,7 @@ class Port(object):
         else:
             self.setStatus(20)
 
-            cursor.execute("SELECT count(*) FROM buildgroups WHERE name = %s", self.group )
+            cursor.execute("SELECT count(*) FROM buildgroups WHERE name = %s", (self.group,) )
             row = cursor.fetchone()
             if not row:
                 raise TracError('SQL Error')
@@ -57,7 +57,7 @@ class Port(object):
         cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES (%s, %s, %s, %s, %s, %s, UNIX_TIMESTAMP()*1000000, 0)", ( self.queueid, self.owner, self.repository, self.revision, self.portname, self.status ))
 
         if self.status == 20:
-             cursor.execute("INSERT INTO builds VALUES ( null, '%s', SUBSTRING(MD5(RAND()), 1, 25), '%s', 20, null, null, null, null, 0, 0, 0 )" % ( self.queueid, self.group ))
+             cursor.execute("INSERT INTO builds VALUES ( null, '%s', SUBSTRING(MD5(RAND()), 1, 25), '%s', 20, null, null, null, null, 0, 0, 0 )", ( self.queueid, self.group ))
         db.commit()
         return True
 
@@ -94,7 +94,7 @@ class Port(object):
     def updateStatus(self, status, key):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
-        cursor.execute("SELECT count(*) FROM builds WHERE backendkey = %s", key)
+        cursor.execute("SELECT count(*) FROM builds WHERE backendkey = %s", (key,) )
         row = cursor.fetchone()
         if not row:
             raise TracError('SQL Error for key ' % key)
@@ -120,20 +120,20 @@ class Port(object):
 
         self.queueid = row[0]
         
-        cursor.execute("UPDATE builds SET status = 95 WHERE id = %s AND (status < 30 OR status > 89)", self.id )
+        cursor.execute("UPDATE builds SET status = 95 WHERE id = %s AND (status < 30 OR status > 89)", (self.id,) )
 
-        cursor.execute("SELECT count(*) FROM builds WHERE queueid = %s AND status <= 90", self.queueid )
+        cursor.execute("SELECT count(*) FROM builds WHERE queueid = %s AND status <= 90", (self.queueid,) )
         row = cursor.fetchone()
         if not row:
             raise TracError('SQL Error')
         if row[0] == 0:
-            cursor.execute("UPDATE buildqueue SET status = 95 WHERE id = %s", self.queueid )
+            cursor.execute("UPDATE buildqueue SET status = 95 WHERE id = %s", (self.queueid,) )
         db.commit()
         
 
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status, 0), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, IF(builds.enddate<builds.startdate,UNIX_TIMESTAMP()*1000000,builds.enddate) FROM buildqueue LEFT OUTER JOIN builds ON buildqueue.id = builds.queueid WHERE owner = %s AND buildqueue.status <= 90 AND (builds.status IS NULL OR builds.status <= 90) ORDER BY buildqueue.id DESC, builds.id", req.authname )
+    cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.group, buildqueue.portname, GREATEST(buildqueue.status, builds.status, 0), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, CASE WHEN builds.enddate < builds.startdate THEN extract(epoch from now())*1000000 ELSE builds.enddate END FROM buildqueue LEFT OUTER JOIN builds ON buildqueue.id = builds.queueid WHERE owner = %s AND buildqueue.status <= 90 AND (builds.status IS NULL OR builds.status <= 90) ORDER BY buildqueue.id DESC, builds.id", (req.authname,) )
     lastid = None
     for id, owner, repository, revision, queueid, group, portname, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate in cursor:
 	port = Port(env)
@@ -230,7 +230,7 @@ def BuildgroupsIterator(env, req):
             if cursor2.rowcount > 0:
                 buildgroup.joined = 'true'
                 buildgroup.setPriority(cursor2.fetchall()[0][0])
-        cursor2.execute("SELECT count(*) FROM builds WHERE `group` = %s AND status < 90", name)
+        cursor2.execute("SELECT count(*) FROM builds WHERE 'group' = %s AND status < 90", (name,) )
         if cursor2.rowcount > 0:
             buildgroup.queued = cursor2.fetchall()[0][0]
         
@@ -238,7 +238,7 @@ def BuildgroupsIterator(env, req):
 
 def AvailableBuildgroupsIterator(env, req):
    cursor = env.get_db_cnx().cursor()
-   cursor.execute("SELECT name FROM buildgroups WHERE name NOT IN (SELECT buildgroup FROM automaticbuildgroups WHERE username = %s) ORDER BY name", req.authname )
+   cursor.execute("SELECT name FROM buildgroups WHERE name NOT IN (SELECT buildgroup FROM automaticbuildgroups WHERE username = %s) ORDER BY name", (req.authname,) )
 
    for name in cursor:
         buildgroup = Buildgroup(env, name)
