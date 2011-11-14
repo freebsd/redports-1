@@ -27,30 +27,38 @@
 #ifndef _DATABASE_H_
 #define _DATABASE_H_
 
-#include <my_global.h>
-#include <mysql.h>
+#include <string.h>
+#include <libpq-fe.h>
 #include "log.h"
 
 #define RETURN_ROLLBACK(conn) \
 { \
+   PGresult *res; \
    logsql(conn); \
-   if(mysql_query(conn, "ROLLBACK") != 0) \
+   res = PQexec(conn, "ROLLBACK"); \
+   if(PQresultStatus(res) != PGRES_COMMAND_OK) \
       logsql(conn); \
-   mysql_close(conn); \
+   PQclear(res); \
+   PQfinish(conn); \
    return -1; \
 }
 
 #define RETURN_COMMIT(conn) \
 { \
-   if(mysql_query(conn, "COMMIT") != 0) \
+   PGresult *res; \
+   res = PQexec(conn, "COMMIT"); \
+   if(PQresultStatus(res) != PGRES_COMMAND_OK) \
    { \
       RETURN_ROLLBACK(conn); \
    } \
-   mysql_close(conn); \
+   PQclear(res); \
+   PQfinish(conn); \
    return 0; \
 }
    
 
-extern MYSQL* mysql_autoconnect(void);
+extern PGconn* PQautoconnect(void);
+extern int PQupdate(PGconn *conn, char *queryfmt, ...);
+extern PGresult* PQselect(PGconn *conn, char *queryfmt, ...);
 
 #endif /* _DATABASE_H */
