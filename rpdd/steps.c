@@ -251,13 +251,13 @@ int handleStep95(void)
         if(!PQupdate(conn, "DELETE FROM builds WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
 
-        result2 = PQselect(conn, "SELECT count(*) FROM builds WHERE queueid = \"%s\"", PQgetvalue(result, i, 1));
+        result2 = PQselect(conn, "SELECT count(*) FROM builds WHERE queueid = '%s'", PQgetvalue(result, i, 1));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
         if(atoi(PQgetvalue(result2, 0, 0)) == 0)
         {
-           if(!PQupdate(conn, "DELETE FROM buildqueue WHERE id = \"%s\" AND status >= 90", PQgetvalue(result, i, 1)))
+           if(!PQupdate(conn, "DELETE FROM buildqueue WHERE id = '%s' AND status >= 90", PQgetvalue(result, i, 1)))
               RETURN_ROLLBACK(conn);
         }
     }
@@ -300,13 +300,13 @@ int handleStep80(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT id, backendid, `group`, queueid FROM builds WHERE status = 80 FOR UPDATE");
+    result = PQexec(conn, "SELECT id, backendid, buildgroup, queueid FROM builds WHERE status = 80 FOR UPDATE");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
     for(i=0; i < PQntuples(result); i++)
     {
-        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = \"%s\"", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s'", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
         if (PQresultStatus(result) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
@@ -325,13 +325,13 @@ int handleStep80(void)
         if(!PQupdate(conn, "UPDATE builds SET status = 90 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
 
-        result3 = PQselect(conn, "SELECT count(*) FROM builds WHERE queueid = \"%s\" AND status < 90", PQgetvalue(result, i, 3));
+        result3 = PQselect(conn, "SELECT count(*) FROM builds WHERE queueid = '%s' AND status < 90", PQgetvalue(result, i, 3));
         if (PQresultStatus(result3) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
         if(atoi(PQgetvalue(result3, 0, 0)) == 0)
         {
-           if(!PQupdate(conn, "UPDATE buildqueue SET status = 90, enddate = %lli WHERE id = \"%s\"", microtime(), PQgetvalue(result, i, 3)))
+           if(!PQupdate(conn, "UPDATE buildqueue SET status = 90, enddate = %lli WHERE id = '%s'", microtime(), PQgetvalue(result, i, 3)))
               RETURN_ROLLBACK(conn);
         }
 
@@ -361,13 +361,13 @@ int handleStep71(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT id, backendid, \"group\" FROM builds WHERE status = 71 FOR UPDATE");
+    result = PQexec(conn, "SELECT id, backendid, buildgroup FROM builds WHERE status = 71 FOR UPDATE");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
     for(i=0; i < PQntuples(result); i++)
     {
-    	result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = \"%s\"", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+    	result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s'", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
@@ -398,7 +398,7 @@ int handleStep71(void)
               continue;
            }
 
-           if(!PQupdate(conn, "UPDATE builds SET buildlog = \"%s\" WHERE id = %ld", basename(localfile), atol(PQgetvalue(result, i, 0))))
+           if(!PQupdate(conn, "UPDATE builds SET buildlog = '%s' WHERE id = %ld", basename(localfile), atol(PQgetvalue(result, i, 0))))
               RETURN_ROLLBACK(conn);
         }
 
@@ -412,12 +412,12 @@ int handleStep71(void)
               continue;
            }
 
-           if(!PQupdate(conn, "UPDATE builds SET wrkdir = \"%s\" WHERE id = %ld", basename(localfile), atol(PQgetvalue(result, i, 0))))
+           if(!PQupdate(conn, "UPDATE builds SET wrkdir = '%s' WHERE id = %ld", basename(localfile), atol(PQgetvalue(result, i, 0))))
               RETURN_ROLLBACK(conn);
         }
 
         loginfo("Updating build status for build #%ld", atol(PQgetvalue(result, i, 0)));
-        if(!PQupdate(conn, "UPDATE builds SET buildstatus = \"%s\", buildreason = \"%s\", enddate = %lli, status = 80 WHERE id = %ld",
+        if(!PQupdate(conn, "UPDATE builds SET buildstatus = '%s', buildreason = '%s', enddate = %lli, status = 80 WHERE id = %ld",
         		getenv("BUILDSTATUS") != NULL ? getenv("BUILDSTATUS") : "",
         		getenv("FAIL_REASON") != NULL ? getenv("FAIL_REASON") : "", microtime(), atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
@@ -479,13 +479,13 @@ int handleStep51(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT id, backendid, `group` FROM builds WHERE status = 51 FOR UPDATE");
+    result = PQexec(conn, "SELECT id, backendid, buildgroup FROM builds WHERE status = 51 FOR UPDATE");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
     for(i=0; i < PQntuples(result); i++)
     {
-        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = \"%s\"", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s'", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
@@ -546,17 +546,17 @@ int handleStep31(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT id, backendid, `group`, backendkey, queueid FROM builds WHERE status = 31 FOR UPDATE");
+    result = PQexec(conn, "SELECT id, backendid, buildgroup, backendkey, queueid FROM builds WHERE status = 31 FOR UPDATE");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
     for(i=0; i < PQntuples(result); i++)
     {
-    	result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = \"%s\"", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+    	result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s'", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
     	if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        result3 = PQselect(conn, "SELECT portname FROM buildqueue WHERE id = \"%s\"", PQgetvalue(result, i, 4));
+        result3 = PQselect(conn, "SELECT portname FROM buildqueue WHERE id = '%s'", PQgetvalue(result, i, 4));
         if (PQresultStatus(result3) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
@@ -598,13 +598,13 @@ int handleStep30(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT builds.id, backendid, `group`, repository, revision FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND builds.status = 30 FOR UPDATE");
+    result = PQexec(conn, "SELECT builds.id, backendid, buildgroup, repository, revision FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND builds.status = 30 FOR UPDATE");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
     for(i=0; i < PQntuples(result); i++)
     {
-        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = \"%s\"", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s'", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
@@ -618,7 +618,7 @@ int handleStep30(void)
            if(!PQupdate(conn, "UPDATE backendbuilds SET status = 2 WHERE id = %ld", atol(PQgetvalue(result2, i, 5))))
               RETURN_ROLLBACK(conn);
 
-           if(!PQupdate(conn, "UPDATE builds SET status = 90, buildstatus = \"FAIL\" WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
+           if(!PQupdate(conn, "UPDATE builds SET status = 90, buildstatus = 'FAIL' WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
               RETURN_ROLLBACK(conn);
 
            PQclear(result2);
@@ -661,13 +661,13 @@ int handleStep20(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT builds.id, builds.group, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 20 AND builds.status = 20 AND builds.backendid = 0 FOR UPDATE");
+    result = PQexec(conn, "SELECT builds.id, builds.buildgroup, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 20 AND builds.status = 20 AND builds.backendid = 0 FOR UPDATE");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
     for(i=0; i < PQntuples(result); i++)
     {
-        result2 = PQselect(conn, "SELECT backendid, maxparallel FROM backendbuilds, backends WHERE backendid = backends.id AND buildgroup = \"%s\" AND backendbuilds.status = 1 AND backends.status = 1 ORDER BY priority", PQgetvalue(result, i, 1));
+        result2 = PQselect(conn, "SELECT backendid, maxparallel FROM backendbuilds, backends WHERE backendid = backends.id AND buildgroup = '%s' AND backendbuilds.status = 1 AND backends.status = 1 ORDER BY priority", PQgetvalue(result, i, 1));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
             RETURN_ROLLBACK(conn);
 
@@ -679,7 +679,7 @@ int handleStep20(void)
 
             if(atoi(PQgetvalue(result3, 0, 0)) < atoi(PQgetvalue(result2, j, 1)))
             {
-                result4 = PQselect(conn, "SELECT count(*) FROM builds WHERE backendid = %ld AND `group` = \"%s\" AND status >= 30 AND status < 90", atol(PQgetvalue(result2, j, 0)), PQgetvalue(result, i, 1));
+                result4 = PQselect(conn, "SELECT count(*) FROM builds WHERE backendid = %ld AND buildgroup = '%s' AND status >= 30 AND status < 90", atol(PQgetvalue(result2, j, 0)), PQgetvalue(result, i, 1));
                 if (PQresultStatus(result4) != PGRES_TUPLES_OK)
                     RETURN_ROLLBACK(conn);
 
@@ -700,13 +700,13 @@ int handleStep20(void)
         PQclear(result2);
 
 
-        result2 = PQselect(conn, "SELECT count(*) FROM builds WHERE queueid = \"%s\" AND backendid = 0", PQgetvalue(result, i, 2));
+        result2 = PQselect(conn, "SELECT count(*) FROM builds WHERE queueid = '%s' AND backendid = 0", PQgetvalue(result, i, 2));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
             RETURN_ROLLBACK(conn);
 
         if(atoi(PQgetvalue(result2, 0, 0)) == 0)
         {
-            if(!PQupdate(conn, "UPDATE buildqueue SET status = 30 WHERE id = \"%s\"", PQgetvalue(result, i, 2)))
+            if(!PQupdate(conn, "UPDATE buildqueue SET status = 30 WHERE id = '%s'", PQgetvalue(result, i, 2)))
                 RETURN_ROLLBACK(conn);
         }
         
@@ -737,7 +737,7 @@ int handleStep10(void)
 
     for(i=0; i < PQntuples(result); i++)
     {
-        result2 = PQselect(conn, "SELECT buildgroup FROM automaticbuildgroups WHERE username = \"%s\" ORDER BY priority", PQgetvalue(result, i, 1));
+        result2 = PQselect(conn, "SELECT buildgroup FROM automaticbuildgroups WHERE username = '%s' ORDER BY priority", PQgetvalue(result, i, 1));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
             RETURN_ROLLBACK(conn);
 
@@ -749,7 +749,7 @@ int handleStep10(void)
         for(j=0; j < PQntuples(result2); j++)
         {
             loginfo("adding build %s for %s", PQgetvalue(result, i, 0), PQgetvalue(result, i, 1));
-            if(!PQupdate(conn, "INSERT INTO builds (id, queueid, backendkey, `group`, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (null, \"%s\", SUBSTRING(MD5(RAND()), 1, 25), \"%s\", 20, null, null, null, null, 0, 0, 0)", PQgetvalue(result, i, 0), PQgetvalue(result2, j, 0)))
+            if(!PQupdate(conn, "INSERT INTO builds (id, queueid, backendkey, buildgroup, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (null, '%s', SUBSTRING(MD5(RANDOM()::text), 1, 25), '%s', 20, null, null, null, null, 0, 0, 0)", PQgetvalue(result, i, 0), PQgetvalue(result2, j, 0)))
                 RETURN_ROLLBACK(conn);
         }
 
