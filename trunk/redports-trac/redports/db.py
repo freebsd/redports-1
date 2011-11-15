@@ -17,11 +17,11 @@ class RedportsEnvironment(Component):
                 Column('startdate', type='bigint'),
                 Column('enddate', type='bigint')
             ],
-            Table('builds', key=('id', 'queueid', 'backendkey', 'group', 'status', 'backendid'))[
+            Table('builds', key=('id', 'queueid', 'backendkey', 'buildgroup', 'status', 'backendid'))[
                 Column('id', type='int', auto_increment=True),
                 Column('queueid', type='varchar(25)', size=25),
                 Column('backendkey', type='varchar(25)', size=25),
-                Column('group', type='varchar(50)', size=50),
+                Column('buildgroup', type='varchar(50)', size=50),
                 Column('status', type='int'),
                 Column('buildstatus', type='varchar(25)', size=25),
                 Column('buildreason', type='varchar(50)', size=50),
