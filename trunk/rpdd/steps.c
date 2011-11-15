@@ -84,7 +84,7 @@ int handleStep102(void)
     if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    result = PQexec(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE");
+    result = PQexec(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
@@ -149,7 +149,7 @@ int handleStep101(void)
     if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    result = PQexec(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE");
+    result = PQexec(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
@@ -188,7 +188,7 @@ int handleStep100(void)
     if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    result = PQexec(conn, "SELECT id, protocol, host, uri, credentials FROM backends WHERE status > 0 FOR UPDATE");
+    result = PQexec(conn, "SELECT id, protocol, host, uri, credentials FROM backends WHERE status > 0 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
@@ -237,7 +237,7 @@ int handleStep95(void)
     if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    result = PQexec(conn, "SELECT builds.id, buildqueue.id, buildqueue.owner FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND (builds.status >= 90 OR buildqueue.status = 95) FOR UPDATE");
+    result = PQexec(conn, "SELECT builds.id, buildqueue.id, buildqueue.owner FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND (builds.status >= 90 OR buildqueue.status = 95) FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
@@ -300,7 +300,7 @@ int handleStep80(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT id, backendid, buildgroup, queueid FROM builds WHERE status = 80 FOR UPDATE");
+    result = PQexec(conn, "SELECT id, backendid, buildgroup, queueid FROM builds WHERE status = 80 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
@@ -361,7 +361,7 @@ int handleStep71(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT id, backendid, buildgroup FROM builds WHERE status = 71 FOR UPDATE");
+    result = PQexec(conn, "SELECT id, backendid, buildgroup FROM builds WHERE status = 71 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
@@ -442,7 +442,7 @@ int handleStep70(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT id, backendid FROM builds WHERE status >= 70 AND status < 80 FOR UPDATE");
+    result = PQexec(conn, "SELECT id, backendid FROM builds WHERE status >= 70 AND status < 80 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
@@ -479,7 +479,7 @@ int handleStep51(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT id, backendid, buildgroup FROM builds WHERE status = 51 FOR UPDATE");
+    result = PQexec(conn, "SELECT id, backendid, buildgroup FROM builds WHERE status = 51 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
@@ -546,7 +546,7 @@ int handleStep31(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT id, backendid, buildgroup, backendkey, queueid FROM builds WHERE status = 31 FOR UPDATE");
+    result = PQexec(conn, "SELECT id, backendid, buildgroup, backendkey, queueid FROM builds WHERE status = 31 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
@@ -598,7 +598,7 @@ int handleStep30(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT builds.id, backendid, buildgroup, repository, revision FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND builds.status = 30 FOR UPDATE");
+    result = PQexec(conn, "SELECT builds.id, backendid, buildgroup, repository, revision FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND builds.status = 30 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
@@ -661,7 +661,7 @@ int handleStep20(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT builds.id, builds.buildgroup, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 20 AND builds.status = 20 AND builds.backendid = 0 FOR UPDATE");
+    result = PQexec(conn, "SELECT builds.id, builds.buildgroup, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 20 AND builds.status = 20 AND builds.backendid = 0 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
@@ -731,7 +731,7 @@ int handleStep10(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT id, owner FROM buildqueue WHERE status = 10 FOR UPDATE");
+    result = PQexec(conn, "SELECT id, owner FROM buildqueue WHERE status = 10 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
@@ -749,13 +749,13 @@ int handleStep10(void)
         for(j=0; j < PQntuples(result2); j++)
         {
             loginfo("adding build %s for %s", PQgetvalue(result, i, 0), PQgetvalue(result, i, 1));
-            if(!PQupdate(conn, "INSERT INTO builds (id, queueid, backendkey, buildgroup, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (null, '%s', SUBSTRING(MD5(RANDOM()::text), 1, 25), '%s', 20, null, null, null, null, 0, 0, 0)", PQgetvalue(result, i, 0), PQgetvalue(result2, j, 0)))
+            if(!PQupdate(conn, "INSERT INTO builds (queueid, backendkey, buildgroup, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES ('%s', SUBSTRING(MD5(RANDOM()::text), 1, 25), '%s', 20, null, null, null, null, 0, 0, 0)", PQgetvalue(result, i, 0), PQgetvalue(result2, j, 0)))
                 RETURN_ROLLBACK(conn);
         }
 
         PQclear(result2);
 
-        if(!PQupdate(conn, "UPDATE buildqueue SET status = %d WHERE id = \"%s\"", status, PQgetvalue(result, i, 0)))
+        if(!PQupdate(conn, "UPDATE buildqueue SET status = %d WHERE id = '%s'", status, PQgetvalue(result, i, 0)))
             RETURN_ROLLBACK(conn);
     }
 

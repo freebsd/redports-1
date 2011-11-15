@@ -3,8 +3,8 @@
 # rpdd.conf
 
 # Database credentials
-dbHost     localhost
-dbUsername root
+dbHost     127.0.0.1
+dbUsername trac
 dbPassword 
 dbDatabase trac
 
