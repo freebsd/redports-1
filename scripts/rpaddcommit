@@ -10,8 +10,13 @@ PATH=${PATH}:/usr/local/bin
 
 REPOSITORY=https://svn.redports.org/
 DBNAME=trac
-DBUSER=root
+DBUSER=trac
 LOG=/var/log/redports.log
+
+if [ -z "${1}" -o -z "${2}" ]; then
+    echo "Usage: rpaddcommit <repository> <revision>"
+    exit 1
+fi
 
 REPOS=$1
 REV=$2
@@ -40,7 +45,9 @@ do
     RAND=`hexdump -n2 -e\"%u\" /dev/random`
     BUILDID=${BUILDDATE}-${RAND}
 
-    echo "INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES (\"${BUILDID}\", \"${USER}\", \"${REPOSITORYBASE}\", ${REV}, \"${PORT}\", 10, ${START}, 0);" | mysql -u ${DBUSER} ${DBNAME}
+    SQLCMD=`printf "INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES ('%s', '%s', '%s', %d, '%s', %d, %d, %d);" "${BUILDID}" "${USER}" "${REPOSITORYBASE}" ${REV} "${PORT}" 10 ${START} 0`
+
+    echo ${SQLCMD} | psql -q ${DBNAME} ${DBUSER}
     if [ $? != 0 ]; then
         echo "ERROR: Failed adding ${PORT} with r${REV} to buildqueue"
     else
