@@ -75,7 +75,6 @@ int handleStep102(void)
     PGconn *conn;
     PGresult *result;
     char url[250];
-    int status;
     struct tm tm;
     int i;
 
@@ -294,7 +293,6 @@ int handleStep80(void)
     PGresult *result2;
     PGresult *result3;
     char url[250];
-    int status;
     int i;
 
     if((conn = PQautoconnect()) == NULL)
