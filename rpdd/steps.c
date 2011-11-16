@@ -365,21 +365,21 @@ int handleStep71(void)
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
-    restmp = PQexec(conn, "SAVEPOINT sp1");
-    if (PQresultStatus(restmp) != PGRES_COMMAND_OK)
-        RETURN_ROLLBACK(conn);
-
     for(i=0; i < PQntuples(result); i++)
     {
         result4 = PQselect(conn, "SELECT id FROM builds WHERE id = %ld AND status = 71 FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 0)));
-        if (PQresultStatus(result) != PGRES_TUPLES_OK)
+        if (PQresultStatus(result4) != PGRES_TUPLES_OK)
         {
-           logsql(conn);
-           restmp = PQexec(conn, "ROLLBACK TO SAVEPOINT sp1");
+           logwarn("Could not lock build #%ld. Download already in progress.", atol(PQgetvalue(result, i, 0)));
+
+           restmp = PQexec(conn, "ROLLBACK");
            if (PQresultStatus(restmp) != PGRES_COMMAND_OK)
                RETURN_ROLLBACK(conn);
 
-           logwarn("Could not lock build #%ld", atol(PQgetvalue(result, i, 0)));
+           restmp = PQexec(conn, "BEGIN");
+           if (PQresultStatus(restmp) != PGRES_COMMAND_OK)
+               RETURN_ROLLBACK(conn);
+
            continue;
         }
 
