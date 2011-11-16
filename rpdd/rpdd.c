@@ -62,7 +62,6 @@ void run(void)
     pid_t pids[MAXCHILDS];
     int stats[MAXCHILDS];
     int slot;
-    int step=0;
 
     memset(pids, '\0', sizeof(pids));
     memset(stats, -1, sizeof(stats));
