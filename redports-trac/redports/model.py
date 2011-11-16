@@ -1,5 +1,7 @@
 from trac.core import *
 from trac.util.datefmt import from_utimestamp, pretty_timedelta
+from datetime import datetime
+from time import time
 import math
 
 class Port(object):
@@ -28,12 +30,7 @@ class Port(object):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
 
-        cursor.execute("SELECT CONCAT(DATE_FORMAT(NOW(), '%Y%m%d%H%i%s'), '-', RPAD(SUBSTRING(FLOOR(RAND()*1000000), 1, 5), 5, '0'))")
-        row = cursor.fetchone()
-        if not row:
-            raise TracError('SQL Error while generating new buildqueue id')
-
-        self.queueid = row[0]
+        self.queueid = datetime.now().strftime('%Y%m%d%H%M%S-%f')[0:20]
 
         if self.group == 'automatic':
             self.setStatus(10)
@@ -54,10 +51,10 @@ class Port(object):
             if row[0] != 1:
                 raise TracError('Invalid buildgroup')
 
-        cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES (%s, %s, %s, %s, %s, %s, UNIX_TIMESTAMP()*1000000, 0)", ( self.queueid, self.owner, self.repository, self.revision, self.portname, self.status ))
+        cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES (%s, %s, %s, %s, %s, %s, %s, 0)", ( self.queueid, self.owner, self.repository, self.revision, self.portname, self.status, long(time()*100000) ))
 
         if self.status == 20:
-             cursor.execute("INSERT INTO builds VALUES ( null, '%s', SUBSTRING(MD5(RAND()), 1, 25), '%s', 20, null, null, null, null, 0, 0, 0 )", ( self.queueid, self.group ))
+             cursor.execute("INSERT INTO builds (queueid, backendkey, buildgroup, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (%s, SUBSTRING(MD5(RANDOM()::text), 1, 25), %s, 20, null, null, null, null, 0, 0, 0)", ( self.queueid, self.group ))
         db.commit()
         return True
 
