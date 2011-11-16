@@ -100,7 +100,7 @@ int handleStep102(void)
            continue;
         }
 
-        if(strcmp(getenv("STATUS"), "idle") != 0 || getenv("PORTSTREELASTBUILT") == NULL)
+        if((getenv("STATUS") != NULL && strcmp(getenv("STATUS"), "idle") != 0) || getenv("PORTSTREELASTBUILT") == NULL)
            continue;
 
         if(strptime(getenv("PORTSTREELASTBUILT"), "%Y-%m-%d %H:%M:%S", &tm) == NULL)
@@ -310,15 +310,15 @@ int handleStep80(void)
         if (PQresultStatus(result) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        loginfo("Cleaning build %s on backend %s", PQgetvalue(result2, i, 4), PQgetvalue(result2, i, 1));
+        loginfo("Cleaning build %s on backend %s", PQgetvalue(result2, 0, 4), PQgetvalue(result2, 0, 1));
 
-        sprintf(url, "%s://%s%sclean?build=%s", PQgetvalue(result2, i, 0), PQgetvalue(result2, i, 1),
-        		PQgetvalue(result2, i, 2), PQgetvalue(result2, i, 4));
-        if(!getpage(url, PQgetvalue(result2, i, 3)))
+        sprintf(url, "%s://%s%sclean?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
+        		PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 4));
+        if(!getpage(url, PQgetvalue(result2, 0, 3)))
         {
             logcgi(url, getenv("ERROR"));
 
-            if(!PQupdate(conn, "UPDATE backendbuilds SET status = 2 WHERE id = %ld", atol(PQgetvalue(result2, i, 5))))
+            if(!PQupdate(conn, "UPDATE backendbuilds SET status = 2 WHERE id = %ld", atol(PQgetvalue(result2, 0, 5))))
                 RETURN_ROLLBACK(conn);
         }
 
@@ -352,6 +352,8 @@ int handleStep71(void)
     PGresult *result;
     PGresult *result2;
     PGresult *result3;
+    PGresult *result4;
+    PGresult *restmp;
     char url[250];
     char remotefile[255];
     char localfile[PATH_MAX];
@@ -361,12 +363,28 @@ int handleStep71(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT id, backendid, buildgroup FROM builds WHERE status = 71 FOR UPDATE NOWAIT");
+    result = PQexec(conn, "SELECT id, backendid, buildgroup FROM builds WHERE status = 71");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
+        RETURN_ROLLBACK(conn);
+
+    restmp = PQexec(conn, "SAVEPOINT sp1");
+    if (PQresultStatus(restmp) != PGRES_COMMAND_OK)
         RETURN_ROLLBACK(conn);
 
     for(i=0; i < PQntuples(result); i++)
     {
+        result4 = PQselect(conn, "SELECT id FROM builds WHERE id = %ld AND status = 71 FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 0)));
+        if (PQresultStatus(result) != PGRES_TUPLES_OK)
+        {
+           logsql(conn);
+           restmp = PQexec(conn, "ROLLBACK TO SAVEPOINT sp1");
+           if (PQresultStatus(restmp) != PGRES_COMMAND_OK)
+               RETURN_ROLLBACK(conn);
+
+           logwarn("Could not lock build #%ld", atol(PQgetvalue(result, i, 0)));
+           continue;
+        }
+
     	result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s'", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
@@ -375,27 +393,27 @@ int handleStep71(void)
         if (PQresultStatus(result3) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, i, 0), PQgetvalue(result2, i, 1),
-        		PQgetvalue(result2, i, 2), PQgetvalue(result2, i, 4));
-        if(!getpage(url, PQgetvalue(result2, i, 3)))
+        sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
+        		PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 4));
+        if(!getpage(url, PQgetvalue(result2, 0, 3)))
         {
            logcgi(url, getenv("ERROR"));
-           continue;
+           RETURN_ROLLBACK(conn);
         }
 
         sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), PQgetvalue(result3, i, 0),
         		PQgetvalue(result3, i, 1), PQgetvalue(result, i, 0));
         if(mkdirrec(localdir) != 0)
-           continue;
+           RETURN_ROLLBACK(conn);
 
         if(getenv("BUILDLOG") != NULL)
         {
            sprintf(localfile, "%s/%s", localdir, basename(getenv("BUILDLOG")));
-           sprintf(remotefile, "%s://%s%s", PQgetvalue(result2, i, 0), PQgetvalue(result2, i, 1), getenv("BUILDLOG"));
+           sprintf(remotefile, "%s://%s%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1), getenv("BUILDLOG"));
            loginfo("Downloading Log %s to %s", remotefile, localfile);
-           if(downloadfile(remotefile, PQgetvalue(result2, i, 3), localfile) != 0){
+           if(downloadfile(remotefile, PQgetvalue(result2, 0, 3), localfile) != 0){
               logerror("Download of %s failed", remotefile);
-              continue;
+              RETURN_ROLLBACK(conn);
            }
 
            if(!PQupdate(conn, "UPDATE builds SET buildlog = '%s' WHERE id = %ld", basename(localfile), atol(PQgetvalue(result, i, 0))))
@@ -405,11 +423,11 @@ int handleStep71(void)
         if(getenv("WRKDIR") != NULL)
         {
            sprintf(localfile, "%s/%s", localdir, basename(getenv("WRKDIR")));
-           sprintf(remotefile, "%s://%s%s", PQgetvalue(result2, i, 0), PQgetvalue(result2, i, 1), getenv("WRKDIR"));
+           sprintf(remotefile, "%s://%s%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1), getenv("WRKDIR"));
            loginfo("Downloading Wrkdir %s to %s", remotefile, localfile);
-           if(downloadfile(remotefile, PQgetvalue(result2, i, 3), localfile) != 0){
+           if(downloadfile(remotefile, PQgetvalue(result2, 0, 3), localfile) != 0){
               logerror("Download of %s failed", remotefile);
-              continue;
+              RETURN_ROLLBACK(conn);
            }
 
            if(!PQupdate(conn, "UPDATE builds SET wrkdir = '%s' WHERE id = %ld", basename(localfile), atol(PQgetvalue(result, i, 0))))
@@ -422,7 +440,12 @@ int handleStep71(void)
         		getenv("FAIL_REASON") != NULL ? getenv("FAIL_REASON") : "", microtime(), atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
 
+        PQclear(result3);
         PQclear(result2);
+        PQclear(result4);
+
+        /* Only one download at a time */
+        break;
     }
 
     PQclear(result);
@@ -431,7 +454,7 @@ int handleStep71(void)
 }
 
 
-/* Start transfers from backends but only one per backend to no overload the link */
+/* Start transfers from backends but only one per backend to avoid overloading the link */
 int handleStep70(void)
 {
     PGconn *conn;
@@ -442,7 +465,7 @@ int handleStep70(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT id, backendid FROM builds WHERE status >= 70 AND status < 80 FOR UPDATE NOWAIT");
+    result = PQexec(conn, "SELECT id, backendid FROM builds WHERE status = 70 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
@@ -489,15 +512,15 @@ int handleStep51(void)
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, i, 0), PQgetvalue(result2, i, 1),
-        		PQgetvalue(result2, i, 2), PQgetvalue(result2, i, 4));
-        if(!getpage(url, PQgetvalue(result2, i, 3)))
+        sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
+        		PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 4));
+        if(!getpage(url, PQgetvalue(result2, 0, 3)))
         {
            logcgi(url, getenv("ERROR"));
            continue;
         }
 
-        if(strcmp(getenv("STATUS"), "finished") == 0 || strcmp(getenv("STATUS"), "idle") == 0)
+        if(getenv("STATUS") != NULL && (strcmp(getenv("STATUS"), "finished") == 0 || strcmp(getenv("STATUS"), "idle") == 0))
         {
            if(!PQupdate(conn, "UPDATE builds SET status = 70 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
                RETURN_ROLLBACK(conn);
@@ -561,10 +584,10 @@ int handleStep31(void)
            RETURN_ROLLBACK(conn);
 
         sprintf(url, "%s://%s%sbuild?port=%s&build=%s&priority=%s&finishurl=%s/backend/finished/%s",
-        		PQgetvalue(result2, i, 0), PQgetvalue(result2, i, 1), PQgetvalue(result2, i, 2),
-        		PQgetvalue(result3, 0, 0), PQgetvalue(result2, i, 4), "5", configget("wwwurl"),
+        		PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1), PQgetvalue(result2, 0, 2),
+        		PQgetvalue(result3, 0, 0), PQgetvalue(result2, 0, 4), "5", configget("wwwurl"),
         		PQgetvalue(result, i, 3));
-        if(getpage(url, PQgetvalue(result2, i, 3)))
+        if(getpage(url, PQgetvalue(result2, 0, 3)))
            status = 50;
         else
         {
@@ -608,14 +631,14 @@ int handleStep30(void)
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, i, 0), PQgetvalue(result2, i, 1),
-        		PQgetvalue(result2, i, 2), PQgetvalue(result2, i, 4));
-        if(!getpage(url, PQgetvalue(result2, i, 3)) || strcmp(getenv("STATUS"), "idle") != 0)
+        sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
+        		PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 4));
+        if(!getpage(url, PQgetvalue(result2, 0, 3)) || (getenv("STATUS") != NULL && strcmp(getenv("STATUS"), "idle") != 0))
         {
            if(getenv("ERROR") != NULL)
               logcgi(url, getenv("ERROR"));
            
-           if(!PQupdate(conn, "UPDATE backendbuilds SET status = 2 WHERE id = %ld", atol(PQgetvalue(result2, i, 5))))
+           if(!PQupdate(conn, "UPDATE backendbuilds SET status = 2 WHERE id = %ld", atol(PQgetvalue(result2, 0, 5))))
               RETURN_ROLLBACK(conn);
 
            if(!PQupdate(conn, "UPDATE builds SET status = 90, buildstatus = 'FAIL' WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
@@ -625,10 +648,10 @@ int handleStep30(void)
            continue;
         }
 
-        sprintf(url, "%s://%s%scheckout?repository=%s&revision=%s&build=%s", PQgetvalue(result2, i, 0),
-        		PQgetvalue(result2, i, 1), PQgetvalue(result2, i, 2), PQgetvalue(result, i, 3),
-        		PQgetvalue(result, i, 4), PQgetvalue(result2, i, 4));
-        if(getpage(url, PQgetvalue(result2, i, 3)))
+        sprintf(url, "%s://%s%scheckout?repository=%s&revision=%s&build=%s", PQgetvalue(result2, 0, 0),
+        		PQgetvalue(result2, 0, 1), PQgetvalue(result2, 0, 2), PQgetvalue(result, i, 3),
+        		PQgetvalue(result, i, 4), PQgetvalue(result2, 0, 4));
+        if(getpage(url, PQgetvalue(result2, 0, 3)))
            status = 31;
         else
         {
