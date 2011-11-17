@@ -4,7 +4,7 @@
 
 LOCALBASE?=/usr/local
 
-CPPFLAGS=-I${LOCALBASE}/include
+CPPFLAGS=-I${LOCALBASE}/include -g
 LDFLAGS=-L${LOCALBASE}/lib
 
 all:	rpdd
