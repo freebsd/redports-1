@@ -47,7 +47,7 @@ class RedportsEnvironment(Component):
                 Column('backendid', type='int'),
                 Column('priority', type='int'),
                 Column('status', type='int'),
-                Column('buildname', type='varchar(25)', size=25)
+                Column('buildname', type='varchar(30)', size=30)
             ],
             Table('buildgroups', key=('name'))[
                 Column('name', type='varchar(50)', size=50),
