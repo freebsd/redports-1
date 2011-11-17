@@ -14,8 +14,8 @@ logFile    /var/log/rpdd.log
 # Www frontend URL
 wwwurl     http://YOUR_HOST/
 
-# Www root directory
-wwwroot    /usr/local/www/redports
+# Www user root directory
+wwwroot    /usr/local/www/redports/users
 
 # Maximum age for old database entries and logfiles (days)
 cleandays  16
