@@ -63,35 +63,35 @@ PGconn* PQautoconnect(void)
 
 int PQupdate(PGconn *conn, char *queryfmt, ...)
 {
-	PGresult *res;
-	char query[4096];
-	va_list args;
+    PGresult *res;
+    char query[4096];
+    va_list args;
 
-	va_start(args, queryfmt);
-	vsprintf(query, queryfmt, args);
+    va_start(args, queryfmt);
+    vsprintf(query, queryfmt, args);
 
-	res = PQexec(conn, query);
+    res = PQexec(conn, query);
 
-	va_end(args);
+    va_end(args);
 
-	if(PQresultStatus(res) != PGRES_COMMAND_OK)
-		return 0;
+    if(PQresultStatus(res) != PGRES_COMMAND_OK)
+        return 0;
 
-	return 1;
+    return 1;
 }
 
 PGresult* PQselect(PGconn *conn, char *queryfmt, ...)
 {
-	PGresult *res;
-	char query[4096];
-	va_list args;
+    PGresult *res;
+    char query[4096];
+    va_list args;
 
-	va_start(args, queryfmt);
-	vsprintf(query, queryfmt, args);
+    va_start(args, queryfmt);
+    vsprintf(query, queryfmt, args);
 
-	res = PQexec(conn, query);
+    res = PQexec(conn, query);
 
-	va_end(args);
+    va_end(args);
 
-	return res;
+    return res;
 }

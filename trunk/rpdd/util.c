@@ -143,118 +143,118 @@ unsigned long long microtime(void)
 
 int mkdirrec(char *dir)
 {
-   struct stat sb;
-   char directory[PATH_MAX];
+    struct stat sb;
+    char directory[PATH_MAX];
 
-   strncpy(directory, dir, sizeof(directory)-1);
-   directory[sizeof(directory)-1] = '\0';
+    strncpy(directory, dir, sizeof(directory)-1);
+    directory[sizeof(directory)-1] = '\0';
 
-   if(stat(directory, &sb) == 0)
-      return 0;
+    if(stat(directory, &sb) == 0)
+        return 0;
 
-   if(mkdirrec(dirname(directory)) == 0)
-      return mkdir(directory, (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH));
+    if(mkdirrec(dirname(directory)) == 0)
+        return mkdir(directory, (S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH));
 
-   return -1;
+    return -1;
 }
 
 int rmdirrec(char *directory)
 {
-   DIR *dp;
-   struct dirent *ep;
-   struct stat sp;
-   char tmp[PATH_MAX];
+    DIR *dp;
+    struct dirent *ep;
+    struct stat sp;
+    char tmp[PATH_MAX];
 
-   dp = opendir(directory);
-   if(dp == NULL)
-      return 1;
+    dp = opendir(directory);
+    if(dp == NULL)
+        return 1;
 
-   while((ep = readdir(dp)))
-   {
-       if(strcmp(ep->d_name, ".") == 0)
-          continue;
+    while((ep = readdir(dp)))
+    {
+        if(strcmp(ep->d_name, ".") == 0)
+            continue;
 
-       if(strcmp(ep->d_name, "..") == 0)
-          continue;
+        if(strcmp(ep->d_name, "..") == 0)
+            continue;
 
-       sprintf(tmp, "%s/%s", directory, ep->d_name);
+        sprintf(tmp, "%s/%s", directory, ep->d_name);
 
-       if(stat(tmp, &sp) < 0)
-          return -1;
+        if(stat(tmp, &sp) < 0)
+            return -1;
 
-       if(S_ISDIR(sp.st_mode))
-       {
-          if(rmdirrec(tmp) != 0)
-             return -1;
-       }
-       else
-          unlink(tmp);
-   }
+        if(S_ISDIR(sp.st_mode))
+        {
+            if(rmdirrec(tmp) != 0)
+                return -1;
+        }
+        else
+            unlink(tmp);
+    }
 
-   closedir(dp);
+    closedir(dp);
 
-   loginfo("Removing %s", directory);
+    loginfo("Removing %s", directory);
 
-   return rmdir(directory);
+    return rmdir(directory);
 }
 
 int checkdir(char *directory)
 {
-   struct tm tm;
-   char *file;
-   int cleandays = atoi(configget("cleandays"));
+    struct tm tm;
+    char *file;
+    int cleandays = atoi(configget("cleandays"));
 
-   file = basename(directory);
+    file = basename(directory);
 
-   if(strlen(file) < 15)
-      return 0;
+    if(strlen(file) < 15)
+        return 0;
 
-   if(strncmp(file, "20", 2) != 0)
-      return 0;
+    if(strncmp(file, "20", 2) != 0)
+        return 0;
 
-   if(file[14] != '-')
-      return 0;
+    if(file[14] != '-')
+        return 0;
 
-   if(strptime(file, "%Y%m%d%H%M%S", &tm) == NULL)
-      return 0;
+    if(strptime(file, "%Y%m%d%H%M%S", &tm) == NULL)
+        return 0;
 
-   return difftime(time(NULL), mktime(&tm)) > cleandays*3600*24;
+    return difftime(time(NULL), mktime(&tm)) > cleandays*3600*24;
 }
 
 int cleanolddir(char *directory)
 {
-   DIR *dp;
-   struct dirent *ep;
-   struct stat sp;
-   char tmp[PATH_MAX];
+    DIR *dp;
+    struct dirent *ep;
+    struct stat sp;
+    char tmp[PATH_MAX];
 
-   dp = opendir(directory);
-   if(dp == NULL)
-      return 1;
+    dp = opendir(directory);
+    if(dp == NULL)
+        return 1;
 
-   while((ep = readdir(dp)))
-   {
-       if(ep->d_name[0] == '.')
-          continue;
+    while((ep = readdir(dp)))
+    {
+        if(ep->d_name[0] == '.')
+            continue;
 
-       sprintf(tmp, "%s/%s", directory, ep->d_name);
+        sprintf(tmp, "%s/%s", directory, ep->d_name);
 
-       if(stat(tmp, &sp) < 0)
-          continue;
+        if(stat(tmp, &sp) < 0)
+            continue;
 
-       if(!S_ISDIR(sp.st_mode))
-          continue;
+        if(!S_ISDIR(sp.st_mode))
+            continue;
 
-       if(!checkdir(tmp)){
-          cleanolddir(tmp);
-          continue;
-       }
+        if(!checkdir(tmp)){
+            cleanolddir(tmp);
+            continue;
+        }
 
-       rmdirrec(tmp);
-   }
+        rmdirrec(tmp);
+    }
 
-   closedir(dp);
+    closedir(dp);
 
-   return 0;
+    return 0;
 }
 
