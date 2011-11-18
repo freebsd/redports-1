@@ -1,0 +1,24 @@
+# Redports dispatcher daemon
+#
+# rpdd.conf
+
+# Database credentials
+dbHost     127.0.0.1
+dbUsername trac
+dbPassword 
+dbDatabase trac
+
+# Logfile
+logFile    /var/log/rpdd.log
+
+# Www frontend URL
+wwwurl     http://YOUR_HOST/
+
+# Www user root directory
+wwwroot    /usr/local/www/redports/users
+
+# Maximum age for old database entries and logfiles (days)
+cleandays  16
+
+# Maximum age for portstrees on tinderbox backends (hours)
+tbPortsTreeMaxAge 48
