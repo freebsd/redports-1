@@ -2,6 +2,8 @@
 
 # RedPorts tinderbox backend
 #
+# $Id$
+#
 # /tmp/rptinderbox/.lock              Global lock for maintenance
 # /tmp/rptinderbox/<build>/.lock      Build lock including shellscript variables
 # /tmp/rptinderbox/<build>/.checkout  Checkout done

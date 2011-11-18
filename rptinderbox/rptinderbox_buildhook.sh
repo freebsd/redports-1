@@ -1,5 +1,7 @@
 #!/bin/sh
 #
+# RedPorts tinderbox hook script
+#
 # $Id$
 #
 # If installed as a postPortBuild Hook, it will compress the WRKDIR. Since this
