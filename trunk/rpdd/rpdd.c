@@ -44,7 +44,7 @@
 #include "steps.h"
 #include "util.h"
 
-#define RPD_VERSION "0.8.93"
+#define RPD_VERSION "0.9.0"
 #define DAEMON_NAME "rpd"
 #define CONF_FILE "rpdd.conf"
 #define PID_FILE "/var/run/rpdd.pid"
