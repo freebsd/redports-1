@@ -1,5 +1,11 @@
 #!/bin/sh
 
+#
+# RedPorts Tinderbox backend maintenance script
+#
+# $Id$
+#
+
 TINDERBOX=/usr/local/tinderbox
 
 DBUSER=root
