@@ -38,7 +38,7 @@ do
 
     # skip commits to Mk
     if [ "${TMP}" = "Mk" ]; then
-       continue;
+        continue;
     fi
 
     BUILDDATE=`date "+%Y%m%d%H%M%S"`

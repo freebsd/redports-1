@@ -15,13 +15,13 @@ REPOSITORY=file:///var/subversion/redports
 SVNUSER=redports
 
 if [ -z "$USER" ]; then
-   echo "Usage: rpcreateaccount <username>"
-   exit 1
+    echo "Usage: rpcreateaccount <username>"
+    exit 1
 fi
 
 if ! egrep "^${USER}:" ${HTPASSWD} >/dev/null ; then
-   echo "User ${USER} doest not exist"
-   exit 1
+    echo "User ${USER} doest not exist"
+    exit 1
 fi
 
 # create svn folder for user
@@ -30,21 +30,21 @@ svn checkout --username ${SVNUSER} --non-interactive --non-recursive ${REPOSITOR
 svn update --non-interactive ${TMP}/${USER} >/dev/null
 
 if [ $? != 0 ]; then
-   echo "Repository checkout failed"
-   exit 1
+    echo "Repository checkout failed"
+    exit 1
 fi
 
 if [ ! -d "${TMP}/${USER}" ]; then
-   mkdir ${TMP}/${USER} && \
-   svn add ${TMP}/${USER} >/dev/null && \
-   svn commit --username ${SVNUSER} --non-interactive --message "Welcome ${USER}!" ${TMP}/${USER} >/dev/null
+    mkdir ${TMP}/${USER} && \
+    svn add ${TMP}/${USER} >/dev/null && \
+    svn commit --username ${SVNUSER} --non-interactive --message "Welcome ${USER}!" ${TMP}/${USER} >/dev/null
 
-   if [ $? != 0 ]; then
-      echo "Failed creating SVN directory"
-      exit 1
-   fi
+    if [ $? != 0 ]; then
+        echo "Failed creating SVN directory"
+        exit 1
+    fi
 else
-   echo "SVN directory already exists"
+    echo "SVN directory already exists"
 fi
 
 rm -rf ${TMP}
@@ -52,11 +52,11 @@ rm -rf ${TMP}
 
 # grant permissions on it
 if ! egrep "^\[/${USER}\]" ${SVNACCESS} >/dev/null ; then
-   echo "[/${USER}]" >> ${SVNACCESS}
-   echo "${USER} = rw" >> ${SVNACCESS}
-   echo "" >> ${SVNACCESS}
+    echo "[/${USER}]" >> ${SVNACCESS}
+    echo "${USER} = rw" >> ${SVNACCESS}
+    echo "" >> ${SVNACCESS}
 else
-   echo "SVN permissions already granted"
+    echo "SVN permissions already granted"
 fi
 
 exit 0
