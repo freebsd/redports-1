@@ -14,7 +14,7 @@ setup(
     author='Bernhard Froehlich',
     author_email='decke@bluelife.at',
     long_description="""
-	Integrates a frontend to view progress of a FreeBSD package buildfarm
+        Integrates a frontend to view progress of a FreeBSD package buildfarm
     """,
     zip_safe=True,
     packages=[PACKAGE],

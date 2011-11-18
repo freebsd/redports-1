@@ -12,10 +12,10 @@ class Port(object):
     def clear(self):
         self.id = None
         self.queueid = None
-	self.owner = None
-	self.repository = None
+        self.owner = None
+        self.repository = None
         self.revision = None
-	self.group = None
+        self.group = None
         self.portname = None
         self.status = None
         self.buildstatus = 'unknown'
@@ -131,29 +131,33 @@ class Port(object):
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
     cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.buildgroup, buildqueue.portname, GREATEST(buildqueue.status, builds.status, 0), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, CASE WHEN builds.enddate < builds.startdate THEN extract(epoch from now())*1000000 ELSE builds.enddate END FROM buildqueue LEFT OUTER JOIN builds ON buildqueue.id = builds.queueid WHERE owner = %s AND buildqueue.status <= 90 AND (builds.status IS NULL OR builds.status <= 90) ORDER BY buildqueue.id DESC, builds.id", (req.authname,) )
+
     lastid = None
     for id, owner, repository, revision, queueid, group, portname, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate in cursor:
-	port = Port(env)
- 	port.id = id
-	port.queueid = queueid
-	port.owner = owner
-	port.repository = repository
-	port.revision = revision
-	port.group = group
-	port.portname = portname
+        port = Port(env)
+        port.id = id
+        port.queueid = queueid
+        port.owner = owner
+        port.repository = repository
+        port.revision = revision
+        port.group = group
+        port.portname = portname
+
         if buildstatus:
             port.buildstatus = buildstatus.lower()
         if buildstatus and not buildreason:
             buildreason = buildstatus.lower()
-	port.setStatus(status, buildreason)
-	port.buildlog = buildlog
-	port.wrkdir = wrkdir
-	port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
-	port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
+
+        port.setStatus(status, buildreason)
+        port.buildlog = buildlog
+        port.wrkdir = wrkdir
+        port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+        port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
+
         if lastid != queueid:
             port.head = True
             lastid = queueid
-	yield port
+        yield port
 
 
 class Buildgroup(object):
@@ -220,13 +224,16 @@ def BuildgroupsIterator(env, req):
         buildgroup.type = type
         buildgroup.description = description
         buildgroup.available = available
+
         if available > 0:
             buildgroup.status = 'success'
         if req.authname and req.authname != 'anonymous':
             cursor2.execute("SELECT priority FROM automaticbuildgroups WHERE username = %s AND buildgroup = %s", ( req.authname, name ) )
+
             if cursor2.rowcount > 0:
                 buildgroup.joined = 'true'
                 buildgroup.setPriority(cursor2.fetchall()[0][0])
+
         cursor2.execute("SELECT count(*) FROM builds WHERE buildgroup = %s AND status < 90", (name,) )
         if cursor2.rowcount > 0:
             buildgroup.queued = cursor2.fetchall()[0][0]
