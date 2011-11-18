@@ -1,5 +1,11 @@
 #!/bin/sh
 
+#
+# RedPorts Tinderbox backend build creation script
+#
+# $Id$
+#
+
 # Requirements:
 #   lftp (ftp/lftp)
 #   tinderbox (ports-mgmt/tinderbox)
