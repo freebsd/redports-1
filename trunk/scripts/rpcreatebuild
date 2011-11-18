@@ -11,53 +11,53 @@ VERSION=$1
 ARCH=$2
 
 if [ ! -z "$3" ]; then
-  SUFFIX=-${3}
+    SUFFIX=-${3}
 else
-  SUFFIX=
+    SUFFIX=
 fi
 
 BUILD=${VERSION}-FreeBSD-${ARCH}${SUFFIX}
 TINDERBOX=/usr/local/tinderbox
 
 if [ -z "$1" -o -z "$2" ]; then
-   echo "Usage ${0##*/} version architecture [extra-suffix]"
-   echo ""
-   echo "Options:"
-   echo "  version        FreeBSD Version (eg. 10, 8.2, 9-STABLE)"
-   echo "  architecture   Machine architecture (i386, amd64)"
-   echo "  extra-suffix   Name suffix (CLANG, GCC46)"
-   echo ""
-   exit 1
+    echo "Usage ${0##*/} version architecture [extra-suffix]"
+    echo ""
+    echo "Options:"
+    echo "  version        FreeBSD Version (eg. 10, 8.2, 9-STABLE)"
+    echo "  architecture   Machine architecture (i386, amd64)"
+    echo "  extra-suffix   Name suffix (CLANG, GCC46)"
+    echo ""
+    exit 1
 fi
 
 if echo ${VERSION} | grep "-" > /dev/null ; then
-   OPTIONS="-t RELENG_${VERSION%-STABLE} -u CSUP"
+    OPTIONS="-t RELENG_${VERSION%-STABLE} -u CSUP"
 elif ! echo ${VERSION} | grep "\." > /dev/null ; then
-   OPTIONS="-t . -u CSUP"
+    OPTIONS="-t . -u CSUP"
 else
-   OPTIONS="-t ${VERSION}-RELEASE -u LFTP -H ${FTP}"
+    OPTIONS="-t ${VERSION}-RELEASE -u LFTP -H ${FTP}"
 fi
 
 if ! zfs list zroot/tinderbox >/dev/null ; then
-   zfs create -o compression=lzjb -o setuid=off zroot/tinderbox
-   zfs set mountpoint=legacy zroot/tinderbox
+    zfs create -o compression=lzjb -o setuid=off zroot/tinderbox
+    zfs set mountpoint=legacy zroot/tinderbox
 fi
 
 if ! zfs list zroot/tinderbox/${BUILD} >/dev/null ; then
-   zfs create -o compression=lzjb -o setuid=on zroot/tinderbox/${BUILD}
-   zfs create -o compression=lzjb -o setuid=off zroot/tinderbox/${BUILD}/portstree
-   zfs create -o compression=lzjb -o setuid=off zroot/tinderbox/${BUILD}/jail
+    zfs create -o compression=lzjb -o setuid=on zroot/tinderbox/${BUILD}
+    zfs create -o compression=lzjb -o setuid=off zroot/tinderbox/${BUILD}/portstree
+    zfs create -o compression=lzjb -o setuid=off zroot/tinderbox/${BUILD}/jail
 
-   zfs set mountpoint=legacy zroot/tinderbox/${BUILD}
-   zfs set mountpoint=${TINDERBOX}/portstrees/${BUILD} zroot/tinderbox/${BUILD}/portstree
-   zfs set mountpoint=${TINDERBOX}/jails/${BUILD} zroot/tinderbox/${BUILD}/jail
+    zfs set mountpoint=legacy zroot/tinderbox/${BUILD}
+    zfs set mountpoint=${TINDERBOX}/portstrees/${BUILD} zroot/tinderbox/${BUILD}/portstree
+    zfs set mountpoint=${TINDERBOX}/jails/${BUILD} zroot/tinderbox/${BUILD}/jail
 fi
 
 if [ `uname -m` != "${ARCH}" ]; then
-   echo "export ARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
-   echo "export MACHINE_ARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
-   echo "export UNAME_m=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
-   echo "export UNAME_p=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
+    echo "export ARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
+    echo "export MACHINE_ARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
+    echo "export UNAME_m=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
+    echo "export UNAME_p=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
 fi
 
 ${TINDERBOX}/scripts/tc createPortsTree -p ${BUILD} -u CSUP -d "FreeBSD Portstree" || exit 1

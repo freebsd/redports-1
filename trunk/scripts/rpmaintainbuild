@@ -16,122 +16,122 @@ CLEANJAILREMOVE=no
 
 while getopts dlprtux arg >/dev/null 2>&1
 do
-  case "${arg}" in
-    d)   CLEANDATABASE=yes ;;
-    l)   CLEANLOCK=yes ;;
-    p)   CLEANPACKAGES=yes ;;
-    r)   CLEANDATABASE=yes
-         CLEANLOCK=yes
-         CLEANTEMP=yes ;;
-    t)   CLEANTEMP=yes ;;
-    u)   CLEANJAIL=yes
-         CLEANPACKAGES=yes ;;
-    x)   CLEANLOCK=yes
-         CLEANPACKAGES=yes
-         CLEANTEMP=yes
-         CLEANJAILREMOVE=yes ;;
-    [?]) echo "Unknown option -${OPTARG}" exit 1 ;;
-  esac
+    case "${arg}" in
+        d)   CLEANDATABASE=yes ;;
+        l)   CLEANLOCK=yes ;;
+        p)   CLEANPACKAGES=yes ;;
+        r)   CLEANDATABASE=yes
+             CLEANLOCK=yes
+             CLEANTEMP=yes ;;
+        t)   CLEANTEMP=yes ;;
+        u)   CLEANJAIL=yes
+             CLEANPACKAGES=yes ;;
+        x)   CLEANLOCK=yes
+             CLEANPACKAGES=yes
+             CLEANTEMP=yes
+             CLEANJAILREMOVE=yes ;;
+        [?]) echo "Unknown option -${OPTARG}" exit 1 ;;
+    esac
 done
 shift `expr $OPTIND - 1`
 
 BUILD=$1
 
 if [ -z "$1" ]; then
-  echo "Usage ${0##*/} [dlprtux] build"
-  echo ""
-  echo "Options:"
-  echo "  -r          Recovery after a crash"
-  echo "  -u          Update tinderbox jail and cleanup what is required"
-  echo "  -x          Remove build completely"
-  echo ""
-  echo "Expert Options:"
-  echo "  -d          Cleanup buildstatus in Database"
-  echo "  -l          Cleanup tinderd lockfiles for build"
-  echo "  -p          Remove all packages for build"
-  echo "  -t          Cleanup redports temporary directory"
-  echo ""
-  exit 1
+    echo "Usage ${0##*/} [dlprtux] build"
+    echo ""
+    echo "Options:"
+    echo "  -r          Recovery after a crash"
+    echo "  -u          Update tinderbox jail and cleanup what is required"
+    echo "  -x          Remove build completely"
+    echo ""
+    echo "Expert Options:"
+    echo "  -d          Cleanup buildstatus in Database"
+    echo "  -l          Cleanup tinderd lockfiles for build"
+    echo "  -p          Remove all packages for build"
+    echo "  -t          Cleanup redports temporary directory"
+    echo ""
+    exit 1
 fi
 
 if ! ${TINDERBOX}/scripts/tc listJails | grep ${BUILD} >/dev/null ; then
-   echo "Tinderbox jail ${BUILD} does not exist"
-   exit 1
+    echo "Tinderbox jail ${BUILD} does not exist"
+    exit 1
 fi
 
 if ! ${TINDERBOX}/scripts/tc listBuilds | grep ${BUILD} >/dev/null ; then
-   echo "Tinderbox build ${BUILD} does not exist"
-   exit 1
+    echo "Tinderbox build ${BUILD} does not exist"
+    exit 1
 fi
 
 if ${TINDERBOX}/scripts/tc listBuildPortsQueue -s ENQUEUED -r | egrep ":${BUILD}:" >/dev/null ; then
-   echo "Build ${BUILD} has queued jobs"
-   exit 1
+    echo "Build ${BUILD} has queued jobs"
+    exit 1
 fi
 
 if ${TINDERBOX}/scripts/tc listBuildPortsQueue -s PROCESSING -r | egrep ":${BUILD}:" >/dev/null ; then
-   echo "Build ${BUILD} has running jobs"
-   exit 1
+    echo "Build ${BUILD} has running jobs"
+    exit 1
 fi
 
 if [ "${CLEANDATABASE}" = "yes" ]; then
-  echo "Reset build_status in database to IDLE"
-  if [ -z "${DBPASS}" ]; then
-    echo "MySQL Database ${DBNAME} ${DBUSER}@${DBHOST}"
-  fi
-  mysql -u${DBUSER} -p${DBPASS} -h ${DBHOST} -e "UPDATE builds SET build_status = \"IDLE\" WHERE build_name = \"${BUILD}\";" ${DBNAME} || exit 1
+    echo "Reset build_status in database to IDLE"
+    if [ -z "${DBPASS}" ]; then
+        echo "MySQL Database ${DBNAME} ${DBUSER}@${DBHOST}"
+    fi
+    mysql -u${DBUSER} -p${DBPASS} -h ${DBHOST} -e "UPDATE builds SET build_status = \"IDLE\" WHERE build_name = \"${BUILD}\";" ${DBNAME} || exit 1
 fi
 
 if [ "${CLEANJAIL}" = "yes" ]; then
-  echo "Rebuilding jail for build ${BUILD}"
-  ${TINDERBOX}/scripts/tc makeJail -j ${BUILD} || exit 1
+    echo "Rebuilding jail for build ${BUILD}"
+    ${TINDERBOX}/scripts/tc makeJail -j ${BUILD} || exit 1
 fi
 
 if [ "${CLEANLOCK}" = "yes" ]; then
-  echo "Removing tinderd locks for ${BUILD}"
-  rm -f ${TINDERBOX}/builds/${BUILD}/lock
-  rm -f ${TINDERBOX}/builds/${BUILD}/tinderdlock
+    echo "Removing tinderd locks for ${BUILD}"
+    rm -f ${TINDERBOX}/builds/${BUILD}/lock
+    rm -f ${TINDERBOX}/builds/${BUILD}/tinderdlock
 fi
 
 if [ "${CLEANPACKAGES}" = "yes" ]; then
-  echo "Removing all packages for build ${BUILD}"
-  rm -rf ${TINDERBOX}/packages/${BUILD}
+    echo "Removing all packages for build ${BUILD}"
+    rm -rf ${TINDERBOX}/packages/${BUILD}
 
-  echo "Cleanup tinderbox database"
-  ${TINDERBOX}/scripts/tc tbcleanup || exit 1
+    echo "Cleanup tinderbox database"
+    ${TINDERBOX}/scripts/tc tbcleanup || exit 1
 fi
 
 if [ "${CLEANTEMP}" = "yes" ]; then
-  echo "Removing redports temporary directory for build ${BUILD}"
-  rm -rf /tmp/redports/${BUILD}
+    echo "Removing redports temporary directory for build ${BUILD}"
+    rm -rf /tmp/redports/${BUILD}
 fi
 
 if [ "${CLEANJAILREMOVE}" = "yes" ]; then
-  echo "Removing build ${BUILD}"
-  ${TINDERBOX}/scripts/tc rmBuild -b ${BUILD} -f
+    echo "Removing build ${BUILD}"
+    ${TINDERBOX}/scripts/tc rmBuild -b ${BUILD} -f
 
-  echo "Removing jail ${BUILD}"
-  ${TINDERBOX}/scripts/tc rmJail -j ${BUILD} -f
+    echo "Removing jail ${BUILD}"
+    ${TINDERBOX}/scripts/tc rmJail -j ${BUILD} -f
 
-  echo "Removing portstree for ${BUILD}"
-  ${TINDERBOX}/scripts/tc rmPortsTree -p ${BUILD} -f
+    echo "Removing portstree for ${BUILD}"
+    ${TINDERBOX}/scripts/tc rmPortsTree -p ${BUILD} -f
 
-  echo "Cleaning up filesystem"
-  rm -rf ${TINDERBOX}/${BUILD}
-  rm -rf ${TINDERBOX}/builds/${BUILD}
-  rm -rf ${TINDERBOX}/errors/${BUILD}
-  rm -rf ${TINDERBOX}/logs/${BUILD}
-  rm -rf ${TINDERBOX}/options/${BUILD}
-  rm -rf ${TINDERBOX}/wrkdirs/${BUILD}
-  mv ${TINDERBOX}/scripts/etc/env/build.${BUILD} ${TINDERBOX}/scripts/etc/env/build.${BUILD}.bak
+    echo "Cleaning up filesystem"
+    rm -rf ${TINDERBOX}/${BUILD}
+    rm -rf ${TINDERBOX}/builds/${BUILD}
+    rm -rf ${TINDERBOX}/errors/${BUILD}
+    rm -rf ${TINDERBOX}/logs/${BUILD}
+    rm -rf ${TINDERBOX}/options/${BUILD}
+    rm -rf ${TINDERBOX}/wrkdirs/${BUILD}
+    mv ${TINDERBOX}/scripts/etc/env/build.${BUILD} ${TINDERBOX}/scripts/etc/env/build.${BUILD}.bak
 
-  echo "Removing ZFS filesystems"
-  zfs destroy zroot/tinderbox/${BUILD}/portstree
-  zfs destroy zroot/tinderbox/${BUILD}/jail
-  zfs destroy zroot/tinderbox/${BUILD}
+    echo "Removing ZFS filesystems"
+    zfs destroy zroot/tinderbox/${BUILD}/portstree
+    zfs destroy zroot/tinderbox/${BUILD}/jail
+    zfs destroy zroot/tinderbox/${BUILD}
 
-  rm -rf ${TINDERBOX}/jails/${BUILD} 2>/dev/null
-  rm -rf ${TINDERBOX}/portstrees/${BUILD} 2>/dev/null
+    rm -rf ${TINDERBOX}/jails/${BUILD} 2>/dev/null
+    rm -rf ${TINDERBOX}/portstrees/${BUILD} 2>/dev/null
 fi
 
 echo "Successfully Finished!"
