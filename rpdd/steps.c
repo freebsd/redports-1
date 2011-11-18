@@ -694,7 +694,7 @@ int handleStep20(void)
 
         for(j=0; j < PQntuples(result2); j++)
         {
-            result3 = PQselect(conn, "SELECT count(*) FROM builds WHERE backendid = %ld AND status < 90", atol(PQgetvalue(result2, j, 0)));
+            result3 = PQselect(conn, "SELECT count(*) FROM builds WHERE backendid = %ld AND status < 70", atol(PQgetvalue(result2, j, 0)));
             if (PQresultStatus(result3) != PGRES_TUPLES_OK)
                 RETURN_ROLLBACK(conn);
 
