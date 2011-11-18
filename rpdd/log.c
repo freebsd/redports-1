@@ -40,72 +40,72 @@ FILE *logfile = NULL;
 
 int logopen(char *filename)
 {
-   if(logfile != NULL)
-      return 1;
+    if(logfile != NULL)
+        return 1;
 
-   logfile = fopen(filename, "a");
-   if(logfile == NULL)
-   {
-      printf("Error %s: Could not open logfile %s\n", strerror(errno), filename);
-      return 1;
-   }
-   
-   return 0;
+    logfile = fopen(filename, "a");
+    if(logfile == NULL)
+    {
+        printf("Error %s: Could not open logfile %s\n", strerror(errno), filename);
+        return 1;
+    }
+
+    return 0;
 }
 
 int logclose(void)
 {
-   int retval;
+    int retval;
 
-   if(logfile == NULL)
-      return 1;
+    if(logfile == NULL)
+        return 1;
 
-   fflush(logfile);
-   retval = fclose(logfile);
-   if(retval != 0)
-      printf("Error %s on closing logfile\n", strerror(errno));
+    fflush(logfile);
+    retval = fclose(logfile);
+    if(retval != 0)
+        printf("Error %s on closing logfile\n", strerror(errno));
    
-   logfile = NULL;
-   return retval;
+    logfile = NULL;
+    return retval;
 }
 
 int logsetlevel(int loglvl)
 {
-   if(loglvl >= 0 && loglvl < 3)
-   {
-      loglevel = loglvl;
-      return 0;
-   }
+    if(loglvl >= 0 && loglvl < 3)
+    {
+        loglevel = loglvl;
+        return 0;
+    }
 
-   return 1;
+    return 1;
 }
 
 int logwrite(int loglvl, char *logfmt, ...)
 {
-   char logmsg[4096];
-   va_list args;
-   time_t now;
-   char timeinfo[32];
+    char logmsg[4096];
+    va_list args;
+    time_t now;
+    char timeinfo[32];
 
-   if(logfile == NULL)
-      return 1;
+    if(logfile == NULL)
+        return 1;
 
-   if(loglvl < 0 || loglvl > loglevel)
-      return 0;
+    if(loglvl < 0 || loglvl > loglevel)
+        return 0;
 
-   time(&now);
-   strftime(timeinfo, sizeof(timeinfo), "%c", localtime(&now));
+    time(&now);
+    strftime(timeinfo, sizeof(timeinfo), "%c", localtime(&now));
 
-   va_start(args, logfmt);
-   vsprintf(logmsg, logfmt, args);
+    va_start(args, logfmt);
+    vsprintf(logmsg, logfmt, args);
 
-   if(fprintf(logfile, "[%s] %s - %s\n", timeinfo, loglevelnames[loglvl], logmsg) < 0)
-   {
-      va_end(args);
-      return 1;
-   }
+    if(fprintf(logfile, "[%s] %s - %s\n", timeinfo, loglevelnames[loglvl], logmsg) < 0)
+    {
+        va_end(args);
+        return 1;
+    }
 
-   va_end(args);
-   return 0;
+    va_end(args);
+    return 0;
 }
 

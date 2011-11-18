@@ -29,9 +29,9 @@
 
 enum loglevels
 {
-   LOG_ERROR = 0,
-   LOG_WARN,
-   LOG_INFO
+    LOG_ERROR = 0,
+    LOG_WARN,
+    LOG_INFO
 };
 
 #define loginfo(format, args...) logwrite(LOG_INFO, format, ##args)
@@ -39,12 +39,12 @@ enum loglevels
 #define logerror(format, args...) logwrite(LOG_ERROR, format, ##args)
 #define logcgi(url, error) \
 { \
-   logwrite(LOG_ERROR, "CGI Error in %s#%d, %s: %s", __FILE__, __LINE__, url, error); \
+    logwrite(LOG_ERROR, "CGI Error in %s#%d, %s: %s", __FILE__, __LINE__, url, error); \
 }
 #define logsql(con) \
 { \
-   logwrite(LOG_ERROR, "SQL Error in %s#%d: %s", \
-      __FILE__, __LINE__, PQerrorMessage(con)); \
+    logwrite(LOG_ERROR, "SQL Error in %s#%d: %s", \
+        __FILE__, __LINE__, PQerrorMessage(con)); \
 }
 
 extern int logopen(char *filename);
