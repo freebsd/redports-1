@@ -13,6 +13,7 @@ class RedportsEnvironment(Component):
                 Column('repository', type='varchar(255)', size=255),
                 Column('revision', type='int'),
                 Column('portname', type='varchar(50)', size=50),
+                Column('pkgversion', type='varchar(25)', size=25),
                 Column('status', type='int'),
                 Column('startdate', type='bigint'),
                 Column('enddate', type='bigint')
