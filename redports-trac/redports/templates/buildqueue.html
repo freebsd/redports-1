@@ -68,7 +68,14 @@
                       </a>
                       (<a href="/changeset/$port.revision/">r$port.revision</a>)
                     </td>
-                    <td></td>
+                    <td>
+                      <py:if test="port.headdel">
+                        <form method="post" action="">
+                          <input type="hidden" name="queueid" value="$port.queueid" />
+                          <input type="submit" name="deletebuildqueue" value="Delete" />
+                        </form>
+                      </py:if>
+                    </td>
                 </tr>
                 <tr py:if="port.id">
                     <td></td>
