@@ -17,6 +17,7 @@ class Port(object):
         self.revision = None
         self.group = None
         self.portname = None
+        self.pkgversion = None
         self.status = None
         self.buildstatus = 'unknown'
         self.statusname = None
@@ -51,7 +52,7 @@ class Port(object):
             if row[0] != 1:
                 raise TracError('Invalid buildgroup')
 
-        cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES (%s, %s, %s, %s, %s, %s, %s, 0)", ( self.queueid, self.owner, self.repository, self.revision, self.portname, self.status, long(time()*1000000) ))
+        cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, portname, pkgversion, status, startdate, enddate) VALUES (%s, %s, %s, %s, %s, null, %s, %s, 0)", ( self.queueid, self.owner, self.repository, self.revision, self.portname, self.status, long(time()*1000000) ))
 
         if self.status == 20:
              cursor.execute("INSERT INTO builds (queueid, backendkey, buildgroup, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (%s, SUBSTRING(MD5(RANDOM()::text), 1, 25), %s, 20, null, null, null, null, 0, 0, 0)", ( self.queueid, self.group ))
@@ -130,10 +131,10 @@ class Port(object):
 
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.buildgroup, buildqueue.portname, GREATEST(buildqueue.status, builds.status, 0), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, CASE WHEN builds.enddate < builds.startdate THEN extract(epoch from now())*1000000 ELSE builds.enddate END FROM buildqueue LEFT OUTER JOIN builds ON buildqueue.id = builds.queueid WHERE owner = %s AND buildqueue.status <= 90 AND (builds.status IS NULL OR builds.status <= 90) ORDER BY buildqueue.id DESC, builds.id", (req.authname,) )
+    cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.buildgroup, buildqueue.portname, buildqueue.pkgversion, GREATEST(buildqueue.status, builds.status, 0), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, CASE WHEN builds.enddate < builds.startdate THEN extract(epoch from now())*1000000 ELSE builds.enddate END FROM buildqueue LEFT OUTER JOIN builds ON buildqueue.id = builds.queueid WHERE owner = %s AND buildqueue.status <= 90 AND (builds.status IS NULL OR builds.status <= 90) ORDER BY buildqueue.id DESC, builds.id", (req.authname,) )
 
     lastid = None
-    for id, owner, repository, revision, queueid, group, portname, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate in cursor:
+    for id, owner, repository, revision, queueid, group, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate in cursor:
         port = Port(env)
         port.id = id
         port.queueid = queueid
@@ -142,6 +143,7 @@ def PortsQueueIterator(env, req):
         port.revision = revision
         port.group = group
         port.portname = portname
+        port.pkgversion = pkgversion
 
         if buildstatus:
             port.buildstatus = buildstatus.lower()

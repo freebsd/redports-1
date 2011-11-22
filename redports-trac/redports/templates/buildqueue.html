@@ -63,7 +63,9 @@
               <py:for each="port in buildqueue">
                 <tr py:if="port.head" class="head">
                     <td colspan="5">
-                      <a href="http://www.freshports.org/$port.portname"><strong>$port.portname</strong></a>
+                      <a href="http://www.freshports.org/$port.portname">
+                        <strong>$port.portname <py:if test="port.pkgversion">$port.pkgversion</py:if></strong>
+                      </a>
                       (<a href="/changeset/$port.revision/">r$port.revision</a>)
                     </td>
                     <td></td>
