@@ -181,6 +181,13 @@ build()
         return 1
     fi
 
+    PORTSTREE=`${TINDERBOX}/scripts/tc getPortsTreeForBuild -b ${BUILD} 2>/dev/null`
+
+    if [ -z "${PORTSTREE}" ]; then
+        echo "Unknown portstree for build ${BUILD}"
+        return 1
+    fi
+
     # aktuellstes package von build merken
     if [ -d "${TINDERBOX}/packages/${BUILD}/All" ]; then
         LASTPACKAGE=`ls -tr ${TINDERBOX}/packages/${BUILD}/All | tail -1`
@@ -197,7 +204,17 @@ build()
     echo "LASTPACKAGE=\"${LASTPACKAGE}\"" >> ${LOCK}
     echo "LASTPACKAGEDATE=\"${LASTPACKAGEDATE}\"" >> ${LOCK}
 
-    ${TINDERBOX}/scripts/tc addBuildPortsQueueEntry -b ${BUILD} -d ${PORT} -p ${PRIORITY} 2>/dev/null || return 1
+    if [ -f "${TINDERBOX}/portstrees/${PORTSTREE}/ports/${PORT}/Makefile" ]; then
+        PKGVERSION=`cd ${TINDERBOX}/portstrees/${PORTSTREE}/ports/${PORT} && make -V PKGVERSION`
+        echo "PKGVERSION=\"${PKGVERSION}\"" >> ${LOCK}
+        echo "PKGVERSION=${PKGVERSION}"
+
+        ${TINDERBOX}/scripts/tc addBuildPortsQueueEntry -b ${BUILD} -d ${PORT} -p ${PRIORITY} 2>/dev/null || return 1
+    else
+        touch ${WRKBASE}/${BUILD}/.finished
+        echo "BUILDSTATUS=\"FAIL\"" >> ${WRKBASE}/${BUILD}/.finished
+        echo "FAIL_REASON=\"Port does not exist\"" >> ${WRKBASE}/${BUILD}/.finished
+    fi
 
     touch ${WRKBASE}/${BUILD}/.build || return 1
 
@@ -217,6 +234,8 @@ status()
         echo "STATUS=finished"
         echo "BUILDSTATUS=FAIL"
     elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s SUCCESS -r | egrep ":${BUILD}:" >/dev/null ; then
+        echo "STATUS=finished"
+    elif [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
         echo "STATUS=finished"
     elif [ -f "${WRKBASE}/${BUILD}/.lock" ]; then
         echo "STATUS=busy"
@@ -295,6 +314,7 @@ update()
     fi
 
     rm -f ${LOCK}
+    rmdir ${WRKBASE}/${BUILD}
     return 0
 }
 
