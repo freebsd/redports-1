@@ -573,28 +573,34 @@ int handleStep31(void)
 
     for(i=0; i < PQntuples(result); i++)
     {
-    	result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s'", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s'", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
     	if (PQresultStatus(result2) != PGRES_TUPLES_OK)
-           RETURN_ROLLBACK(conn);
+            RETURN_ROLLBACK(conn);
 
         result3 = PQselect(conn, "SELECT portname FROM buildqueue WHERE id = '%s'", PQgetvalue(result, i, 4));
         if (PQresultStatus(result3) != PGRES_TUPLES_OK)
-           RETURN_ROLLBACK(conn);
+            RETURN_ROLLBACK(conn);
 
         sprintf(url, "%s://%s%sbuild?port=%s&build=%s&priority=%s&finishurl=%s/backend/finished/%s",
         		PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1), PQgetvalue(result2, 0, 2),
         		PQgetvalue(result3, 0, 0), PQgetvalue(result2, 0, 4), "5", configget("wwwurl"),
         		PQgetvalue(result, i, 3));
         if(getpage(url, PQgetvalue(result2, 0, 3)))
-           status = 50;
+            status = 50;
         else
         {
-           status = 80;
-           logcgi(url, getenv("ERROR"));
+            status = 80;
+            logcgi(url, getenv("ERROR"));
+        }
+
+        if(getenv("PKGVERSION") != NULL)
+        {
+            if(!PQupdate(conn, "UPDATE buildqueue SET pkgversion = '%s' WHERE id = '%s'", getenv("PKGVERSION"), PQgetvalue(result, i, 4)))
+                RETURN_ROLLBACK(conn);
         }
 
         if(!PQupdate(conn, "UPDATE builds SET status = %d WHERE id = %ld", status, atol(PQgetvalue(result, i, 0))))
-           RETURN_ROLLBACK(conn);
+            RETURN_ROLLBACK(conn);
 
         PQclear(result3);
         PQclear(result2);
