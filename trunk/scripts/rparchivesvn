@@ -1,0 +1,47 @@
+#!/bin/sh
+
+#
+# RedPorts Subversion archival script
+#
+# $Id$
+#
+
+PATH=${PATH}:/usr/local/bin:/usr/sbin:/bin
+
+SVNURL=https://svn.redports.org
+TMP=/tmp/redportssvn
+TARGET=/usr/local/www/redports/repository
+
+if [ -z "${1}" -o -z "${2}" ]; then
+    echo "Usage: rparchive <repository> <revision>"
+    exit 1
+fi
+
+REPOS=$1
+REV=$2
+
+# add affected ports to buildqueue
+for USER in `svnlook changed ${REPOS} -r ${REV} | cut -b5- | cut -d'/' -f1 | uniq`
+do
+    TMPFILE=${TMP}/archive.tar.bz2
+    TARGETFILE=${TARGET}/${USER}.tar.bz2
+
+    rm -rf ${TMP} ${TMPFILE}
+    mkdir -p ${TMP} || exit 1
+
+    echo "REPOSITORY=${SVNURL}/${USER}" >> ${TMP}/INFO
+    echo "REVISION=${REV}" >> ${TMP}/INFO
+    echo "DATE=`date`" >> ${TMP}/INFO
+
+    svn export --no-auth-cache --non-interactive ${SVNURL}/${USER} ${TMP}/ports >/dev/null || exit 1
+    chown -R root:wheel ${TMP} || exit 1
+    cd ${TMP} && tar cvfj ${TMPFILE} ports INFO >/dev/null 2>/dev/null || exit 1
+
+    rm -f ${TARGETFILE} || exit 1
+    mv ${TMPFILE} ${TARGETFILE} || exit 1
+    chown www:www ${TARGETFILE} || exit 1
+
+    rm -rf ${TMP} ${TMPFILE}
+done
+
+exit 0
