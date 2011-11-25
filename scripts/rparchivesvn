@@ -9,8 +9,8 @@
 PATH=${PATH}:/usr/local/bin:/usr/sbin:/bin
 
 SVNURL=https://svn.redports.org
-TMP=/tmp/redportssvn
-TARGET=/usr/local/www/redports/repository
+TMPROOT=/tmp/redportssvn
+TARGET=/usr/local/www/redports/users
 
 if [ -z "${1}" -o -z "${2}" ]; then
     echo "Usage: rparchive <repository> <revision>"
@@ -23,10 +23,11 @@ REV=$2
 # add affected ports to buildqueue
 for USER in `svnlook changed ${REPOS} -r ${REV} | cut -b5- | cut -d'/' -f1 | uniq`
 do
+    TMP=${TMPROOT}/${REV}
     TMPFILE=${TMP}/archive.tar.bz2
-    TARGETFILE=${TARGET}/${USER}.tar.bz2
+    TARGETFILE=${TARGET}/${USER}/svn.tar.bz2
 
-    rm -rf ${TMP} ${TMPFILE}
+    rm -rf ${TMP} || exit 1
     mkdir -p ${TMP} || exit 1
 
     echo "REPOSITORY=${SVNURL}/${USER}" >> ${TMP}/INFO
@@ -37,11 +38,14 @@ do
     chown -R root:wheel ${TMP} || exit 1
     cd ${TMP} && tar cvfj ${TMPFILE} ports INFO >/dev/null 2>/dev/null || exit 1
 
-    rm -f ${TARGETFILE} || exit 1
-    mv ${TMPFILE} ${TARGETFILE} || exit 1
-    chown www:www ${TARGETFILE} || exit 1
+    if [ ! -d "${TARGETFILE%${TARGETFILE##*/}}" ]; then
+        mkdir -p ${TARGETFILE%${TARGETFILE##*/}} || exit 1
+    fi
 
-    rm -rf ${TMP} ${TMPFILE}
+    chown www:www ${TMPFILE} || exit 1
+    mv ${TMPFILE} ${TARGETFILE} || exit 1
+
+    rm -rf ${TMP}
 done
 
 exit 0
