@@ -6,11 +6,11 @@ class RedportsEnvironment(Component):
     implements(IEnvironmentSetupParticipant)
     
     def __init__(self):
-        self.schema = [
+        self.schema1 = [
             Table('buildqueue', key=('id', 'owner', 'status'))[
                 Column('id', type='varchar(25)', size=25),
                 Column('owner', type='varchar(50)', size=50),
-                Column('repository', type='varchar(255)', size=255),
+                Column('repository', type='int'),
                 Column('revision', type='int'),
                 Column('portname', type='varchar(50)', size=50),
                 Column('pkgversion', type='varchar(25)', size=25),
@@ -64,9 +64,18 @@ class RedportsEnvironment(Component):
             ],
         ]
 
+        self.schema2 = [
+            Table('portrepositories', key=('id'))[
+                Column('id', type='int', auto_increment=True),
+                Column('type', type='varchar(25)', size=25),
+                Column('url', type='varchar(255)', size=255),
+                Column('username', type='varchar(50)', size=50)
+            ],
+        ]
+
         self.db_version_key = 'redports_version'
         #   Increment this whenever there are DB changes
-        self.db_version = 1
+        self.db_version = 2
         self.db_installed_version = None
 
         #   Check DB to see if we need to add new tables, etc.
@@ -97,9 +106,15 @@ class RedportsEnvironment(Component):
         print 'Environment needs Upgrade'
         cursor = db.cursor()
         if self.db_installed_version < 1:
-            for table in self.schema:
+            for table in self.schema1:
                 for stmt in to_sql(self.env, table):
                     cursor.execute(stmt)
+        if self.db_installed_version < 2:
+            for table in self.schema2:
+                for stmt in to_sql(self.env, table):
+                    cursor.execute(stmt)
+            cursor.execute("ALTER TABLE buildqueue DROP repository")
+            cursor.execute("ALTER TABLE buildqueue ADD COLUMN repository integer")
 
         cursor.execute("UPDATE system SET value = %s WHERE name = %s", (self.db_version, self.db_version_key))
         print 'Done Upgrading'
