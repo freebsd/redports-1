@@ -29,6 +29,11 @@ checkout()
     REVISION=$3
     BUILD=$4
 
+    if [ -z "${BUILD}" ]; then
+        echo "Build not specified."
+        return 1
+    fi
+
     if [ -f "${WRKBASE}/.lock" ]; then
         echo "Maintenance lock exists."
         return 1
@@ -61,7 +66,7 @@ checkout()
     fi
 
     # populate lock
-    echo "TYPE=\"${TYPE}"" >> ${LOCK}
+    echo "TYPE=\"${TYPE}\"" >> ${LOCK}
     echo "REPOSITORY=\"${REPOSITORY}\"" >> ${LOCK}
     echo "REVISION=\"${REVISION}\"" >> ${LOCK}
     echo "BUILD=\"${BUILD}\"" >> ${LOCK}
@@ -69,11 +74,12 @@ checkout()
     echo "LOCK=\"${LOCK}\"" >> ${LOCK}
 
     # checkout overlay ports
-    if [ -z "${REVISION}" ]; then
-        PARAMS="--revision ${REVISION}"
+    PARAMS="--non-interactive"
+    if [ ! -z "${REVISION}" ]; then
+        PARAMS="${PARAMS} --revision ${REVISION}"
     fi
 
-    svn export --non-interactive ${PARAMS} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports || return 2
+    svn export ${PARAMS} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports || return 2
 
     # create snapshot of original tree
     ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
@@ -356,7 +362,7 @@ selftest()
 
 case "$1" in
 'build')
-    if build $2 $3 $4 $5 2>&1 ; then
+    if build "$2" "$3" "$4" "$5" 2>&1 ; then
         echo "OK"
         return 0
     else
@@ -365,7 +371,7 @@ case "$1" in
     fi
 ;;
 'checkout')
-    if checkout $2 $3 $4 2>&1 ; then
+    if checkout "$2" "$3" "$4" "$5" 2>&1 ; then
         echo "OK"
         return 0
     else
@@ -374,7 +380,7 @@ case "$1" in
     fi
 ;;
 'clean')
-    if clean $2 2>&1 ; then
+    if clean "$2" 2>&1 ; then
         echo "OK"
         return 0
     else
@@ -384,7 +390,7 @@ case "$1" in
     return $?
 ;;
 'status')
-    if status $2 2>&1 ; then
+    if status "$2" 2>&1 ; then
         echo "OK"
         return 0
     else
@@ -393,7 +399,7 @@ case "$1" in
     fi
 ;;
 'update')
-    if update $2 2>&1 ; then
+    if update "$2" 2>&1 ; then
         echo "OK"
         return 0
     else
@@ -402,7 +408,7 @@ case "$1" in
     fi
 ;;
 'selftest')
-    if selftest $2 2>&1 ; then
+    if selftest "$2" 2>&1 ; then
         echo "OK"
         return 0
     else
