@@ -618,14 +618,15 @@ int handleStep30(void)
     PGconn *conn;
     PGresult *result;
     PGresult *result2;
-    char url[250];
+    PGresult *result3;
+    char url[512];
     int status;
     int i;
 
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT builds.id, backendid, buildgroup, repository, revision FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND builds.status = 30 FOR UPDATE NOWAIT");
+    result = PQexec(conn, "SELECT builds.id, backendid, buildgroup, revision FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND builds.status = 30 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
@@ -652,9 +653,13 @@ int handleStep30(void)
            continue;
         }
 
-        sprintf(url, "%s://%s%scheckout?repository=%s&revision=%s&build=%s", PQgetvalue(result2, 0, 0),
-        		PQgetvalue(result2, 0, 1), PQgetvalue(result2, 0, 2), PQgetvalue(result, i, 3),
-        		PQgetvalue(result, i, 4), PQgetvalue(result2, 0, 4));
+        result3 = PQselect(conn, "SELECT type, replace(replace(replace(replace(url, '%%OWNER%%', owner), '%%PORTNAME%%', portname), '%%QUEUEID%%', buildqueue.id::text), '%%BUILDID%%', builds.id::text) FROM portrepositories, buildqueue, builds WHERE portrepositories.id = repository AND buildqueue.id = queueid AND builds.id = %ld", atol(PQgetvalue(result, i, 0)));
+        if (PQresultStatus(result3) != PGRES_TUPLES_OK)
+           RETURN_ROLLBACK(conn);
+
+        sprintf(url, "%s://%s%scheckout?type=%s&repository=%s&revision=%s&build=%s", PQgetvalue(result2, 0, 0),
+        		PQgetvalue(result2, 0, 1), PQgetvalue(result2, 0, 2), PQgetvalue(result3, 0, 0),
+                        PQgetvalue(result3, 0, 1), PQgetvalue(result, i, 3), PQgetvalue(result2, 0, 4));
         if(getpage(url, PQgetvalue(result2, 0, 3)))
            status = 31;
         else
@@ -666,6 +671,7 @@ int handleStep30(void)
         if(!PQupdate(conn, "UPDATE builds SET status = %d WHERE id = %ld", status, atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
 
+        PQclear(result3);
         PQclear(result2);
     }
          
