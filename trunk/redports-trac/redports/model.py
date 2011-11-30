@@ -4,6 +4,19 @@ from datetime import datetime
 from time import time
 import math
 
+class PortRepository(object):
+    def __init__(self, env, id):
+        self.env = env
+        self.clear()
+        self.id = id
+
+    def clear(self):
+        self.id = None
+        self.name = None
+        self.type = None
+        self.url = None
+        self.browseurl = None
+
 class Port(object):
     def __init__(self, env, id=None):
         self.env = env
@@ -35,6 +48,9 @@ class Port(object):
 
         self.queueid = datetime.now().strftime('%Y%m%d%H%M%S-%f')[0:20]
 
+        if not self.revision:
+            self.revision = None
+
         if self.group == 'automatic':
             self.setStatus(10)
 
@@ -53,6 +69,13 @@ class Port(object):
                 raise TracError('SQL Error')
             if row[0] != 1:
                 raise TracError('Invalid buildgroup')
+
+        cursor.execute("SELECT count(*) FROM portrepositories WHERE id = %s AND ( username = %s OR username IS NULL )", ( self.repository, self.owner ))
+        row = cursor.fetchone()
+        if not row:
+            raise TracError('SQL Error')
+        if row[0] != 1:
+            raise TracError('Invalid repository')
 
         cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, portname, pkgversion, status, startdate, enddate) VALUES (%s, %s, %s, %s, %s, null, %s, %s, 0)", ( self.queueid, self.owner, self.repository, self.revision, self.portname, self.status, long(time()*1000000) ))
 
@@ -153,7 +176,7 @@ class Port(object):
 
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT builds.id, buildqueue.owner, buildqueue.repository, buildqueue.revision, buildqueue.id, builds.buildgroup, buildqueue.portname, buildqueue.pkgversion, buildqueue.status, GREATEST(buildqueue.status, builds.status, 0), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, CASE WHEN builds.enddate < builds.startdate THEN extract(epoch from now())*1000000 ELSE builds.enddate END FROM buildqueue LEFT OUTER JOIN builds ON buildqueue.id = builds.queueid WHERE owner = %s AND buildqueue.status <= 90 AND (builds.status IS NULL OR builds.status <= 90) ORDER BY buildqueue.id DESC, builds.id", (req.authname,) )
+    cursor.execute("SELECT builds.id, buildqueue.owner, replace(replace(portrepositories.browseurl, '%OWNER%', buildqueue.owner), '%REVISION%', buildqueue.revision::text), buildqueue.revision, buildqueue.id, builds.buildgroup, buildqueue.portname, buildqueue.pkgversion, buildqueue.status, GREATEST(buildqueue.status, builds.status, 0), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, CASE WHEN builds.enddate < builds.startdate THEN extract(epoch from now())*1000000 ELSE builds.enddate END FROM buildqueue LEFT OUTER JOIN builds ON buildqueue.id = builds.queueid, portrepositories WHERE buildqueue.repository = portrepositories.id AND owner = %s AND buildqueue.status <= 90 AND (builds.status IS NULL OR builds.status <= 90) ORDER BY buildqueue.id DESC, builds.id", (req.authname,) )
 
     lastid = None
     for id, owner, repository, revision, queueid, group, portname, pkgversion, queuestatus, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate in cursor:
@@ -283,4 +306,17 @@ def AllBuildgroupsIterator(env):
         buildgroup = Buildgroup(env, name)
 
         yield buildgroup
+
+def RepositoryIterator(env, req):
+   cursor = env.get_db_cnx().cursor()
+   cursor.execute("SELECT id, replace(name, '%OWNER%', %s), type, url, replace(browseurl, '%OWNER%', %s) FROM portrepositories WHERE username IS NULL OR username = %s ORDER BY id", (req.authname, req.authname, req.authname))
+
+   for id, name, type, url, browseurl in cursor:
+        repository = PortRepository(env, id)
+        repository.name = name
+        repository.type = type
+        repository.url = url
+        repository.browseurl = browseurl
+
+        yield repository
 

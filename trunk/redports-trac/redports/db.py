@@ -67,8 +67,10 @@ class RedportsEnvironment(Component):
         self.schema2 = [
             Table('portrepositories', key=('id'))[
                 Column('id', type='int', auto_increment=True),
+                Column('name', type='varchar(255)', size=255),
                 Column('type', type='varchar(25)', size=25),
                 Column('url', type='varchar(255)', size=255),
+                Column('browseurl', type='varchar(255)', size=255),
                 Column('username', type='varchar(50)', size=50)
             ],
         ]

@@ -20,11 +20,17 @@
           <table>
             <tr class="field">
               <th><label for="repository">Repository:</label></th>
-              <td><a href="/browser/$authname">$repository</a></td>
+              <td>
+                <select id="repository" name="repository">
+                <py:for each="repos in repository">
+                  <option value="$repos.id">$repos.name</option>
+                </py:for>
+                </select>
+              </td>
             </tr>
             <tr class="field">
               <th><label for="revision">Revision:</label></th>
-              <td><input type="text" name="revision" size="5" value="$revision" /></td>
+              <td><input type="text" name="revision" size="5" /></td>
             </tr>
             <tr class="field">
               <th><label for="portname">Port:</label></th>
@@ -66,7 +72,9 @@
                       <a href="http://www.freshports.org/$port.portname">
                         <strong>$port.portname <py:if test="port.pkgversion">$port.pkgversion</py:if></strong>
                       </a>
-                      (<a href="/changeset/$port.revision/">r$port.revision</a>)
+                      <py:if test="port.revision">
+                        (<a href="$port.repository">r$port.revision</a>)
+                      </py:if>
                     </td>
                     <td>
                       <py:if test="port.headdel">
