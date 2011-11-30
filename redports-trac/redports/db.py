@@ -15,6 +15,7 @@ class RedportsEnvironment(Component):
                 Column('portname', type='varchar(50)', size=50),
                 Column('pkgversion', type='varchar(25)', size=25),
                 Column('status', type='int'),
+                Column('priority', type='int'),
                 Column('startdate', type='bigint'),
                 Column('enddate', type='bigint')
             ],

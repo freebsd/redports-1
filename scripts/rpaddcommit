@@ -9,6 +9,7 @@
 PATH=${PATH}:/usr/local/bin
 
 REPOSITORYID=1
+PRIORITY=7
 DBNAME=trac
 DBUSER=trac
 
@@ -42,7 +43,7 @@ do
     RAND=`hexdump -n2 -e\"%u\" /dev/random`
     BUILDID=${BUILDDATE}-${RAND}
 
-    SQLCMD=`printf "INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES ('%s', '%s', %d, %d, '%s', %d, %d, %d);" "${BUILDID}" "${USER}" ${REPOSITORYID} ${REV} "${PORT}" 10 ${START} 0`
+    SQLCMD=`printf "INSERT INTO buildqueue (id, owner, repository, revision, portname, status, priority, startdate, enddate) VALUES ('%s', '%s', %d, %d, '%s', %d, %d, %d);" "${BUILDID}" "${USER}" ${REPOSITORYID} ${REV} "${PORT}" 10 ${PRIORITY} ${START} 0`
 
     echo ${SQLCMD} | psql -q ${DBNAME} ${DBUSER}
     if [ $? != 0 ]; then

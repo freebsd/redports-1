@@ -41,6 +41,7 @@ class Port(object):
         self.head = None
         self.headdel = None
         self.deletable = None
+        self.priority = None
 
     def addPort(self):
         db = self.env.get_db_cnx()
@@ -50,6 +51,9 @@ class Port(object):
 
         if not self.revision:
             self.revision = None
+
+        if not self.priority:
+            self.priority = 5
 
         if self.group == 'automatic':
             self.setStatus(10)
@@ -77,7 +81,7 @@ class Port(object):
         if row[0] != 1:
             raise TracError('Invalid repository')
 
-        cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, portname, pkgversion, status, startdate, enddate) VALUES (%s, %s, %s, %s, %s, null, %s, %s, 0)", ( self.queueid, self.owner, self.repository, self.revision, self.portname, self.status, long(time()*1000000) ))
+        cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, portname, pkgversion, status, priority, startdate, enddate) VALUES (%s, %s, %s, %s, %s, null, %s, %s, %s, 0)", ( self.queueid, self.owner, self.repository, self.revision, self.portname, self.status, self.priority, long(time()*1000000) ))
 
         if self.status == 20:
              cursor.execute("INSERT INTO builds (queueid, backendkey, buildgroup, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (%s, SUBSTRING(MD5(RANDOM()::text), 1, 25), %s, 20, null, null, null, null, 0, 0, 0)", ( self.queueid, self.group ))
