@@ -3,14 +3,13 @@ from trac.web.api import IRequestHandler
 from trac.web.chrome import add_script, add_stylesheet, add_warning, add_notice, INavigationContributor, ITemplateProvider
 from trac.perm import IPermissionRequestor
 from trac.util.translation import _, tag_
-from trac.versioncontrol import RepositoryManager
 
 from genshi.builder import tag
 
 from pkg_resources import resource_filename
 import re
 
-from model import Port, PortsQueueIterator, AllBuildgroupsIterator
+from model import Port, PortsQueueIterator, AllBuildgroupsIterator, RepositoryIterator
 
 class BuildqueuePanel(Component):
     implements(INavigationContributor, ITemplateProvider, IRequestHandler, IPermissionRequestor)
@@ -35,16 +34,10 @@ class BuildqueuePanel(Component):
     def process_request(self, req):
         req.perm('redports').assert_permission('BUILDQUEUE_VIEW')
 
-        repopath = RepositoryManager(self.env).get_repository(None).get_path_url(req.authname, 1)
-        reponame, repos, repopath2 = RepositoryManager(self.env).get_repository_by_path(repopath)
-
-        if not repos.has_node(req.authname):
-            add_warning(req, 'Your account was not activated yet '
-                             'so scheduling new builds will not work.')
-        elif req.method == 'POST' and req.args.get('addbuild'):
+        if req.method == 'POST' and req.args.get('addbuild'):
             port = Port(self.env)
             port.owner = req.authname
-            port.repository = repopath
+            port.repository = req.args.get('repository')
             port.revision = req.args.get('revision')
             port.portname = req.args.get('portname')
             port.group = req.args.get('group')
@@ -72,8 +65,7 @@ class BuildqueuePanel(Component):
         return ('buildqueue.html', 
             {   'buildqueue': PortsQueueIterator(self.env, req),
                 'allbuildgroups': AllBuildgroupsIterator(self.env),
-                'repository': repopath,
-                'revision': repos.youngest_rev,
+                'repository': RepositoryIterator(self.env, req),
                 'authname': req.authname
             }, None)
 
