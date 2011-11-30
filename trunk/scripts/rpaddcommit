@@ -8,10 +8,9 @@
 
 PATH=${PATH}:/usr/local/bin
 
-REPOSITORY=https://svn.redports.org/
+REPOSITORYID=1
 DBNAME=trac
 DBUSER=trac
-LOG=/var/log/redports.log
 
 if [ -z "${1}" -o -z "${2}" ]; then
     echo "Usage: rpaddcommit <repository> <revision>"
@@ -25,8 +24,6 @@ USER=`svnlook author -r ${REV} ${REPOS}`
 # add affected ports to buildqueue
 for PORT in `svnlook changed ${REPOS} -r ${REV} | grep -v "D   " | cut -b5- | cut -d'/' -f2-3 | uniq`
 do
-    REPOSITORYPATH=`svnlook changed ${REPOS} -r ${REV} | cut -b5- | cut -d'/' -f1 | uniq`
-    REPOSITORYBASE=${REPOSITORY}${REPOSITORYPATH}
     START=`date +"%s"`000000
     TMP=`echo "${PORT}" | cut -d'/' -f2`
 
@@ -45,7 +42,7 @@ do
     RAND=`hexdump -n2 -e\"%u\" /dev/random`
     BUILDID=${BUILDDATE}-${RAND}
 
-    SQLCMD=`printf "INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES ('%s', '%s', '%s', %d, '%s', %d, %d, %d);" "${BUILDID}" "${USER}" "${REPOSITORYBASE}" ${REV} "${PORT}" 10 ${START} 0`
+    SQLCMD=`printf "INSERT INTO buildqueue (id, owner, repository, revision, portname, status, startdate, enddate) VALUES ('%s', '%s', %d, %d, '%s', %d, %d, %d);" "${BUILDID}" "${USER}" ${REPOSITORYID} ${REV} "${PORT}" 10 ${START} 0`
 
     echo ${SQLCMD} | psql -q ${DBNAME} ${DBUSER}
     if [ $? != 0 ]; then
