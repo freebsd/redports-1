@@ -5,11 +5,12 @@ SCRIPTROOT=/usr/local/www/remote
 echo "Content-Type: text/plain"
 echo ""
 
-REPOSITORY=`echo ${QUERY_STRING} | cut -d'&' -f 1 | cut -d'=' -f 2`
-REVISION=`echo ${QUERY_STRING} | cut -d'&' -f 2 | cut -d'=' -f 2`
-BUILD=`echo ${QUERY_STRING} | cut -d'&' -f 3 | cut -d'=' -f 2`
+TYPE=`echo ${QUERY_STRING} | cut -d'&' -f 1 | cut -d'=' -f 2`
+REPOSITORY=`echo ${QUERY_STRING} | cut -d'&' -f 2 | cut -d'=' -f 2`
+REVISION=`echo ${QUERY_STRING} | cut -d'&' -f 3 | cut -d'=' -f 2`
+BUILD=`echo ${QUERY_STRING} | cut -d'&' -f 4 | cut -d'=' -f 2`
 
-sudo -n ${SCRIPTROOT}/rptinderbox checkout ${REPOSITORY} ${REVISION} ${BUILD}
+sudo -n ${SCRIPTROOT}/rptinderbox checkout "${TYPE}" "${REPOSITORY}" "${REVISION}" "${BUILD}"
 
 exit 0
 

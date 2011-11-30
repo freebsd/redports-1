@@ -24,9 +24,10 @@ CLEANROOM_MODE=yes
 
 checkout()
 {
-    REPOSITORY=$1
-    REVISION=$2
-    BUILD=$3
+    TYPE=$1
+    REPOSITORY=$2
+    REVISION=$3
+    BUILD=$4
 
     if [ -f "${WRKBASE}/.lock" ]; then
         echo "Maintenance lock exists."
@@ -54,7 +55,13 @@ checkout()
         return 1
     fi
 
+    if [ "${TYPE}" != "svn" ]; then
+        echo "Unknown repository type"
+        return 1
+    fi
+
     # populate lock
+    echo "TYPE=\"${TYPE}"" >> ${LOCK}
     echo "REPOSITORY=\"${REPOSITORY}\"" >> ${LOCK}
     echo "REVISION=\"${REVISION}\"" >> ${LOCK}
     echo "BUILD=\"${BUILD}\"" >> ${LOCK}
@@ -62,7 +69,11 @@ checkout()
     echo "LOCK=\"${LOCK}\"" >> ${LOCK}
 
     # checkout overlay ports
-    svn export --non-interactive --revision ${REVISION} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports || return 2
+    if [ -z "${REVISION}" ]; then
+        PARAMS="--revision ${REVISION}"
+    fi
+
+    svn export --non-interactive ${PARAMS} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports || return 2
 
     # create snapshot of original tree
     ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
