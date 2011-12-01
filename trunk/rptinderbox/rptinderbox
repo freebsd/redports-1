@@ -68,7 +68,6 @@ checkout()
     # populate lock
     echo "TYPE=\"${TYPE}\"" >> ${LOCK}
     echo "REPOSITORY=\"${REPOSITORY}\"" >> ${LOCK}
-    echo "REVISION=\"${REVISION}\"" >> ${LOCK}
     echo "BUILD=\"${BUILD}\"" >> ${LOCK}
     echo "PORTSTREE=\"${PORTSTREE}\"" >> ${LOCK}
     echo "LOCK=\"${LOCK}\"" >> ${LOCK}
@@ -80,6 +79,13 @@ checkout()
     fi
 
     svn export ${PARAMS} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports || return 2
+
+    if [ -z "${REVISION}" ]; then
+        REVISION=`svn info ${WRKBASE}/${BUILD}/ports | grep "Revision" | cut -d: -f2`
+        echo "REVISION=${REVISION}"
+    fi
+
+    echo "REVISION=\"${REVISION}\"" >> ${LOCK}
 
     # create snapshot of original tree
     ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
