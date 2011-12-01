@@ -648,7 +648,7 @@ int handleStep30(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT builds.id, backendid, buildgroup, revision FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND builds.status = 30 FOR UPDATE NOWAIT");
+    result = PQexec(conn, "SELECT builds.id, backendid, buildgroup, revision, buildqueue.id FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND builds.status = 30 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
@@ -688,6 +688,12 @@ int handleStep30(void)
         {
            status = 80;
            logcgi(url, getenv("ERROR"));
+        }
+
+        if(getenv("REVISION") != NULL)
+        {
+           if(!PQupdate(conn, "UPDATE buildqueue SET revision = %ld WHERE id = '%s'", atol(getenv("REVISION")), PQgetvalue(result, i, 4)))
+              RETURN_ROLLBACK(conn);
         }
 
         if(!PQupdate(conn, "UPDATE builds SET status = %d WHERE id = %ld", status, atol(PQgetvalue(result, i, 0))))
