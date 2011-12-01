@@ -78,10 +78,11 @@ checkout()
         PARAMS="${PARAMS} --revision ${REVISION}"
     fi
 
-    svn export ${PARAMS} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports || return 2
+    svn checkout ${PARAMS} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports >/dev/null || return 2
 
     if [ -z "${REVISION}" ]; then
-        REVISION=`svn info ${WRKBASE}/${BUILD}/ports | grep "Revision" | cut -d: -f2`
+        REVISION=`svn info ${WRKBASE}/${BUILD}/ports | grep "Revision:" | cut -d: -f2`
+        REVISION=`expr ${REVISION} + 0`
         echo "REVISION=${REVISION}"
     fi
 
