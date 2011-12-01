@@ -28,7 +28,7 @@
 #include <stdlib.h>
 #include <curl/curl.h>
 
-char pagebuffer[1024];
+char pagebuffer[4096];
 char *ppagebuffer;
 
 char *remotevars[] = {
@@ -39,6 +39,7 @@ char *remotevars[] = {
     "OK",
     "PKGVERSION",
     "PORTSTREELASTBUILT",
+    "REVISION",
     "STATUS",
     "WRKDIR",
     ""
