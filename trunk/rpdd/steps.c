@@ -51,7 +51,6 @@ struct StepHandler
 };
 
 struct StepHandler stepreg[] = {
-    { "10", handleStep10, 1, 0, 0 },
     { "20", handleStep20, 1, 0, 0 },
     { "30", handleStep30, 1, 0, 0 },
     { "31", handleStep31, 1, 0, 0 },
@@ -581,7 +580,6 @@ int handleStep31(void)
     PGconn *conn;
     PGresult *result;
     PGresult *result2;
-    PGresult *result3;
     char url[500];
     int status;
     int i;
@@ -589,7 +587,7 @@ int handleStep31(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT id, backendid, buildgroup, backendkey, queueid FROM builds WHERE status = 31 FOR UPDATE NOWAIT");
+    result = PQexec(conn, "SELECT id, backendid, buildgroup, backendkey, queueid, portname FROM builds WHERE status = 31 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
@@ -599,13 +597,9 @@ int handleStep31(void)
     	if (PQresultStatus(result2) != PGRES_TUPLES_OK)
             RETURN_ROLLBACK(conn);
 
-        result3 = PQselect(conn, "SELECT portname FROM buildqueue WHERE id = '%s'", PQgetvalue(result, i, 4));
-        if (PQresultStatus(result3) != PGRES_TUPLES_OK)
-            RETURN_ROLLBACK(conn);
-
         sprintf(url, "%s://%s%sbuild?port=%s&build=%s&priority=%s&finishurl=%s/backend/finished/%s",
         		PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1), PQgetvalue(result2, 0, 2),
-        		PQgetvalue(result3, 0, 0), PQgetvalue(result2, 0, 4), "5", configget("wwwurl"),
+        		PQgetvalue(result, i, 5), PQgetvalue(result2, 0, 4), "5", configget("wwwurl"),
         		PQgetvalue(result, i, 3));
         if(getpage(url, PQgetvalue(result2, 0, 3)))
             status = 50;
@@ -624,7 +618,6 @@ int handleStep31(void)
         if(!PQupdate(conn, "UPDATE builds SET status = %d WHERE id = %ld", status, atol(PQgetvalue(result, i, 0))))
             RETURN_ROLLBACK(conn);
 
-        PQclear(result3);
         PQclear(result2);
     }
 
@@ -772,52 +765,6 @@ int handleStep20(void)
         }
         
         PQclear(result2);
-    }
-
-    PQclear(result);
-
-    RETURN_COMMIT(conn);
-}
-
-
-/* Create new jobs based on the buildgroups that the user joined */
-int handleStep10(void)
-{
-    PGconn *conn;
-    PGresult *result;
-    PGresult *result2;
-    int status;
-    int i, j;
-
-    if((conn = PQautoconnect()) == NULL)
-        return -1;
-
-    result = PQexec(conn, "SELECT id, owner FROM buildqueue WHERE status = 10 FOR UPDATE NOWAIT");
-    if (PQresultStatus(result) != PGRES_TUPLES_OK)
-        RETURN_ROLLBACK(conn);
-
-    for(i=0; i < PQntuples(result); i++)
-    {
-        result2 = PQselect(conn, "SELECT buildgroup FROM automaticbuildgroups WHERE username = '%s' ORDER BY priority", PQgetvalue(result, i, 1));
-        if (PQresultStatus(result2) != PGRES_TUPLES_OK)
-            RETURN_ROLLBACK(conn);
-
-        if(PQntuples(result2) > 0)
-            status = 20;
-        else
-            status = 95;
-
-        for(j=0; j < PQntuples(result2); j++)
-        {
-            loginfo("adding build %s for %s", PQgetvalue(result, i, 0), PQgetvalue(result, i, 1));
-            if(!PQupdate(conn, "INSERT INTO builds (queueid, backendkey, buildgroup, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES ('%s', SUBSTRING(MD5(RANDOM()::text), 1, 25), '%s', 20, null, null, null, null, 0, 0, 0)", PQgetvalue(result, i, 0), PQgetvalue(result2, j, 0)))
-                RETURN_ROLLBACK(conn);
-        }
-
-        PQclear(result2);
-
-        if(!PQupdate(conn, "UPDATE buildqueue SET status = %d WHERE id = '%s'", status, PQgetvalue(result, i, 0)))
-            RETURN_ROLLBACK(conn);
     }
 
     PQclear(result);

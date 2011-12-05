@@ -46,33 +46,16 @@ class Port(object):
     def addPort(self):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
+        cursor2 = db.cursor()
 
         self.queueid = datetime.now().strftime('%Y%m%d%H%M%S-%f')[0:20]
+        self.setStatus(20)
 
         if not self.revision:
             self.revision = None
 
         if not self.priority:
             self.priority = 5
-
-        if self.group == 'automatic':
-            self.setStatus(10)
-
-            cursor.execute("SELECT count(*) FROM automaticbuildgroups WHERE username = %s", (self.owner,) )
-            row = cursor.fetchone()
-            if not row:
-                raise TracError('SQL Error')
-            if row[0] < 1:
-                return False
-        else:
-            self.setStatus(20)
-
-            cursor.execute("SELECT count(*) FROM buildgroups WHERE name = %s", (self.group,) )
-            row = cursor.fetchone()
-            if not row:
-                raise TracError('SQL Error')
-            if row[0] != 1:
-                raise TracError('Invalid buildgroup')
 
         cursor.execute("SELECT count(*) FROM portrepositories WHERE id = %s AND ( username = %s OR username IS NULL )", ( self.repository, self.owner ))
         row = cursor.fetchone()
@@ -81,10 +64,19 @@ class Port(object):
         if row[0] != 1:
             raise TracError('Invalid repository')
 
-        cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, portname, pkgversion, status, priority, startdate, enddate) VALUES (%s, %s, %s, %s, %s, null, %s, %s, %s, 0)", ( self.queueid, self.owner, self.repository, self.revision, self.portname, self.status, self.priority, long(time()*1000000) ))
+        if self.group == 'automatic':
+            cursor2.execute("SELECT buildgroup FROM automaticbuildgroups WHERE username = %s", (self.owner,) )
+            if cursor.rowcount < 1:
+                return False
+        else:
+            cursor2.execute("SELECT name FROM buildgroups WHERE name = %s", (self.group,) )
+            if cursor.rowcount != 1:
+                raise TracError('Invalid buildgroup')
 
-        if self.status == 20:
-             cursor.execute("INSERT INTO builds (queueid, backendkey, buildgroup, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (%s, SUBSTRING(MD5(RANDOM()::text), 1, 25), %s, 20, null, null, null, null, 0, 0, 0)", ( self.queueid, self.group ))
+        cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, pkgversion, status, priority, startdate, enddate) VALUES (%s, %s, %s, %s, null, %s, %s, %s, 0)", ( self.queueid, self.owner, self.repository, self.revision, self.status, self.priority, long(time()*1000000) ))
+
+        for group in cursor2:
+             cursor.execute("INSERT INTO builds (queueid, backendkey, buildgroup, portname, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (%s, SUBSTRING(MD5(RANDOM()::text), 1, 25), %s, %s, %s, null, null, null, null, 0, 0, 0)", ( self.queueid, group, self.portname, self.status ))
         db.commit()
         return True
 
@@ -180,7 +172,7 @@ class Port(object):
 
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT builds.id, buildqueue.owner, replace(replace(portrepositories.browseurl, '%OWNER%', buildqueue.owner), '%REVISION%', buildqueue.revision::text), buildqueue.revision, buildqueue.id, builds.buildgroup, buildqueue.portname, buildqueue.pkgversion, buildqueue.status, GREATEST(buildqueue.status, builds.status, 0), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, CASE WHEN builds.enddate < builds.startdate THEN extract(epoch from now())*1000000 ELSE builds.enddate END FROM buildqueue LEFT OUTER JOIN builds ON buildqueue.id = builds.queueid, portrepositories WHERE buildqueue.repository = portrepositories.id AND owner = %s AND buildqueue.status <= 90 AND (builds.status IS NULL OR builds.status <= 90) ORDER BY buildqueue.id DESC, builds.id", (req.authname,) )
+    cursor.execute("SELECT builds.id, buildqueue.owner, replace(replace(portrepositories.browseurl, '%OWNER%', buildqueue.owner), '%REVISION%', buildqueue.revision::text), buildqueue.revision, buildqueue.id, builds.buildgroup, builds.portname, buildqueue.pkgversion, buildqueue.status, GREATEST(buildqueue.status, builds.status, 0), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, CASE WHEN builds.enddate < builds.startdate THEN extract(epoch from now())*1000000 ELSE builds.enddate END FROM buildqueue LEFT OUTER JOIN builds ON buildqueue.id = builds.queueid, portrepositories WHERE buildqueue.repository = portrepositories.id AND owner = %s AND buildqueue.status <= 90 AND (builds.status IS NULL OR builds.status <= 90) ORDER BY buildqueue.id DESC, builds.id", (req.authname,) )
 
     lastid = None
     for id, owner, repository, revision, queueid, group, portname, pkgversion, queuestatus, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate in cursor:

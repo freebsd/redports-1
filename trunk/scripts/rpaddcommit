@@ -20,7 +20,12 @@ fi
 
 REPOS=$1
 REV=$2
-USER=`svnlook author -r ${REV} ${REPOS}`
+USER=`svnlook author -r ${REV} ${REPOS} 2>/dev/null`
+
+if [ -z "${USER}" ]; then
+    echo "Invalid revision number"
+    exit 1
+fi
 
 # add affected ports to buildqueue
 for PORT in `svnlook changed ${REPOS} -r ${REV} | grep -v "D   " | cut -b5- | cut -d'/' -f2-3 | uniq`
@@ -43,7 +48,16 @@ do
     RAND=`hexdump -n2 -e\"%u\" /dev/random`
     BUILDID=${BUILDDATE}-${RAND}
 
-    SQLCMD=`printf "INSERT INTO buildqueue (id, owner, repository, revision, portname, status, priority, startdate, enddate) VALUES ('%s', '%s', %d, %d, '%s', %d, %d, %d);" "${BUILDID}" "${USER}" ${REPOSITORYID} ${REV} "${PORT}" 10 ${PRIORITY} ${START} 0`
+    SQLCMD=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d);" "${BUILDID}" "${USER}" ${REPOSITORYID} ${REV} 10 ${PRIORITY} ${START} 0`
+
+    for GROUP in `echo "SELECT buildgroup FROM automaticbuildgroups WHERE username = '${USER}'" | psql -A -t -q ${DBNAME} ${DBUSER}`
+    do
+        SQLCMD2=`printf "INSERT INTO builds (queueid, backendkey, buildgroup, portname, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES ('%s', SUBSTRING(MD5(RANDOM()::text), 1, 25), '%s', '%s', %d, null, null, null, null, 0, 0, 0);" "${BUILDID}" "${GROUP}" "${PORT}" 20`
+
+        SQLCMD="${SQLCMD} ${SQLCMD2}"
+    done
+
+    SQLCMD="BEGIN; ${SQLCMD} COMMIT;"
 
     echo ${SQLCMD} | psql -q ${DBNAME} ${DBUSER}
     if [ $? != 0 ]; then
