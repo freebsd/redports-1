@@ -611,7 +611,7 @@ int handleStep31(void)
 
         if(getenv("PKGVERSION") != NULL)
         {
-            if(!PQupdate(conn, "UPDATE buildqueue SET pkgversion = '%s' WHERE id = '%s'", getenv("PKGVERSION"), PQgetvalue(result, i, 4)))
+            if(!PQupdate(conn, "UPDATE builds SET pkgversion = '%s' WHERE id = %ld", getenv("PKGVERSION"), atol(PQgetvalue(result, i, 0))))
                 RETURN_ROLLBACK(conn);
         }
 

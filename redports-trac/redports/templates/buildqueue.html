@@ -45,9 +45,13 @@
                 </select>
               </td>
             </tr>
+            <tr class="field">
+              <th><label for="description">Description:</label></th>
+              <td><input type="text" name="description" /></td>
+            </tr>
           </table>
           <p class="help">
-            Trigger a rebuild for a specific port in your repository.
+            Schedule a rebuild for a list of ports in your repository.
           </p>
           <div class="buttons">
             <input type="submit" name="addbuild" value="Add" />
@@ -59,21 +63,19 @@
         <table class="listing" id="buildqueue_list">
             <thead>
                 <tr>
-                    <th colspan="5">Port / Source</th><th rowspan="2">Options</th>
+                    <th colspan="6">Port / Source</th><th rowspan="2">Options</th>
                 </tr>
                 <tr>
-                    <th>&nbsp; &nbsp;</th><th>Buildgroup</th><th>Status</th><th>Buildtime</th><th>Links</th>
+                    <th>&nbsp;</th><th>&nbsp;</th><th>Buildgroup</th><th>Status</th><th>Buildtime</th><th>Links</th>
                 </tr>
             </thead>
             <tbody>
               <py:for each="port in buildqueue">
-                <tr py:if="port.head" class="head">
-                    <td colspan="5">
-                      <a href="http://www.freshports.org/$port.portname">
-                        <strong>$port.portname <py:if test="port.pkgversion">$port.pkgversion</py:if></strong>
-                      </a>
+                <tr py:if="port.headfull" class="headfull">
+                    <td colspan="6">
+                      <strong>$port.description</strong>
                       <py:if test="port.revision">
-                        (<a href="$port.repository">r$port.revision</a>)
+                        <a href="$port.repository"><strong>(r$port.revision)</strong></a>
                       </py:if>
                     </td>
                     <td>
@@ -85,8 +87,16 @@
                       </py:if>
                     </td>
                 </tr>
-                <tr py:if="port.id">
+                <tr py:if="port.head" class="head">
                     <td></td>
+                    <td colspan="6">
+                      <a href="http://www.freshports.org/$port.portname">
+                        <strong>$port.portname <py:if test="port.pkgversion">$port.pkgversion</py:if></strong>
+                      </a>
+                    </td>
+                </tr>
+                <tr py:if="port.id">
+                    <td colspan="2"></td>
                     <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
                     <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
                     <td>$port.startdate</td>

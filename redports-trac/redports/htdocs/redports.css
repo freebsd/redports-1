@@ -17,6 +17,10 @@
     border-top: 1px dashed grey;
 }
 
+#buildqueue_list tr.headfull {
+    background: #eed;
+}
+
 /* Buildgroups */
 #buildgroups_list {
     max-width: 70%;

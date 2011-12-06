@@ -41,6 +41,7 @@ class BuildqueuePanel(Component):
             port.revision = req.args.get('revision')
             port.portname = req.args.get('portname')
             port.group = req.args.get('group')
+            port.description = req.args.get('description')
 
             if port.addPort():
                 add_notice(req, 'New builds for port %s have been scheduled', req.args.get('portname'))
