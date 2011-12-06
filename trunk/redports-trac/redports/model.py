@@ -40,8 +40,10 @@ class Port(object):
         self.startdate = None
         self.head = None
         self.headdel = None
+        self.headfull = None
         self.deletable = None
         self.priority = None
+        self.description = None
 
     def addPort(self):
         db = self.env.get_db_cnx()
@@ -56,6 +58,9 @@ class Port(object):
 
         if not self.priority:
             self.priority = 5
+
+        if not self.description:
+            self.description = 'Web rebuild'
 
         cursor.execute("SELECT count(*) FROM portrepositories WHERE id = %s AND ( username = %s OR username IS NULL )", ( self.repository, self.owner ))
         row = cursor.fetchone()
@@ -73,10 +78,11 @@ class Port(object):
             if cursor.rowcount != 1:
                 raise TracError('Invalid buildgroup')
 
-        cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, pkgversion, status, priority, startdate, enddate) VALUES (%s, %s, %s, %s, null, %s, %s, %s, 0)", ( self.queueid, self.owner, self.repository, self.revision, self.status, self.priority, long(time()*1000000) ))
+        cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", ( self.queueid, self.owner, self.repository, self.revision, self.status, self.priority, long(time()*1000000), 0, self.description ))
 
         for group in cursor2:
-             cursor.execute("INSERT INTO builds (queueid, backendkey, buildgroup, portname, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (%s, SUBSTRING(MD5(RANDOM()::text), 1, 25), %s, %s, %s, null, null, null, null, 0, 0, 0)", ( self.queueid, group, self.portname, self.status ))
+            for portname in self.portname.split():
+                cursor.execute("INSERT INTO builds (queueid, backendkey, buildgroup, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (%s, SUBSTRING(MD5(RANDOM()::text), 1, 25), %s, %s, null, %s, null, null, null, null, 0, 0, 0)", ( self.queueid, group, portname, self.status ))
         db.commit()
         return True
 
@@ -172,10 +178,11 @@ class Port(object):
 
 def PortsQueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT builds.id, buildqueue.owner, replace(replace(portrepositories.browseurl, '%OWNER%', buildqueue.owner), '%REVISION%', buildqueue.revision::text), buildqueue.revision, buildqueue.id, builds.buildgroup, builds.portname, buildqueue.pkgversion, buildqueue.status, GREATEST(buildqueue.status, builds.status, 0), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, CASE WHEN builds.enddate < builds.startdate THEN extract(epoch from now())*1000000 ELSE builds.enddate END FROM buildqueue LEFT OUTER JOIN builds ON buildqueue.id = builds.queueid, portrepositories WHERE buildqueue.repository = portrepositories.id AND owner = %s AND buildqueue.status <= 90 AND (builds.status IS NULL OR builds.status <= 90) ORDER BY buildqueue.id DESC, builds.id", (req.authname,) )
+    cursor.execute("SELECT builds.id, buildqueue.owner, replace(replace(portrepositories.browseurl, '%OWNER%', buildqueue.owner), '%REVISION%', buildqueue.revision::text), buildqueue.revision, buildqueue.id, builds.buildgroup, builds.portname, builds.pkgversion, buildqueue.status, GREATEST(buildqueue.status, builds.status, 0), builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, CASE WHEN builds.enddate < builds.startdate THEN extract(epoch from now())*1000000 ELSE builds.enddate END, description FROM buildqueue LEFT OUTER JOIN builds ON buildqueue.id = builds.queueid, portrepositories WHERE buildqueue.repository = portrepositories.id AND owner = %s AND buildqueue.status <= 90 AND (builds.status IS NULL OR builds.status <= 90) ORDER BY buildqueue.id DESC, portname, builds.id", (req.authname,) )
 
     lastid = None
-    for id, owner, repository, revision, queueid, group, portname, pkgversion, queuestatus, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate in cursor:
+    lastport = None
+    for id, owner, repository, revision, queueid, group, portname, pkgversion, queuestatus, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate, description in cursor:
         port = Port(env)
         port.id = id
         port.queueid = queueid
@@ -196,12 +203,18 @@ def PortsQueueIterator(env, req):
         port.wrkdir = wrkdir
         port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
         port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
+        port.description = description
 
         if lastid != queueid:
             port.head = True
+            port.headfull = True
             if queuestatus == 90:
                 port.headdel = True
             lastid = queueid
+
+        if lastport != portname:
+            port.head = True
+            lastport = portname
         yield port
 
 

@@ -12,11 +12,11 @@ class RedportsEnvironment(Component):
                 Column('owner', type='varchar(50)', size=50),
                 Column('repository', type='int'),
                 Column('revision', type='int'),
-                Column('pkgversion', type='varchar(25)', size=25),
                 Column('status', type='int'),
                 Column('priority', type='int'),
                 Column('startdate', type='bigint'),
-                Column('enddate', type='bigint')
+                Column('enddate', type='bigint'),
+                Column('description', type='varchar(255)', size=255)
             ],
             Table('builds', key=('id', 'queueid', 'backendkey', 'buildgroup', 'status', 'backendid'))[
                 Column('id', type='int', auto_increment=True),
@@ -24,6 +24,7 @@ class RedportsEnvironment(Component):
                 Column('backendkey', type='varchar(25)', size=25),
                 Column('buildgroup', type='varchar(50)', size=50),
                 Column('portname', type='varchar(50)', size=50),
+                Column('pkgversion', type='varchar(25)', size=25),
                 Column('status', type='int'),
                 Column('buildstatus', type='varchar(25)', size=25),
                 Column('buildreason', type='varchar(100)', size=100),
