@@ -17,6 +17,7 @@
 RPTB_VERSION="0.9.90"
 
 ZFSROOT="zroot/tinderbox/%s/portstree"
+ZFSREPOROOT="zroot/tinderbox"
 
 WRKBASE=/tmp/rptinderbox
 TINDERBOX=/usr/local/tinderbox
@@ -28,6 +29,7 @@ checkout()
     REPOSITORY=$2
     REVISION=$3
     BUILD=$4
+    REPOSITORYMD5=`echo ${REPOSITORY} | md5`
 
     if [ -z "${BUILD}" ]; then
         echo "Build not specified."
@@ -60,7 +62,7 @@ checkout()
         return 1
     fi
 
-    if [ "${TYPE}" != "svn" ]; then
+    if [ "${TYPE}" != "svn" -a "${TYPE}" != "svn-full" ]; then
         echo "Unknown repository type"
         return 1
     fi
@@ -78,7 +80,33 @@ checkout()
         PARAMS="${PARAMS} --revision ${REVISION}"
     fi
 
-    svn checkout ${PARAMS} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports >/dev/null || return 2
+    if [ "${TYPE}" = "svn" ]; then
+        ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
+        echo "ZFSVOLUME=\"${ZFSVOLUME}@work\"" >> ${LOCK}
+
+        svn checkout ${PARAMS} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports >/dev/null || return 2
+        zfs snapshot ${ZFSVOLUME}@work || return 3
+
+        # apply overlay ports
+        find ${WRKBASE}/${BUILD}/ports -type d -d 2 | grep -v "${WRKBASE}/${BUILDS}/ports/Mk/" | sed -e "s|^${WRKBASE}/${BUILD}/ports/|${TINDERBOX}/portstrees/${PORTSTREE}/ports/|" | xargs rm -Rf || return 1
+        cp -pr ${WRKBASE}/${BUILD}/ports/* ${TINDERBOX}/portstrees/${PORTSTREE}/ports/
+    elif [ "${TYPE}" = "svn-full" ]; then
+        REPOSITORYMD5=`echo ${REPOSITORY} | md5`
+        ZFSVOLUME="${ZFSREPOROOT}/${REPOSITORYMD5}"
+
+        if ! zfs list ${ZFSVOLUME} >/dev/null ; then
+            echo "Unknown repository ${ZFSVOLUME}"
+            return 3
+        fi
+
+        echo "ZFSVOLUME=\"${ZFSVOLUME}@${BUILD}\"" >> ${LOCK}
+
+        zfs snapshot ${ZFSVOLUME}@${BUILD} || return 3
+        zfs clone ${ZFSVOLUME}@${BUILD} ${ZFSVOLUME}/${BUILD} || return 3
+        zfs set mountpoint=${WRKBASE}/${BUILD} ${ZFSVOLUME}/${BUILD} || return 3
+
+        svn switch ${PARAMS} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports >/dev/null || return 2
+    fi
 
     if [ -z "${REVISION}" ]; then
         REVISION=`svn info ${WRKBASE}/${BUILD}/ports | grep "Revision:" | cut -d: -f2`
@@ -87,14 +115,6 @@ checkout()
     fi
 
     echo "REVISION=\"${REVISION}\"" >> ${LOCK}
-
-    # create snapshot of original tree
-    ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
-    zfs snapshot ${ZFSVOLUME}@work || return 3
-
-    # apply overlay ports
-    find ${WRKBASE}/${BUILD}/ports -type d -d 2 | grep -v "${WRKBASE}/${BUILDS}/ports/Mk/" | sed -e "s|^${WRKBASE}/${BUILD}/ports/|${TINDERBOX}/portstrees/${PORTSTREE}/ports/|" | xargs rm -Rf || return 1
-    cp -pr ${WRKBASE}/${BUILD}/ports/* ${TINDERBOX}/portstrees/${PORTSTREE}/ports/
   
     # checkout finished
     touch ${WRKBASE}/${BUILD}/.checkout || return 1
@@ -120,9 +140,10 @@ clean()
         fi
     fi
 
-    ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
-    zfs rollback ${ZFSVOLUME}@work
-    zfs destroy ${ZFSVOLUME}@work
+    if [ ! -z "${ZFSVOLUME}" ]; then
+        zfs rollback ${ZFSVOLUME}
+        zfs destroy -R ${ZFSVOLUME}
+    fi
 
     if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
         NEWPACKAGES=`cd ${TINDERBOX}/packages/${PORTSTREE}/All/ && find * -type f -newermt "${LASTPACKAGEDATE}" -print`
