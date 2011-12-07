@@ -13,6 +13,11 @@ PRIORITY=7
 DBNAME=trac
 DBUSER=trac
 
+BUILDDATE=`date "+%Y%m%d%H%M%S"`
+RAND=`hexdump -n2 -e\"%u\" /dev/random`
+BUILDID=${BUILDDATE}-${RAND}
+START=`date +"%s"`000000
+
 if [ -z "${1}" -o -z "${2}" ]; then
     echo "Usage: rpaddcommit <repository> <revision>"
     exit 1
@@ -27,10 +32,12 @@ if [ -z "${USER}" ]; then
     exit 1
 fi
 
+SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, '%s');" "${BUILDID}" "${USER}" ${REPOSITORYID} ${REV} 10 ${PRIORITY} ${START} 0 "Subversion commit"`
+SQLBUILDS=""
+
 # add affected ports to buildqueue
 for PORT in `svnlook changed ${REPOS} -r ${REV} | grep -v "D   " | cut -b5- | cut -d'/' -f2-3 | uniq`
 do
-    START=`date +"%s"`000000
     TMP=`echo "${PORT}" | cut -d'/' -f2`
 
     # skip lines with category only
@@ -44,27 +51,27 @@ do
         continue;
     fi
 
-    BUILDDATE=`date "+%Y%m%d%H%M%S"`
-    RAND=`hexdump -n2 -e\"%u\" /dev/random`
-    BUILDID=${BUILDDATE}-${RAND}
-
-    SQLCMD=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, '%s');" "${BUILDID}" "${USER}" ${REPOSITORYID} ${REV} 10 ${PRIORITY} ${START} 0 "Subversion commit"`
-
-    for GROUP in `echo "SELECT buildgroup FROM automaticbuildgroups WHERE username = '${USER}'" | psql -A -t -q ${DBNAME} ${DBUSER}`
+    SQL=""
+    for GROUP in `echo "SELECT buildgroup FROM automaticbuildgroups WHERE username = '${USER}' ORDER BY priority" | psql -A -t -q ${DBNAME} ${DBUSER}`
     do
-        SQLCMD2=`printf "INSERT INTO builds (queueid, backendkey, buildgroup, portname, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES ('%s', SUBSTRING(MD5(RANDOM()::text), 1, 25), '%s', '%s', %d, null, null, null, null, 0, 0, 0);" "${BUILDID}" "${GROUP}" "${PORT}" 20`
+        SQL=`printf "INSERT INTO builds (queueid, backendkey, buildgroup, portname, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES ('%s', SUBSTRING(MD5(RANDOM()::text), 1, 25), '%s', '%s', %d, null, null, null, null, 0, 0, 0);" "${BUILDID}" "${GROUP}" "${PORT}" 20`
 
-        SQLCMD="${SQLCMD} ${SQLCMD2}"
+        SQLBUILDS="${SQLBUILDS} ${SQL}"
     done
 
-    SQLCMD="BEGIN; ${SQLCMD} COMMIT;"
-
-    echo ${SQLCMD} | psql -q ${DBNAME} ${DBUSER}
-    if [ $? != 0 ]; then
-        echo "ERROR: Failed adding ${PORT} with r${REV} to buildqueue"
-    else
-        echo "Added ${PORT} with r${REV} to buildqueue"
+    if [ ! -z "${SQL}" ]; then
+        echo "Schedule build of ${PORT} with r${REV}"
     fi
 done
+
+if [ -z "${SQLBUILDS}" ]; then
+    echo "Nothing to schedule"
+else
+    echo "BEGIN; ${SQLBUILDQUEUE} ${SQLBUILDS} COMMIT;" | psql -q ${DBNAME} ${DBUSER}
+    if [ $? != 0 ]; then
+        echo "ERROR: commit failed!"
+        exit 1
+    fi
+fi
 
 exit 0
