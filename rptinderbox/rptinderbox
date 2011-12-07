@@ -214,7 +214,7 @@ build()
 
     # aktuellstes package von build merken
     if [ -d "${TINDERBOX}/packages/${BUILD}/All" ]; then
-        LASTPACKAGE=`ls -tr ${TINDERBOX}/packages/${BUILD}/All | tail -1`
+        LASTPACKAGE=`ls -tr ${TINDERBOX}/packages/${BUILD}/All | grep -v "Makefile" | tail -1`
         LASTPACKAGEDATE=`stat -f %m ${TINDERBOX}/packages/${BUILD}/All/${LASTPACKAGE}`
         LASTPACKAGEDATE=`date -r ${LASTPACKAGEDATE} "+%Y-%m-%d %H:%M:%S"`
     else
