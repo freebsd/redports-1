@@ -40,6 +40,7 @@ do
 
     if [ ! -d "${TARGETFILE%${TARGETFILE##*/}}" ]; then
         mkdir -p ${TARGETFILE%${TARGETFILE##*/}} || exit 1
+        chown www:www ${TARGETFILE%${TARGETFILE##*/}} || exit 1
     fi
 
     chown www:www ${TMPFILE} || exit 1
