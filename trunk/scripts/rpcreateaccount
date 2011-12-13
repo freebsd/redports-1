@@ -20,7 +20,7 @@ if [ -z "$USER" ]; then
 fi
 
 if ! egrep "^${USER}:" ${HTPASSWD} >/dev/null ; then
-    echo "User ${USER} doest not exist"
+    echo "User ${USER} does not exist"
     exit 1
 fi
 
