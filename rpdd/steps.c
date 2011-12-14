@@ -113,7 +113,6 @@ int handleStep101(void)
     PGconn *conn;
     PGresult *result;
     char url[250];
-    int status;
     int i;
 
     if((conn = PQautoconnect()) == NULL)
@@ -130,14 +129,14 @@ int handleStep101(void)
         sprintf(url, "%s://%s%sselftest?build=%s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2),
         		PQgetvalue(result, i, 3), PQgetvalue(result, i, 5));
         if(getpage(url, PQgetvalue(result, i, 4)) == -1)
-           status = 2; /* Status failure */
+        {
+           logwarn("%s is not available", PQgetvalue(result, i, 5));
+
+           if(!updateBackendbuildFailed(conn, atoi(PQgetvalue(result, i, 6))))
+              RETURN_ROLLBACK(conn);
+        }
         else
-           status = 1; /* Status enabled */
-
-        logdebug("%s is %s", PQgetvalue(result, i, 5), status == 2 ? "not available" : "available");
-
-        if(!PQupdate(conn, "UPDATE backendbuilds SET status = %d WHERE id = %ld", status, atol(PQgetvalue(result, i, 6))))
-           RETURN_ROLLBACK(conn);
+           logdebug("%s is available", PQgetvalue(result, i, 5));
     }
 
     PQclear(result);
@@ -168,7 +167,13 @@ int handleStep100(void)
 
         sprintf(url, "%s://%s%sping", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2), PQgetvalue(result, i, 3));
         if(getpage(url, PQgetvalue(result, i, 4)) == -1)
+        {
            status = 2; /* Status failure */
+           logwarn("Backend %s failed", PQgetvalue(result, i, 2));
+
+           if(!updateBackendFailed(conn, atoi(PQgetvalue(result, i, 0))))
+              RETURN_ROLLBACK(conn);
+        }
         else
            status = 1; /* Status enabled */
 
