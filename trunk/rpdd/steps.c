@@ -54,7 +54,7 @@ struct StepHandler stepreg[] = {
     { "20", handleStep20, 1, 0, 0 },
     { "30", handleStep30, 1, 0, 0 },
     { "31", handleStep31, 1, 0, 0 },
-    { "50", handleStep50, 1, 120, 0 },
+    { "50", handleStep50, 1, 0, 0 },
     { "51", handleStep51, 1, 0, 0 },
     { "70", handleStep70, 1, 0, 0 },
     { "71", handleStep71, 2, 0, 0 },
@@ -614,6 +614,9 @@ int handleStep51(void)
                RETURN_ROLLBACK(conn);
         }
 
+        if(!PQupdate(conn, "UPDATE builds SET checkdate = %lli WHERE id = %ld", microtime(), atol(PQgetvalue(result, i, 0))))
+           RETURN_ROLLBACK(conn);
+
         PQclear(result2);
     }
 
@@ -627,11 +630,24 @@ int handleStep51(void)
 int handleStep50(void)
 {
     PGconn *conn;
+    unsigned long long limit;
 
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50"))
+    /* 0-15min buildtime = check every 30 seconds */
+    limit = microtime()-(30*1000000L);
+    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND cleandate-startdate < %lli AND cleandate < %lli", 15*60*1000000L, limit))
+        RETURN_ROLLBACK(conn);
+
+    /* 15-60min buildtime = check every 60 seconds */
+    limit = microtime()-(60*1000000L);
+    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND cleandate-startdate < %lli AND cleandate < %lli", 60*60*1000000L, limit))
+        RETURN_ROLLBACK(conn);
+
+    /* > 60min buildtime = check every 2 minutes */
+    limit = microtime()-(120*1000000L);
+    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND cleandate < %lli", limit))
         RETURN_ROLLBACK(conn);
 
     RETURN_COMMIT(conn);
@@ -679,7 +695,7 @@ int handleStep31(void)
                 RETURN_ROLLBACK(conn);
         }
 
-        if(!PQupdate(conn, "UPDATE builds SET status = %d WHERE id = %ld", status, atol(PQgetvalue(result, i, 0))))
+        if(!PQupdate(conn, "UPDATE builds SET status = %d, checkdate = %lli WHERE id = %ld", status, microtime(), atol(PQgetvalue(result, i, 0))))
             RETURN_ROLLBACK(conn);
 
         PQclear(result2);
