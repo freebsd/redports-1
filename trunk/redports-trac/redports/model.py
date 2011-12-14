@@ -171,7 +171,7 @@ class Port(object):
             if self.queueid and self.queueid != row[0]:
                 raise TracError('Invalid ID')
 
-            queueid = row[0]
+            self.queueid = row[0]
         
             cursor.execute("UPDATE builds SET status = 95 WHERE id = %s AND (status < 30 OR status > 89)", (self.id,) )
 
