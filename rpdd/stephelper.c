@@ -30,3 +30,53 @@
 
 #include "database.h"
 
+int updateBuildFailed(PGconn *conn, long buildId)
+{
+    if(!PQupdate(conn, "UPDATE builds SET status = 20, backendid = 0 WHERE id = %ld", buildId))
+        RETURN_ROLLBACK(conn);
+
+    return 0;
+}
+
+int updateBackendbuildFailed(PGconn *conn, int backendBuildId)
+{
+    PGresult *result;
+    int i;
+ 
+    result = PQselect(conn, "SELECT builds.id FROM builds, backendbuilds WHERE builds.backendid = backendbuilds.backendid AND builds.buildgroup = backendbuilds.buildgroup AND backendbuilds.id = %ld AND builds.status >= 30 builds.status < 90 FOR UPDATE NOWAIT", backendBuildId);
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
+        RETURN_ROLLBACK(conn);
+
+    for(i=0; i < PQntuples(result); i++)
+    {
+        if(!updateBuildFailed(conn, atol(PQgetvalue(result, i, 0))))
+            RETURN_ROLLBACK(conn);
+    }
+
+    if(!PQupdate(conn, "UPDATE backendbuilds SET status = 2 WHERE id = %ld", backendBuildId))
+        RETURN_ROLLBACK(conn);
+
+    return 0;
+}
+
+int updateBackendFailed(PGconn *conn, int backendId)
+{
+    PGresult *result;
+    int i;
+ 
+    result = PQselect(conn, "SELECT id FROM builds WHERE backendid = %ld AND status >= 30 status < 90 FOR UPDATE NOWAIT", backendId);
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
+        RETURN_ROLLBACK(conn);
+
+    for(i=0; i < PQntuples(result); i++)
+    {
+        if(!updateBuildFailed(conn, atol(PQgetvalue(result, i, 0))))
+            RETURN_ROLLBACK(conn);
+    }
+
+    if(!PQupdate(conn, "UPDATE backens SET status = 2 WHERE id = %ld", backendId))
+        RETURN_ROLLBACK(conn);
+
+    return 0;
+}
+
