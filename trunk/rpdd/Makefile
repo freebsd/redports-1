@@ -17,8 +17,8 @@ install: rpdd
 clean:
 	@rm -f *.o *.core
 
-rpdd:	database.o log.o remote.o rpdd.o steps.o util.o
-	$(CC) $(LDFLAGS) -lutil -lcurl -lpq database.o log.o remote.o rpdd.o steps.o util.o -o rpdd
+rpdd:	database.o log.o remote.o rpdd.o steps.o steputil.o util.o
+	$(CC) $(LDFLAGS) -lutil -lcurl -lpq database.o log.o remote.o rpdd.o steps.o steputil.o util.o -o rpdd
 
 database.o: database.c
 	$(CC) $(CPPFLAGS) -c database.c
@@ -34,6 +34,9 @@ rpdd.o:	rpdd.c util.o
 
 steps.o: steps.c
 	$(CC) $(CPPFLAGS) -c steps.c
+
+steputil.o: steputil.c
+	$(CC) $(CPPFLAGS) -c steputil.c
 
 util.o:	util.c
 	$(CC) $(CPPFLAGS) -c util.c
