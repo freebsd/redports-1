@@ -81,7 +81,7 @@ int handleStep102(void)
 
         if(difftime(time(NULL), mktime(&tm)) < 3600*maxage)
         {
-           loginfo("Portstree last built %s does not exceed max. age of %d hours", getenv("PORTSTREELASTBUILT"), maxage);
+           logdebug("Portstree last built %s does not exceed max. age of %d hours", getenv("PORTSTREELASTBUILT"), maxage);
            continue;
         }
 
@@ -125,7 +125,7 @@ int handleStep101(void)
 
     for(i=0; i < PQntuples(result); i++)
     {
-        loginfo("Checking build %s on backend %s", PQgetvalue(result, i, 5), PQgetvalue(result, i, 2));
+        logdebug("Checking build %s on backend %s", PQgetvalue(result, i, 5), PQgetvalue(result, i, 2));
 
         sprintf(url, "%s://%s%sselftest?build=%s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2),
         		PQgetvalue(result, i, 3), PQgetvalue(result, i, 5));
@@ -134,7 +134,7 @@ int handleStep101(void)
         else
            status = 1; /* Status enabled */
 
-        loginfo("%s is %s", PQgetvalue(result, i, 5), status == 2 ? "not available" : "available");
+        logdebug("%s is %s", PQgetvalue(result, i, 5), status == 2 ? "not available" : "available");
 
         if(!PQupdate(conn, "UPDATE backendbuilds SET status = %d WHERE id = %ld", status, atol(PQgetvalue(result, i, 6))))
            RETURN_ROLLBACK(conn);
@@ -164,7 +164,7 @@ int handleStep100(void)
 
     for(i=0; i < PQntuples(result); i++)
     {
-        loginfo("Checking backend %s", PQgetvalue(result, i, 2));
+        logdebug("Checking backend %s", PQgetvalue(result, i, 2));
 
         sprintf(url, "%s://%s%sping", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2), PQgetvalue(result, i, 3));
         if(getpage(url, PQgetvalue(result, i, 4)) == -1)
@@ -172,7 +172,7 @@ int handleStep100(void)
         else
            status = 1; /* Status enabled */
 
-        loginfo("%s is %s", PQgetvalue(result, i, 2), status == 2 ? "not available" : "available");
+        logdebug("%s is %s", PQgetvalue(result, i, 2), status == 2 ? "not available" : "available");
 
         if(!PQupdate(conn, "UPDATE backends SET status = %d WHERE id = %ld", status, atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
@@ -213,6 +213,8 @@ int handleStep98(void)
 
     for(i=0; i < PQntuples(result); i++)
     {
+        loginfo("Cleaning build %s", PQgetvalue(result, i, 0));
+
         sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), PQgetvalue(result, i, 2), PQgetvalue(result, i, 1), PQgetvalue(result, i, 0));
 
         if(rmdirrec(localdir) != 0)
@@ -241,6 +243,7 @@ int handleStep98(void)
 int handleStep96(void)
 {
     PGconn *conn;
+    PGresult *result;
 
     unsigned long long cleandays = atoi(configget("cleandays"));
     unsigned long long limit = microtime()-(cleandays*86400*1000000L);
@@ -248,8 +251,12 @@ int handleStep96(void)
     if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    if(!PQupdate(conn, "UPDATE buildqueue SET status = 98 WHERE status = 96 AND ( (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli) )", limit, limit))
+    result = PQselect(conn, "UPDATE buildqueue SET status = 98 WHERE status = 96 AND ( (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli) )", limit, limit);
+    if (PQresultStatus(result) != PGRES_COMMAND_OK)
         RETURN_ROLLBACK(conn);
+
+    if(atoi(PQcmdTuples(result)) > 0)
+        loginfo("Updated %s buildqueue entries to status 98", PQcmdTuples(result));
 
     RETURN_COMMIT(conn);
 }
@@ -273,6 +280,8 @@ int handleStep95(void)
 
     for(i=0; i < PQntuples(result); i++)
     {
+        loginfo("Archiving build %s", PQgetvalue(result, i, 0));
+
         sprintf(wrkdir, "%s/%s/%s-%s/%s", configget("wwwroot"), PQgetvalue(result, i, 2), PQgetvalue(result, i, 1), PQgetvalue(result, i, 0), PQgetvalue(result, i, 3));
 
         if(unlink(wrkdir) != 0)
@@ -304,6 +313,7 @@ int handleStep95(void)
 int handleStep90(void)
 {
     PGconn *conn;
+    PGresult *result;
 
     unsigned long long archivedays = atoi(configget("archivedays"));
     unsigned long long limit = microtime()-(archivedays*86400*1000000L);
@@ -311,8 +321,12 @@ int handleStep90(void)
     if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    if(!PQupdate(conn, "UPDATE buildqueue SET status = 95 WHERE status = 90 AND ( (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli) )", limit, limit))
+    result = PQselect(conn, "UPDATE buildqueue SET status = 95 WHERE status = 90 AND ( (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli) )", limit, limit);
+    if (PQresultStatus(result) != PGRES_COMMAND_OK)
         RETURN_ROLLBACK(conn);
+
+    if(atoi(PQcmdTuples(result)) > 0)
+        loginfo("Updated %s buildqueue entries to status 95", PQcmdTuples(result));
 
     RETURN_COMMIT(conn);
 }
@@ -530,6 +544,8 @@ int handleStep70(void)
 
         if(atoi(PQgetvalue(result2, 0, 0)) == 0)
         {
+           loginfo("Starting transfer for build %s", PQgetvalue(result, i, 0));
+
            if(!PQupdate(conn, "UPDATE builds SET status = 71 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
                RETURN_ROLLBACK(conn);
         }
@@ -561,6 +577,8 @@ int handleStep51(void)
 
     for(i=0; i < PQntuples(result); i++)
     {
+        loginfo("Checking backend for status of build %s", PQgetvalue(result, i, 0));
+
         result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s'", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
@@ -607,17 +625,17 @@ int handleStep50(void)
 
     /* 0-15min buildtime = check every 30 seconds */
     limit = microtime()-(30*1000000L);
-    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND cleandate-startdate < %lli AND cleandate < %lli", 15*60*1000000L, limit))
+    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND checkdate-startdate < %lli AND checkdate < %lli", 15*60*1000000L, limit))
         RETURN_ROLLBACK(conn);
 
     /* 15-60min buildtime = check every 60 seconds */
     limit = microtime()-(60*1000000L);
-    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND cleandate-startdate < %lli AND cleandate < %lli", 60*60*1000000L, limit))
+    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND checkdate-startdate < %lli AND checkdate < %lli", 60*60*1000000L, limit))
         RETURN_ROLLBACK(conn);
 
     /* > 60min buildtime = check every 2 minutes */
     limit = microtime()-(120*1000000L);
-    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND cleandate < %lli", limit))
+    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND checkdate < %lli", limit))
         RETURN_ROLLBACK(conn);
 
     RETURN_COMMIT(conn);
@@ -642,6 +660,8 @@ int handleStep31(void)
 
     for(i=0; i < PQntuples(result); i++)
     {
+        loginfo("Start building for build %s", PQgetvalue(result, i, 0));
+
         result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
     	if (PQresultStatus(result2) != PGRES_TUPLES_OK)
             RETURN_ROLLBACK(conn);
@@ -697,6 +717,8 @@ int handleStep30(void)
 
     for(i=0; i < PQntuples(result); i++)
     {
+        loginfo("Start checkout for build %s", PQgetvalue(result, i, 0));
+
         result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
@@ -785,10 +807,12 @@ int handleStep20(void)
                 if (PQresultStatus(result4) != PGRES_TUPLES_OK)
                     RETURN_ROLLBACK(conn);
 
-                loginfo("Running %d jobs for group %s", atoi(PQgetvalue(result4, 0, 0)), PQgetvalue(result, i, 1));
+                logdebug("Running %d jobs for group %s", atoi(PQgetvalue(result4, 0, 0)), PQgetvalue(result, i, 1));
 
                 if(atoi(PQgetvalue(result4, 0, 0)) == 0)
                 {
+                    loginfo("Choose backend %s for build %s", PQgetvalue(result2, j, 0), PQgetvalue(result, i, 0));
+
                     if(!PQupdate(conn, "UPDATE builds SET backendid = %ld, status = 30, startdate = %lli WHERE id = %ld", atol(PQgetvalue(result2, j, 0)), microtime(), atol(PQgetvalue(result, i, 0))))
                         RETURN_ROLLBACK(conn);
                 }

@@ -33,7 +33,7 @@
 
 #include "log.h"
 
-char *loglevelnames[] = { "ERROR", "WARN ", "INFO " };
+char *loglevelnames[] = { "ERROR", "WARN ", "INFO ", "DEBUG" };
 
 int loglevel = LOG_INFO;
 FILE *logfile = NULL;

@@ -45,7 +45,7 @@
 #include "util.h"
 
 #define RPD_VERSION "0.9.90"
-#define DAEMON_NAME "rpd"
+#define DAEMON_NAME "rpdd"
 #define CONF_FILE "rpdd.conf"
 #define PID_FILE "/var/run/rpdd.pid"
 
@@ -108,7 +108,7 @@ void run(void)
             }
         }
 
-        sleep(1);
+        usleep(500000);
     }
 }
  

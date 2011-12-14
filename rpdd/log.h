@@ -31,9 +31,11 @@ enum loglevels
 {
     LOG_ERROR = 0,
     LOG_WARN,
-    LOG_INFO
+    LOG_INFO,
+    LOG_DEBUG
 };
 
+#define logdebug(format, args...) logwrite(LOG_DEBUG, format, ##args)
 #define loginfo(format, args...) logwrite(LOG_INFO, format, ##args)
 #define logwarn(format, args...) logwrite(LOG_WARN, format, ##args)
 #define logerror(format, args...) logwrite(LOG_ERROR, format, ##args)
