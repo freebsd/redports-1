@@ -48,7 +48,6 @@ class Port(object):
     def addPort(self):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
-        cursor2 = db.cursor()
 
         self.queueid = datetime.now().strftime('%Y%m%d%H%M%S-%f')[0:20]
         self.setStatus(20)
@@ -69,24 +68,29 @@ class Port(object):
         if row[0] != 1:
             raise TracError('Invalid repository')
 
-        if self.group == 'automatic':
-            cursor2.execute("SELECT buildgroup FROM automaticbuildgroups WHERE username = %s ORDER BY priority", (self.owner,) )
+        if isinstance(self.group, basestring):
+            groups = list()
+            groups.append(self.group)
+            self.group = groups
+
+        if self.group[0] == 'automatic':
+            cursor.execute("SELECT buildgroup FROM automaticbuildgroups WHERE username = %s ORDER BY priority", (self.owner,) )
             if cursor.rowcount < 1:
                 return False
+            self.group = cursor.fetchall()
         else:
-            cursor2.execute("SELECT name FROM buildgroups WHERE name = %s", (self.group,) )
-            if cursor.rowcount != 1:
-                raise TracError('Invalid buildgroup')
+            for group in self.group:
+                cursor.execute("SELECT name FROM buildgroups WHERE name = %s", (group,) )
+                if cursor.rowcount != 1:
+                    raise TracError('Invalid Buildqueue')
 
         cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", ( self.queueid, self.owner, self.repository, self.revision, self.status, self.priority, long(time()*1000000), 0, self.description ))
 
         ports = self.portname.split()
         ports.sort()
 
-        groups = cursor2.fetchall()
-
         for portname in ports:
-            for group in groups:
+            for group in self.group:
                 cursor.execute("INSERT INTO builds (queueid, backendkey, buildgroup, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (%s, SUBSTRING(MD5(RANDOM()::text), 1, 25), %s, %s, null, %s, null, null, null, null, 0, 0, 0)", ( self.queueid, group, portname, self.status ))
         db.commit()
         return True
