@@ -43,11 +43,14 @@ class BuildqueuePanel(Component):
             port.group = req.args.get('group')
             port.description = req.args.get('description')
 
-            if port.addPort():
-                add_notice(req, 'New builds for port %s have been scheduled', req.args.get('portname'))
+            if not port.portname:
+                add_notice(req, 'Portname needs to be set')
             else:
-                buildgroup = tag.a("Buildgroup", href=req.href.buildgroups())
-                add_warning(req, tag_("Cannot schedule automatic builds. You need to join a %(buildgroup)s first.", buildgroup=buildgroup))
+                if port.addPort():
+                    add_notice(req, 'New builds for port %s have been scheduled', req.args.get('portname'))
+                else:
+                    buildgroup = tag.a("Buildgroup", href=req.href.buildgroups())
+                    add_warning(req, tag_("Cannot schedule automatic builds. You need to join a %(buildgroup)s first.", buildgroup=buildgroup))
             req.redirect(req.href.buildqueue())
         elif req.method == 'POST' and req.args.get('deletebuild'):
             port = Port(self.env)

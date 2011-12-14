@@ -37,10 +37,10 @@
               <td><input type="text" name="portname" /></td>
             </tr>
             <tr class="field">
-              <th><label for="group">Buildgroup:</label></th>
+              <th><label for="group">Buildgroups:</label></th>
               <td>
-                <select id="group" name="group">
-                  <option value="automatic">automatic</option>
+                <select id="group" name="group" multiple="multiple" size="5">
+                  <option value="automatic" selected="selected">automatic</option>
                   <option py:for="groups in allbuildgroups">$groups.name</option>
                 </select>
               </td>
