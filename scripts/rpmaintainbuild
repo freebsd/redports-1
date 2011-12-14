@@ -76,8 +76,7 @@ if ${TINDERBOX}/scripts/tc listBuildPortsQueue -s ENQUEUED -r | egrep ":${BUILD}
 fi
 
 if ${TINDERBOX}/scripts/tc listBuildPortsQueue -s PROCESSING -r | egrep ":${BUILD}:" >/dev/null ; then
-    echo "Build ${BUILD} has running jobs"
-    exit 1
+    echo "Warning: Build ${BUILD} has running jobs"
 fi
 
 if [ "${CLEANDATABASE}" = "yes" ]; then
