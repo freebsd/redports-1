@@ -91,7 +91,7 @@ class Port(object):
 
         for portname in ports:
             for group in self.group:
-                cursor.execute("INSERT INTO builds (queueid, backendkey, buildgroup, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES (%s, SUBSTRING(MD5(RANDOM()::text), 1, 25), %s, %s, null, %s, null, null, null, null, 0, 0, 0)", ( self.queueid, group, portname, self.status ))
+                cursor.execute("INSERT INTO builds (queueid, backendkey, buildgroup, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate, checkdate) VALUES (%s, SUBSTRING(MD5(RANDOM()::text), 1, 25), %s, %s, null, %s, null, null, null, null, 0, 0, 0, checkdate)", ( self.queueid, group, portname, self.status ))
         db.commit()
         return True
 
