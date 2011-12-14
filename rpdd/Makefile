@@ -7,6 +7,9 @@ LOCALBASE?=/usr/local
 CPPFLAGS=-I${LOCALBASE}/include -g
 LDFLAGS=-L${LOCALBASE}/lib
 
+SRC =	database.c log.c remote.c rpdd.c steps.c stephelper.c steputil.c util.c
+OBJS =	${SRC:.c=.o}
+
 all:	rpdd
 
 install: rpdd
@@ -17,26 +20,11 @@ install: rpdd
 clean:
 	@rm -f *.o *.core
 
-rpdd:	database.o log.o remote.o rpdd.o steps.o steputil.o util.o
-	$(CC) $(LDFLAGS) -lutil -lcurl -lpq database.o log.o remote.o rpdd.o steps.o steputil.o util.o -o rpdd
+rpdd:	${OBJS}
+	$(CC) $(LDFLAGS) -lutil -lcurl -lpq ${OBJS} -o rpdd
 
-database.o: database.c
-	$(CC) $(CPPFLAGS) -c database.c
+# SUFFIX RULES
+.SUFFIXES: .c .o
 
-log.o: log.c
-	$(CC) $(CPPFLAGS) -c log.c
-
-remote.o: remote.c
-	$(CC) $(CPPFLAGS) -c remote.c
-
-rpdd.o:	rpdd.c util.o
-	$(CC) $(CPPFLAGS) -c rpdd.c
-
-steps.o: steps.c
-	$(CC) $(CPPFLAGS) -c steps.c
-
-steputil.o: steputil.c
-	$(CC) $(CPPFLAGS) -c steputil.c
-
-util.o:	util.c
-	$(CC) $(CPPFLAGS) -c util.c
+.c.o:
+	$(CC) $(CPPFLAGS) -c ${.IMPSRC}
