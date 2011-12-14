@@ -1,6 +1,6 @@
 from trac.core import *
 from trac.web.api import IRequestHandler
-from trac.web.chrome import add_script, add_stylesheet, add_warning, add_notice, INavigationContributor, ITemplateProvider
+from trac.web.chrome import add_ctxtnav, add_script, add_stylesheet, add_warning, add_notice, INavigationContributor, ITemplateProvider
 from trac.perm import IPermissionRequestor
 from trac.util.translation import _, tag_
 
@@ -62,6 +62,8 @@ class BuildqueuePanel(Component):
 
         add_stylesheet(req, 'common/css/admin.css')
         add_stylesheet(req, 'redports/redports.css')
+        add_ctxtnav(req, _('Your Builds'), req.href.buildqueue())
+        add_ctxtnav(req, _('Buildgroups'), req.href.buildgroups())
 
         return ('buildqueue.html', 
             {   'buildqueue': PortsQueueIterator(self.env, req),
