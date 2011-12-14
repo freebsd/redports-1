@@ -30,11 +30,13 @@
 #include <libgen.h>
 #include <limits.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "database.h"
 #include "remote.h"
 #include "util.h"
 #include "steps.h"
+#include "stephelper.h"
 #include "steputil.h"
 
 
@@ -559,7 +561,7 @@ int handleStep51(void)
 
     for(i=0; i < PQntuples(result); i++)
     {
-        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s'", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s'", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
@@ -573,7 +575,7 @@ int handleStep51(void)
 
         if(getenv("STATUS") != NULL && (strcmp(getenv("STATUS"), "finished") == 0 || strcmp(getenv("STATUS"), "idle") == 0))
         {
-           if(!PQupdate(conn, "UPDATE builds SET status = 70 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
+           if(!updateBackendbuildFailed(conn, atoi(PQgetvalue(result2, 0, 5))))
                RETURN_ROLLBACK(conn);
         }
         else
@@ -629,7 +631,6 @@ int handleStep31(void)
     PGresult *result;
     PGresult *result2;
     char url[500];
-    int status;
     int i;
 
     if((conn = PQautoconnect()) == NULL)
@@ -641,7 +642,7 @@ int handleStep31(void)
 
     for(i=0; i < PQntuples(result); i++)
     {
-        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
     	if (PQresultStatus(result2) != PGRES_TUPLES_OK)
             RETURN_ROLLBACK(conn);
 
@@ -650,11 +651,16 @@ int handleStep31(void)
         		PQgetvalue(result, i, 5), PQgetvalue(result2, 0, 4), "5", configget("wwwurl"),
         		PQgetvalue(result, i, 3));
         if(getpage(url, PQgetvalue(result2, 0, 3)))
-            status = 50;
+        {
+            if(!PQupdate(conn, "UPDATE builds SET status = 50, checkdate = %lli WHERE id = %ld", microtime(), atol(PQgetvalue(result, i, 0))))
+               RETURN_ROLLBACK(conn);
+        }
         else
         {
-            status = 80;
             logcgi(url, getenv("ERROR"));
+
+            if(!updateBackendbuildFailed(conn, atol(PQgetvalue(result2, 0, 5))))
+               RETURN_ROLLBACK(conn);
         }
 
         if(getenv("PKGVERSION") != NULL)
@@ -662,9 +668,6 @@ int handleStep31(void)
             if(!PQupdate(conn, "UPDATE builds SET pkgversion = '%s' WHERE id = %ld", getenv("PKGVERSION"), atol(PQgetvalue(result, i, 0))))
                 RETURN_ROLLBACK(conn);
         }
-
-        if(!PQupdate(conn, "UPDATE builds SET status = %d, checkdate = %lli WHERE id = %ld", status, microtime(), atol(PQgetvalue(result, i, 0))))
-            RETURN_ROLLBACK(conn);
 
         PQclear(result2);
     }
@@ -683,7 +686,6 @@ int handleStep30(void)
     PGresult *result2;
     PGresult *result3;
     char url[512];
-    int status;
     int i;
 
     if((conn = PQautoconnect()) == NULL)
@@ -706,10 +708,7 @@ int handleStep30(void)
            if(getenv("ERROR") != NULL)
               logcgi(url, getenv("ERROR"));
            
-           if(!PQupdate(conn, "UPDATE backendbuilds SET status = 2 WHERE id = %ld", atol(PQgetvalue(result2, 0, 5))))
-              RETURN_ROLLBACK(conn);
-
-           if(!PQupdate(conn, "UPDATE builds SET status = 90, buildstatus = 'FAIL' WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
+           if(!updateBackendbuildFailed(conn, atol(PQgetvalue(result2, 0, 5))))
               RETURN_ROLLBACK(conn);
 
            PQclear(result2);
@@ -724,11 +723,15 @@ int handleStep30(void)
         		PQgetvalue(result2, 0, 1), PQgetvalue(result2, 0, 2), PQgetvalue(result3, 0, 0),
                         PQgetvalue(result3, 0, 1), PQgetvalue(result, i, 3), PQgetvalue(result2, 0, 4));
         if(getpage(url, PQgetvalue(result2, 0, 3)))
-           status = 31;
+        {
+           if(!PQupdate(conn, "UPDATE builds SET status = 31 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
+              RETURN_ROLLBACK(conn);
+        }
         else
         {
-           status = 80;
            logcgi(url, getenv("ERROR"));
+           if(!updateBackendbuildFailed(conn, atol(PQgetvalue(result2, 0, 5))))
+              RETURN_ROLLBACK(conn);
         }
 
         if(getenv("REVISION") != NULL)
@@ -736,9 +739,6 @@ int handleStep30(void)
            if(!PQupdate(conn, "UPDATE buildqueue SET revision = %ld WHERE id = '%s'", atol(getenv("REVISION")), PQgetvalue(result, i, 4)))
               RETURN_ROLLBACK(conn);
         }
-
-        if(!PQupdate(conn, "UPDATE builds SET status = %d WHERE id = %ld", status, atol(PQgetvalue(result, i, 0))))
-           RETURN_ROLLBACK(conn);
 
         PQclear(result3);
         PQclear(result2);

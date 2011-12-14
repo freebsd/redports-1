@@ -27,5 +27,8 @@
 #ifndef _STEPHELPER_H_
 #define _STEPHELPER_H_
 
+extern int updateBackendFailed(PGconn *conn, int backendId);
+extern int updateBackendbuildFailed(PGconn *conn, int backendBuildId);
+extern int updateBuildFailed(PGconn *conn, long buildId);
 
 #endif /* _STEPHELPER_H */
