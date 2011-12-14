@@ -41,7 +41,7 @@
 #include <libutil.h>
 
 #include "log.h"
-#include "steps.h"
+#include "steputil.h"
 #include "util.h"
 
 #define RPD_VERSION "0.9.90"
