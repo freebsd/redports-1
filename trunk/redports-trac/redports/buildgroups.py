@@ -1,6 +1,6 @@
 from trac.core import *
 from trac.web.api import IRequestHandler
-from trac.web.chrome import add_script, add_stylesheet, INavigationContributor, ITemplateProvider
+from trac.web.chrome import add_ctxtnav, add_script, add_stylesheet, INavigationContributor, ITemplateProvider
 from trac.perm import IPermissionRequestor
 from trac.util.translation import _
 
@@ -44,6 +44,8 @@ class BuildgroupPanel(Component):
         
         add_stylesheet(req, 'common/css/admin.css')
         add_stylesheet(req, 'redports/redports.css')
+        add_ctxtnav(req, _('Your Builds'), req.href.buildqueue())
+        add_ctxtnav(req, _('Buildgroups'), req.href.buildgroups())
 
         return ('buildgroups.html', 
             {   'buildgroups': BuildgroupsIterator(self.env, req),
