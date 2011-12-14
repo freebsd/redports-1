@@ -54,7 +54,7 @@ do
     SQL=""
     for GROUP in `echo "SELECT buildgroup FROM automaticbuildgroups WHERE username = '${USER}' ORDER BY priority" | psql -A -t -q ${DBNAME} ${DBUSER}`
     do
-        SQL=`printf "INSERT INTO builds (queueid, backendkey, buildgroup, portname, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate) VALUES ('%s', SUBSTRING(MD5(RANDOM()::text), 1, 25), '%s', '%s', %d, null, null, null, null, 0, 0, 0);" "${BUILDID}" "${GROUP}" "${PORT}" 20`
+        SQL=`printf "INSERT INTO builds (queueid, backendkey, buildgroup, portname, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate, checkdate) VALUES ('%s', SUBSTRING(MD5(RANDOM()::text), 1, 25), '%s', '%s', %d, null, null, null, null, 0, 0, 0, 0);" "${BUILDID}" "${GROUP}" "${PORT}" 20`
 
         SQLBUILDS="${SQLBUILDS} ${SQL}"
     done

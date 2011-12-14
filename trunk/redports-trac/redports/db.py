@@ -32,7 +32,8 @@ class RedportsEnvironment(Component):
                 Column('wrkdir', type='varchar(50)', size=50),
                 Column('backendid', type='int'),
                 Column('startdate', type='bigint'),
-                Column('enddate', type='bigint')
+                Column('enddate', type='bigint'),
+                Column('checkdate', type='bigint')
             ],
             Table('backends', key=('id', 'status'))[
                 Column('id', type='int', auto_increment=True),
