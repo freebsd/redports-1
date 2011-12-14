@@ -61,6 +61,8 @@ struct StepHandler stepreg[] = {
     { "80", handleStep80, 1, 0, 0 },
     { "90", handleStep90, 1, 7200, 0 },
     { "95", handleStep95, 1, 3600, 0 },
+    { "96", handleStep96, 1, 3600, 0 },
+    { "98", handleStep98, 1, 3600, 0 },
     { "99", handleStep99, 1, 7200, 0 },
     { "100", handleStep100, 1, 120, 0 },
     { "101", handleStep101, 1, 7200, 0 },
@@ -224,7 +226,7 @@ int handleStep99(void)
 
 
 /* Clean filesystem and database from deleted builds */
-int handleStep95(void)
+int handleStep98(void)
 {
     PGconn *conn;
     PGresult *result;
@@ -235,7 +237,7 @@ int handleStep95(void)
     if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    result = PQexec(conn, "SELECT builds.id, buildqueue.id, buildqueue.owner FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND (builds.status = 95 OR buildqueue.status = 95) FOR UPDATE NOWAIT");
+    result = PQexec(conn, "SELECT builds.id, buildqueue.id, buildqueue.owner FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND (builds.status = 98 OR buildqueue.status = 98) FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
@@ -265,14 +267,76 @@ int handleStep95(void)
     RETURN_COMMIT(conn);
 }
 
-
-/* Automatically mark finished entries as deleted after $cleandays */
-int handleStep90(void)
+/* Automatically delete builds after $cleandays */
+int handleStep96(void)
 {
     PGconn *conn;
 
     unsigned long long cleandays = atoi(configget("cleandays"));
     unsigned long long limit = microtime()-(cleandays*86400*1000000L);
+
+    if((conn = PQautoconnect()) == NULL)
+        return 1;
+
+    if(!PQupdate(conn, "UPDATE buildqueue SET status = 98 WHERE status = 96 AND ( (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli) )", limit, limit))
+        RETURN_ROLLBACK(conn);
+
+    RETURN_COMMIT(conn);
+}
+
+
+/* Remove non essential files for builds (wrkdir) */
+int handleStep95(void)
+{
+    PGconn *conn;
+    PGresult *result;
+    PGresult *result2;
+    char wrkdir[PATH_MAX];
+    int i;
+
+    if((conn = PQautoconnect()) == NULL)
+        return 1;
+
+    result = PQexec(conn, "SELECT builds.id, buildqueue.id, buildqueue.owner, wrkdir FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND (builds.status = 95 OR buildqueue.status = 95) FOR UPDATE NOWAIT");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
+    	RETURN_ROLLBACK(conn);
+
+    for(i=0; i < PQntuples(result); i++)
+    {
+        sprintf(wrkdir, "%s/%s/%s-%s/%s", configget("wwwroot"), PQgetvalue(result, i, 2), PQgetvalue(result, i, 1), PQgetvalue(result, i, 0), PQgetvalue(result, i, 3));
+
+        if(unlink(wrkdir) != 0)
+           logerror("Failure while deleting %s", wrkdir);
+
+        if(!PQupdate(conn, "UPDATE builds SET status = 96 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
+           RETURN_ROLLBACK(conn);
+
+        result2 = PQselect(conn, "SELECT count(*) FROM builds WHERE queueid = '%s' AND status < 98", PQgetvalue(result, i, 1));
+        if (PQresultStatus(result2) != PGRES_TUPLES_OK)
+           RETURN_ROLLBACK(conn);
+
+        if(atoi(PQgetvalue(result2, 0, 0)) == 0)
+        {
+           if(!PQupdate(conn, "UPDATE buildqueue SET status = 96 WHERE id = '%s'", PQgetvalue(result, i, 1)))
+              RETURN_ROLLBACK(conn);
+        }
+
+        PQclear(result2);
+    }
+
+    PQclear(result);
+
+    RETURN_COMMIT(conn);
+}
+
+
+/* Automatically mark finished entries as deleted after $archivedays */
+int handleStep90(void)
+{
+    PGconn *conn;
+
+    unsigned long long archivedays = atoi(configget("archivedays"));
+    unsigned long long limit = microtime()-(archivedays*86400*1000000L);
 
     if((conn = PQautoconnect()) == NULL)
         return 1;

@@ -46,7 +46,8 @@ struct configparam
 };
 
 struct configparam config[] = {
-    { "cleandays",     "16" },
+    { "archivedays",   "16" },
+    { "cleandays",     "62" },
     { "dbHost",        "localhost" },
     { "dbUsername",    "root" },
     { "dbPassword",    "" },

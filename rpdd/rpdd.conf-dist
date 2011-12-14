@@ -17,8 +17,11 @@ wwwurl     http://YOUR_HOST/
 # Www user root directory
 wwwroot    /usr/local/www/redports/users
 
-# Maximum age for old database entries and logfiles (days)
-cleandays  16
+# Maximum age for builds before they are archived (days)
+archivedays 16
+
+# Maximum age for archived database entries and logfiles (days)
+cleandays  62
 
 # Maximum age for portstrees on tinderbox backends (hours)
 tbPortsTreeMaxAge 48
