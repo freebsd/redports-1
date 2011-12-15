@@ -287,10 +287,13 @@ int handleStep95(void)
     {
         loginfo("Archiving build %s", PQgetvalue(result, i, 0));
 
-        sprintf(wrkdir, "%s/%s/%s-%s/%s", configget("wwwroot"), PQgetvalue(result, i, 2), PQgetvalue(result, i, 1), PQgetvalue(result, i, 0), PQgetvalue(result, i, 3));
+        if(strlen(PQgetvalue(result, i, 3)) > 0)
+        {
+            sprintf(wrkdir, "%s/%s/%s-%s/%s", configget("wwwroot"), PQgetvalue(result, i, 2), PQgetvalue(result, i, 1), PQgetvalue(result, i, 0), PQgetvalue(result, i, 3));
 
-        if(unlink(wrkdir) != 0)
-           logerror("Failure while deleting %s", wrkdir);
+            if(unlink(wrkdir) != 0)
+                logerror("Failure while deleting %s", wrkdir);
+        }
 
         if(!PQupdate(conn, "UPDATE builds SET status = 96 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
