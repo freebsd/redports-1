@@ -60,7 +60,7 @@
         </form>
 
 
-        <table class="listing" id="buildqueue_list">
+        <table class="listing" id="build_list">
             <thead>
                 <tr>
                     <th colspan="6">Port / Source</th><th rowspan="2">Options</th>
@@ -70,32 +70,33 @@
                 </tr>
             </thead>
             <tbody>
-              <py:for each="port in buildqueue">
-                <tr py:if="port.headfull" class="headfull">
+              <py:for each="build in buildqueue">
+                <tr class="headfull">
                     <td colspan="6">
-                      <strong>$port.description</strong>
-                      <py:if test="port.revision">
-                        <a href="$port.repository"><strong>(r$port.revision)</strong></a>
+                      <strong>$build.description</strong>
+                      <py:if test="build.revision">
+                        <a href="$build.repository"><strong>(r$build.revision)</strong></a>
                       </py:if>
                     </td>
                     <td>
-                      <py:if test="port.headdel">
+                      <py:if test="build.deletable">
                         <form method="post" action="">
-                          <input type="hidden" name="queueid" value="$port.queueid" />
-                          <input type="submit" name="deletebuildqueue" value="Delete" />
+                          <input type="hidden" name="queueid" value="$build.queueid" />
+                          <input type="submit" name="deletebuild" value="Delete" />
                         </form>
                       </py:if>
                     </td>
                 </tr>
-                <tr py:if="port.head" class="head">
+                <py:for each="port in build.ports">
+                  <tr py:if="port.head" class="head">
                     <td></td>
                     <td colspan="6">
                       <a href="http://www.freshports.org/$port.portname">
                         <strong>$port.portname <py:if test="port.pkgversion">$port.pkgversion</py:if></strong>
                       </a>
                     </td>
-                </tr>
-                <tr py:if="port.id">
+                  </tr>
+                  <tr>
                     <td colspan="2"></td>
                     <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
                     <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
@@ -108,11 +109,12 @@
                       <py:if test="port.deletable">
                         <form method="post" action="">
                           <input type="hidden" name="id" value="$port.id" />
-                          <input type="submit" name="deletebuild" value="Delete" />
+                          <input type="submit" name="deleteport" value="Delete" />
                         </form>
                       </py:if>
                     </td>
-                </tr>
+                  </tr>
+                </py:for>
               </py:for>
             </tbody>
         </table>

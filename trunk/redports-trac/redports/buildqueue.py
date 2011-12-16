@@ -9,7 +9,7 @@ from genshi.builder import tag
 from pkg_resources import resource_filename
 import re
 
-from model import Port, PortsQueueIterator, AllBuildgroupsIterator, RepositoryIterator
+from model import Build, Port, BuildqueueIterator, AllBuildgroupsIterator, RepositoryIterator
 
 class BuildqueuePanel(Component):
     implements(INavigationContributor, ITemplateProvider, IRequestHandler, IPermissionRequestor)
@@ -20,6 +20,8 @@ class BuildqueuePanel(Component):
     def get_navigation_items(self, req):
         if 'BUILDQUEUE_VIEW' in req.perm('buildqueue'):
             yield('mainnav', 'buildqueue', tag.a(_('Your Builds'), href=req.href.buildqueue()))
+        else:
+            yield('mainnav', 'buildqueue', tag.a(_('Builds'), href=req.href.buildarchive()))
 
     def get_htdocs_dirs(self):
         return [('redports', resource_filename('redports', 'htdocs'))]
@@ -35,41 +37,38 @@ class BuildqueuePanel(Component):
         req.perm('redports').assert_permission('BUILDQUEUE_VIEW')
 
         if req.method == 'POST' and req.args.get('addbuild'):
-            port = Port(self.env)
-            port.owner = req.authname
-            port.repository = req.args.get('repository')
-            port.revision = req.args.get('revision')
-            port.portname = req.args.get('portname')
-            port.group = req.args.get('group')
-            port.description = req.args.get('description')
+            build = Build(self.env)
+            build.owner = req.authname
+            build.repository = req.args.get('repository')
+            build.revision = req.args.get('revision')
+            build.description = req.args.get('description')
 
-            if not port.portname:
+            if not req.args.get('portname'):
                 add_notice(req, 'Portname needs to be set')
             else:
-                if port.addPort():
-                    add_notice(req, 'New builds for port %s have been scheduled', req.args.get('portname'))
+                if build.addBuild(req.args.get('group'), req.args.get('portname')):
+                    add_notice(req, 'New builds have been scheduled')
                 else:
                     buildgroup = tag.a("Buildgroup", href=req.href.buildgroups())
                     add_warning(req, tag_("Cannot schedule automatic builds. You need to join a %(buildgroup)s first.", buildgroup=buildgroup))
             req.redirect(req.href.buildqueue())
-        elif req.method == 'POST' and req.args.get('deletebuild'):
+        elif req.method == 'POST' and req.args.get('deleteport'):
             port = Port(self.env)
             port.id = req.args.get('id')
-            port.deleteBuildQueueEntry(req)
+            port.delete(req)
             req.redirect(req.href.buildqueue())
-        elif req.method == 'POST' and req.args.get('deletebuildqueue'):
-            port = Port(self.env)
-            port.queueid = req.args.get('queueid')
-            port.deleteBuildQueueEntry(req)
+        elif req.method == 'POST' and req.args.get('deletebuild'):
+            build = Build(self.env)
+            build.queueid = req.args.get('queueid')
+            build.delete(req)
             req.redirect(req.href.buildqueue())
 
         add_stylesheet(req, 'common/css/admin.css')
         add_stylesheet(req, 'redports/redports.css')
-        add_ctxtnav(req, _('Your Builds'), req.href.buildqueue())
-        add_ctxtnav(req, _('Buildgroups'), req.href.buildgroups())
+        render_ctxtnav(req)
 
         return ('buildqueue.html', 
-            {   'buildqueue': PortsQueueIterator(self.env, req),
+            {   'buildqueue': BuildqueueIterator(self.env, req),
                 'allbuildgroups': AllBuildgroupsIterator(self.env),
                 'repository': RepositoryIterator(self.env, req),
                 'authname': req.authname
@@ -77,3 +76,10 @@ class BuildqueuePanel(Component):
 
     def get_permission_actions(self):
         return ['BUILDQUEUE_VIEW']
+
+def render_ctxtnav(req):
+    if 'BUILDQUEUE_VIEW' in req.perm('buildqueue'):
+        add_ctxtnav(req, _('Your Builds'), req.href.buildqueue())
+
+    add_ctxtnav(req, _('Buildgroups'), req.href.buildgroups())
+    add_ctxtnav(req, _('Archive'), req.href.buildarchive())

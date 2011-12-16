@@ -23,6 +23,7 @@ setup(
         'trac.plugins': [
             'redports.db = redports.db',
             'redports.backend = redports.backend',
+            'redports.buildarchive = redports.buildarchive',
             'redports.buildgroups = redports.buildgroups',
             'redports.buildqueue = redports.buildqueue',
         ]
