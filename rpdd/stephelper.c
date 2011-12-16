@@ -56,6 +56,8 @@ int updateBackendbuildFailed(PGconn *conn, int backendBuildId)
             return -1;
     }
 
+    logwarn("Setting backendbuild %d to error status", backendBuildId);
+
     if(!PQupdate(conn, "UPDATE backendbuilds SET status = 2 WHERE id = %d", backendBuildId))
         RETURN_FAIL(conn);
 
@@ -78,6 +80,8 @@ int updateBackendFailed(PGconn *conn, int backendId)
         if(updateBuildFailed(conn, atol(PQgetvalue(result, i, 0))) != 0)
             return -1;
     }
+
+    logwarn("Setting backend %d to error status", backendId);
 
     if(!PQupdate(conn, "UPDATE backens SET status = 2 WHERE id = %ld", backendId))
         RETURN_FAIL(conn);
