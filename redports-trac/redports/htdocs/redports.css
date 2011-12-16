@@ -1,41 +1,24 @@
-/* Buildqueue */
-#buildqueue_list {
+#build_list {
     max-width: 70%;
 }
 
-#buildqueue_list th {
+#build_list th {
     vertical-align: middle;
 }
 
-#buildqueue_list td {
+#build_list td {
     height: 2.5em;
     vertical-align: middle;
 }
 
-#buildqueue_list tr.head {
+#build_list tr.head {
     background: #F7F7F0;
     border-top: 1px dashed grey;
 }
 
-#buildqueue_list tr.headfull {
+#build_list tr.headfull {
     background: #eed;
 }
-
-/* Buildgroups */
-#buildgroups_list {
-    max-width: 70%;
-}
-
-#buildgroups_list th {
-    height: 2.5em;
-    vertical-align: middle;
-}
-
-#buildgroups_list td {
-    height: 2.8em;
-    vertical-align: middle;
-}
-
 
 /* Buildstatus */
 .status-fail {

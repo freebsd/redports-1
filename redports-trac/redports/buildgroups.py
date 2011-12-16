@@ -10,6 +10,7 @@ from pkg_resources import resource_filename
 import re
 
 from model import Buildgroup, BuildgroupsIterator, AvailableBuildgroupsIterator
+from buildqueue import render_ctxtnav
 
 class BuildgroupPanel(Component):
     implements(INavigationContributor, ITemplateProvider, IRequestHandler, IPermissionRequestor)
@@ -44,8 +45,7 @@ class BuildgroupPanel(Component):
         
         add_stylesheet(req, 'common/css/admin.css')
         add_stylesheet(req, 'redports/redports.css')
-        add_ctxtnav(req, _('Your Builds'), req.href.buildqueue())
-        add_ctxtnav(req, _('Buildgroups'), req.href.buildgroups())
+        render_ctxtnav(req)
 
         return ('buildgroups.html', 
             {   'buildgroups': BuildgroupsIterator(self.env, req),
