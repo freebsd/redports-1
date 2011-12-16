@@ -1,5 +1,5 @@
 from trac.core import *
-from trac.util.datefmt import from_utimestamp, pretty_timedelta
+from trac.util.datefmt import from_utimestamp, pretty_timedelta, format_datetime
 from datetime import datetime
 from time import time
 import math
@@ -371,7 +371,7 @@ def RepositoryIterator(env, req):
 def BuildarchiveIterator(env, req):
     cursor = env.get_db_cnx().cursor()
     cursor2 = env.get_db_cnx().cursor()
-    cursor.execute("SELECT buildqueue.id, replace(replace(portrepositories.browseurl, '%OWNER%', buildqueue.owner), '%REVISION%', buildqueue.revision::text), buildqueue.revision, description, startdate, enddate FROM buildqueue, portrepositories WHERE buildqueue.repository = portrepositories.id AND (owner = %s OR %s = 'anonymous') AND buildqueue.status >= 90 ORDER BY buildqueue.id DESC LIMIT 100", (req.authname, req.authname) )
+    cursor.execute("SELECT buildqueue.id, replace(replace(portrepositories.browseurl, '%OWNER%', buildqueue.owner), '%REVISION%', buildqueue.revision::text), buildqueue.revision, description, startdate, CASE WHEN enddate < startdate THEN startdate ELSE enddate END FROM buildqueue, portrepositories WHERE buildqueue.repository = portrepositories.id AND (owner = %s OR %s = 'anonymous') AND buildqueue.status >= 90 ORDER BY buildqueue.id DESC LIMIT 100", (req.authname, req.authname) )
 
     for queueid, repository, revision, description, startdate, enddate in cursor:
         build = Build(env)
@@ -380,7 +380,7 @@ def BuildarchiveIterator(env, req):
         build.revision = revision
         build.description = description
         build.runtime = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
-        build.endtime = from_utimestamp(enddate)
+        build.endtime = format_datetime(enddate)
 
         cursor2.execute("SELECT id, portname, pkgversion, buildstatus FROM builds WHERE queueid = %s ORDER BY id", (queueid,) )
 
