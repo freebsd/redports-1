@@ -17,7 +17,7 @@
       <py:for each="build in builds">
 
         <fieldset style="max-width: 400px">
-          <legend>Build</legend>
+          <legend>Build Details</legend>
           <table>
             <tr class="field">
                 <th><strong>ID:</strong></th>
@@ -48,11 +48,8 @@
           </table>
         </fieldset>
  
-        <table class="listing" id="build_list" style="max-size: 50%">
+        <table class="listing" id="build_list">
           <thead>
-            <tr>
-              <th colspan="5">Port</th>
-            </tr>
             <tr>
               <th>&nbsp;</th><th>Buildgroup</th><th>Status</th><th>Buildtime</th><th>Links</th>
             </tr>
@@ -69,8 +66,7 @@
               <tr>
                 <td></td>
                 <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
-                <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstat
-us">$port.statusname</a></td>
+                <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
                 <td>$port.startdate</td>
                 <td>
                   <py:if test="port.buildlog"><a href="$port.directory/$port.buildlog">log</a></py:if>
