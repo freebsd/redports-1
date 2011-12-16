@@ -368,28 +368,52 @@ def RepositoryIterator(env, req):
         yield repository
 
 
-def BuildarchiveIterator(env, req):
+def BuildarchiveIterator(env, req, queueid=None):
     cursor = env.get_db_cnx().cursor()
     cursor2 = env.get_db_cnx().cursor()
-    cursor.execute("SELECT buildqueue.id, replace(replace(portrepositories.browseurl, '%OWNER%', buildqueue.owner), '%REVISION%', buildqueue.revision::text), buildqueue.revision, description, startdate, CASE WHEN enddate < startdate THEN startdate ELSE enddate END FROM buildqueue, portrepositories WHERE buildqueue.repository = portrepositories.id AND (owner = %s OR %s = 'anonymous') AND buildqueue.status >= 90 ORDER BY buildqueue.id DESC LIMIT 100", (req.authname, req.authname) )
 
-    for queueid, repository, revision, description, startdate, enddate in cursor:
+    if not queueid:
+        queueid = ''
+
+    cursor.execute("SELECT buildqueue.id, owner, replace(replace(browseurl, '%OWNER%', buildqueue.owner), '%REVISION%', revision::text), revision, status, startdate, CASE WHEN enddate < startdate THEN startdate ELSE enddate END, description FROM buildqueue, portrepositories WHERE repository = portrepositories.id AND (owner = %s OR %s = 'anonymous') AND (buildqueue.id = %s OR %s = '') AND buildqueue.status >= 90 ORDER BY buildqueue.id DESC LIMIT 100", (req.authname, req.authname, queueid, queueid) )
+
+    for queueid, owner, repository, revision, status, startdate, enddate, description in cursor:
         build = Build(env)
         build.queueid = queueid
+        build.owner = owner
         build.repository = repository
         build.revision = revision
-        build.description = description
+        build.setStatus(status)
         build.runtime = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
         build.endtime = format_datetime(enddate)
+        build.description = description
 
-        cursor2.execute("SELECT id, portname, pkgversion, buildstatus FROM builds WHERE queueid = %s ORDER BY id", (queueid,) )
+        cursor2.execute("SELECT id, buildgroup, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, CASE WHEN enddate < startdate THEN extract(epoch from now())*1000000 ELSE enddate END FROM builds WHERE queueid = %s ORDER BY id", (queueid,) )
 
-        for id, portname, pkgversion, buildstatus in cursor2:
+        lastport = None
+        for id, group, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate in cursor2:
             port = Port(env)
             port.id = id
+            port.group = group
             port.portname = portname
             port.pkgversion = pkgversion
             port.buildstatus = buildstatus
+            port.buildlog = buildlog
+            port.wrkdir = wrkdir
+            port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+            port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
+
+            if buildstatus:
+                port.buildstatus = buildstatus.lower()
+            if buildstatus and not buildreason:
+                buildreason = buildstatus.lower()
+
+            port.setStatus(status, buildreason)
+
+            if lastport != portname:
+                port.head = True
+                lastport = portname
+
             build.ports.append(port)
 
         yield build

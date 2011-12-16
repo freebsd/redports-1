@@ -20,6 +20,12 @@
     background: #eed;
 }
 
+/* Small Listing */
+.smalllisting th {
+    font-weight: bold;
+    background: #eed;
+}
+
 /* Buildstatus */
 .status-fail {
     background: #F9B5B5;
