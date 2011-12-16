@@ -80,7 +80,7 @@ class Build(object):
             cursor.execute("SELECT buildgroup FROM automaticbuildgroups WHERE username = %s ORDER BY priority", (self.owner,) )
             if cursor.rowcount < 1:
                 return False
-            self.group = cursor.fetchall()
+            groups = cursor.fetchall()
         else:
             for group in groups:
                 cursor.execute("SELECT name FROM buildgroups WHERE name = %s", (group,) )
@@ -221,7 +221,7 @@ def BuildqueueIterator(env, req):
         build.runtime = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
         build.description = description
 
-        cursor2.execute("SELECT id, buildgroup, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, CASE WHEN enddate < startdate THEN extract(epoch from now())*1000000 ELSE enddate END FROM builds WHERE queueid = %s ORDER BY id", (queueid,) )
+        cursor2.execute("SELECT id, buildgroup, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, CASE WHEN enddate < startdate THEN extract(epoch from now())*1000000 ELSE enddate END FROM builds WHERE queueid = %s AND status <= 90 ORDER BY id", (queueid,) )
 
         lastport = None
         for id, group, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate in cursor2:
