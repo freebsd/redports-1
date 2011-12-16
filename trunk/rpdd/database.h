@@ -55,6 +55,12 @@
     PQfinish(conn); \
     return 0; \
 }
+
+#define RETURN_FAIL(conn) \
+{ \
+    logsql(conn); \
+    return -1; \
+}
    
 
 extern PGconn* PQautoconnect(void);

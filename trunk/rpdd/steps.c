@@ -132,7 +132,7 @@ int handleStep101(void)
         {
            logwarn("%s is not available", PQgetvalue(result, i, 5));
 
-           if(!updateBackendbuildFailed(conn, atoi(PQgetvalue(result, i, 6))))
+           if(updateBackendbuildFailed(conn, atoi(PQgetvalue(result, i, 6))) != 0)
               RETURN_ROLLBACK(conn);
         }
         else
@@ -171,7 +171,7 @@ int handleStep100(void)
            status = 2; /* Status failure */
            logwarn("Backend %s failed", PQgetvalue(result, i, 2));
 
-           if(!updateBackendFailed(conn, atoi(PQgetvalue(result, i, 0))))
+           if(updateBackendFailed(conn, atoi(PQgetvalue(result, i, 0))) != 0)
               RETURN_ROLLBACK(conn);
         }
         else
@@ -601,12 +601,12 @@ int handleStep51(void)
 
         if(getenv("STATUS") != NULL && (strcmp(getenv("STATUS"), "finished") == 0 || strcmp(getenv("STATUS"), "idle") == 0))
         {
-           if(!updateBackendbuildFailed(conn, atoi(PQgetvalue(result2, 0, 5))))
+           if(!PQupdate(conn, "UPDATE builds SET status = 70 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
                RETURN_ROLLBACK(conn);
         }
         else
         {
-           if(!PQupdate(conn, "UPDATE builds SET status = 50 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
+           if(updateBackendbuildFailed(conn, atoi(PQgetvalue(result2, 0, 5))) != 0)
                RETURN_ROLLBACK(conn);
         }
 
@@ -687,7 +687,7 @@ int handleStep31(void)
         {
             logcgi(url, getenv("ERROR"));
 
-            if(!updateBackendbuildFailed(conn, atol(PQgetvalue(result2, 0, 5))))
+            if(updateBackendbuildFailed(conn, atol(PQgetvalue(result2, 0, 5))) != 0)
                RETURN_ROLLBACK(conn);
         }
 
@@ -738,7 +738,7 @@ int handleStep30(void)
            if(getenv("ERROR") != NULL)
               logcgi(url, getenv("ERROR"));
            
-           if(!updateBackendbuildFailed(conn, atol(PQgetvalue(result2, 0, 5))))
+           if(updateBackendbuildFailed(conn, atol(PQgetvalue(result2, 0, 5))) != 0)
               RETURN_ROLLBACK(conn);
 
            PQclear(result2);
@@ -760,7 +760,7 @@ int handleStep30(void)
         else
         {
            logcgi(url, getenv("ERROR"));
-           if(!updateBackendbuildFailed(conn, atol(PQgetvalue(result2, 0, 5))))
+           if(updateBackendbuildFailed(conn, atol(PQgetvalue(result2, 0, 5))) != 0)
               RETURN_ROLLBACK(conn);
         }
 
