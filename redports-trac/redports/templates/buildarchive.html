@@ -1,0 +1,56 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="layout.html" />
+  <xi:include href="macros.html" />
+  <head>
+    <title>Your Builds</title>
+  </head>
+
+  <body>
+    <h1>$sitename</h1>
+    <div id="tabcontent">
+
+        <table class="listing" id="build_list">
+            <thead>
+                <tr>
+                    <th>Job Description</th>
+                    <th>Source</th>
+                    <th>Buildtime</th>
+                    <th>Endtime</th>
+                    <th>Links</th>
+                </tr>
+                <tr>
+                    <th colspan="5">Ports</th>
+                </tr>
+            </thead>
+            <tbody>
+              <py:for each="build in builds">
+                <tr class="headfull">
+                    <td><strong>$build.description</strong></td>
+                    <td>
+                      <py:if test="build.revision">
+                        <a href="$build.repository">r$build.revision</a>
+                      </py:if>
+                    </td>
+                    <td>$build.runtime</td>
+                    <td>$build.endtime</td>
+                    <td><a href="/buildarchive/$build.queueid/">Details</a></td>
+                </tr>
+                <tr>
+                    <td colspan="5">
+                      <py:for each="i, port in enumerate(build.ports)">
+                        ${i is not 0 and ',' or ''} <a href="/buildarchive/$build.queueid/">$port.portname<py:if test="port.pkgversion"> $port.pkgversion</py:if></a>
+                      </py:for>
+                    </td>
+                </tr>
+              </py:for>
+            </tbody>
+        </table>
+	<br />
+    </div>
+  </body>
+</html>
