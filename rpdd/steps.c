@@ -447,7 +447,7 @@ int handleStep71(void)
         result4 = PQselect(conn, "SELECT id FROM builds WHERE id = %ld AND status = 71 FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 0)));
         if (PQresultStatus(result4) != PGRES_TUPLES_OK)
         {
-           logwarn("Could not lock build #%ld. Download already in progress.", atol(PQgetvalue(result, i, 0)));
+           logwarn("Could not lock build %ld. Download already in progress.", atol(PQgetvalue(result, i, 0)));
 
            restmp = PQexec(conn, "ROLLBACK");
            if (PQresultStatus(restmp) != PGRES_COMMAND_OK)
@@ -509,7 +509,7 @@ int handleStep71(void)
               RETURN_ROLLBACK(conn);
         }
 
-        loginfo("Updating build status for build #%ld", atol(PQgetvalue(result, i, 0)));
+        loginfo("Updating build status for build %ld", atol(PQgetvalue(result, i, 0)));
         if(!PQupdate(conn, "UPDATE builds SET buildstatus = '%s', buildreason = '%s', enddate = %lli, status = 80 WHERE id = %ld",
         		getenv("BUILDSTATUS") != NULL ? getenv("BUILDSTATUS") : "",
         		getenv("FAIL_REASON") != NULL ? getenv("FAIL_REASON") : "", microtime(), atol(PQgetvalue(result, i, 0))))
@@ -602,6 +602,11 @@ int handleStep51(void)
         if(getenv("STATUS") != NULL && (strcmp(getenv("STATUS"), "finished") == 0 || strcmp(getenv("STATUS"), "idle") == 0))
         {
            if(!PQupdate(conn, "UPDATE builds SET status = 70 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
+               RETURN_ROLLBACK(conn);
+        }
+        else if(getenv("STATUS") != NULL && strcmp(getenv("STATUS"), "building") == 0)
+        {
+           if(!PQupdate(conn, "UPDATE builds SET status = 50 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
                RETURN_ROLLBACK(conn);
         }
         else
@@ -793,7 +798,7 @@ int handleStep20(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT builds.id, builds.buildgroup, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status = 20 AND builds.status = 20 AND builds.backendid = 0 ORDER BY priority, builds.id DESC FOR UPDATE NOWAIT");
+    result = PQexec(conn, "SELECT builds.id, builds.buildgroup, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status < 90 AND builds.status = 20 AND builds.backendid = 0 ORDER BY priority, builds.id DESC FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
