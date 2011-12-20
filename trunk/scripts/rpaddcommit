@@ -35,7 +35,6 @@ fi
 
 SQL=`printf "SELECT id FROM portrepositories WHERE type = 'svn' AND (username = '%s' OR username IS NULL) AND replace(url, '%%OWNER%%', '%s') = '%s';" "${USER}" "${USER}" "${REPOSITORYROOT}${COMMITROOT}"`
 
-echo "${SQL}"
 REPOSITORYID=`echo "${SQL}" | psql -qtA ${DBNAME} ${DBUSER}`
 
 if [ -z "${REPOSITORYID}" ]; then
