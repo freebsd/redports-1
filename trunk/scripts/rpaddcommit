@@ -8,7 +8,7 @@
 
 PATH=${PATH}:/usr/local/bin
 
-REPOSITORYID=1
+REPOSITORYROOT="https://svn.redports.org/"
 PRIORITY=7
 DBNAME=trac
 DBUSER=trac
@@ -26,9 +26,20 @@ fi
 REPOS=$1
 REV=$2
 USER=`svnlook author -r ${REV} ${REPOS} 2>/dev/null`
+COMMITROOT=`svnlook changed -r ${REV} ${REPOS} | cut -b5- | cut -d'/' -f1 | uniq`
 
 if [ -z "${USER}" ]; then
     echo "Invalid revision number"
+    exit 1
+fi
+
+SQL=`printf "SELECT id FROM portrepositories WHERE type = 'svn' AND (username = '%s' OR username IS NULL) AND replace(url, '%%OWNER%%', '%s') = '%s';" "${USER}" "${USER}" "${REPOSITORYROOT}${COMMITROOT}"`
+
+echo "${SQL}"
+REPOSITORYID=`echo "${SQL}" | psql -qtA ${DBNAME} ${DBUSER}`
+
+if [ -z "${REPOSITORYID}" ]; then
+    echo "Could not determine RepositoryID"
     exit 1
 fi
 
