@@ -20,20 +20,23 @@ CLEANPACKAGES=no
 CLEANTEMP=no
 CLEANJAILREMOVE=no
 
-while getopts dlprtux arg >/dev/null 2>&1
+while getopts dlpqrtux arg >/dev/null 2>&1
 do
     case "${arg}" in
         d)   CLEANDATABASE=yes ;;
         l)   CLEANLOCK=yes ;;
         p)   CLEANPACKAGES=yes ;;
+        q)   CLEANQUEUE=yes ;;
         r)   CLEANDATABASE=yes
              CLEANLOCK=yes
+             CLEANQUEUE=yes
              CLEANTEMP=yes ;;
         t)   CLEANTEMP=yes ;;
         u)   CLEANJAIL=yes
              CLEANPACKAGES=yes ;;
         x)   CLEANLOCK=yes
              CLEANPACKAGES=yes
+             CLEANQUEUE=yes
              CLEANTEMP=yes
              CLEANJAILREMOVE=yes ;;
         [?]) echo "Unknown option -${OPTARG}" exit 1 ;;
@@ -55,6 +58,7 @@ if [ -z "$1" ]; then
     echo "  -d          Cleanup buildstatus in Database"
     echo "  -l          Cleanup tinderd lockfiles for build"
     echo "  -p          Remove all packages for build"
+    echo "  -q          Remove queue entries for build"
     echo "  -t          Cleanup redports temporary directory"
     echo ""
     exit 1
@@ -104,6 +108,19 @@ if [ "${CLEANPACKAGES}" = "yes" ]; then
 
     echo "Cleanup tinderbox database"
     ${TINDERBOX}/scripts/tc tbcleanup || exit 1
+fi
+
+if [ "${CLEANQUEUE}" = "yes" ]; then
+    echo "Removing Queue entries for build ${BUILD}"
+
+    for ENTRY in `${TINDERBOX}/scripts/tc listBuildPortsQueue -r | egrep ":${BUILD}:"`
+    do
+       QUEUEID=`echo ${ENTRY} | cut -d: -f1`
+       PORT=`echo ${ENTRY} | cut -d: -f4`
+
+       echo "Removing job for ${PORT}"
+       ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -i ${QUEUEID}
+    done
 fi
 
 if [ "${CLEANTEMP}" = "yes" ]; then
