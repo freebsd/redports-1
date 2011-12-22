@@ -298,7 +298,7 @@ int handleStep95(void)
         if(!PQupdate(conn, "UPDATE builds SET status = 96 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
 
-        result2 = PQselect(conn, "SELECT count(*) FROM builds WHERE queueid = '%s' AND status < 98", PQgetvalue(result, i, 1));
+        result2 = PQselect(conn, "SELECT count(*) FROM builds WHERE queueid = '%s' AND status < 96", PQgetvalue(result, i, 1));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
@@ -638,12 +638,12 @@ int handleStep50(void)
 
     /* 0-15min buildtime = check every 30 seconds */
     limit = microtime()-(30*1000000L);
-    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND checkdate-startdate < %lli AND checkdate < %lli", 15*60*1000000L, limit))
+    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND checkdate-startdate < 900000000 AND checkdate < %lli", limit))
         RETURN_ROLLBACK(conn);
 
     /* 15-60min buildtime = check every 60 seconds */
     limit = microtime()-(60*1000000L);
-    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND checkdate-startdate < %lli AND checkdate < %lli", 60*60*1000000L, limit))
+    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND checkdate-startdate < 3600000000 AND checkdate < %lli", limit))
         RETURN_ROLLBACK(conn);
 
     /* > 60min buildtime = check every 2 minutes */
