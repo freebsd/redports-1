@@ -9,6 +9,7 @@ clean:
 	rm -fr build/ dist/ redports.egg-info/
 
 rollout: build
+	chown www:www dist/*.egg
 	cp -p dist/*.egg /var/db/trac/redports/plugins/
 
 restart:
