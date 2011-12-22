@@ -698,7 +698,7 @@ int handleStep31(void)
 
         if(getenv("PKGVERSION") != NULL)
         {
-            if(!PQupdate(conn, "UPDATE builds SET pkgversion = '%s' WHERE id = %ld", getenv("PKGVERSION"), atol(PQgetvalue(result, i, 0))))
+            if(!PQupdate(conn, "UPDATE builds SET pkgversion = '%s' WHERE id = %ld OR (queueid = '%s' AND portname = '%s' AND pkgversion IS NULL)", getenv("PKGVERSION"), atol(PQgetvalue(result, i, 0)), PQgetvalue(result, i, 4), PQgetvalue(result, i, 5)))
                 RETURN_ROLLBACK(conn);
         }
 
