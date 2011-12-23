@@ -83,7 +83,7 @@ int updateBackendFailed(PGconn *conn, int backendId)
 
     logwarn("Setting backend %d to error status", backendId);
 
-    if(!PQupdate(conn, "UPDATE backens SET status = 2 WHERE id = %ld", backendId))
+    if(!PQupdate(conn, "UPDATE backends SET status = 2 WHERE id = %ld", backendId))
         RETURN_FAIL(conn);
 
     PQclear(result);
