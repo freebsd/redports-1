@@ -1,5 +1,6 @@
 from trac.core import *
 from trac.util.datefmt import from_utimestamp, pretty_timedelta, format_datetime
+from trac.versioncontrol import RepositoryManager
 from datetime import datetime
 from time import time
 import math
@@ -41,7 +42,7 @@ class Build(object):
         if math.floor(self.status / 10) == 9:
             self.deletable = True
 
-    def addBuild(self, groups, ports):
+    def addBuild(self, groups, ports, req):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
 
@@ -59,14 +60,20 @@ class Build(object):
         if not self.description:
             self.description = 'Web rebuild'
 
-        cursor.execute("SELECT count(*) FROM portrepositories WHERE id = %s AND ( username = %s OR username IS NULL )", (
- self.repository, self.owner ))
-        row = cursor.fetchone()
-        if not row:
-            raise TracError('SQL Error')
-        if row[0] != 1:
-            raise TracError('Invalid repository')
+        if not ports:
+            raise TracError('Portname needs to be set')
 
+        cursor.execute("SELECT id, type, replace(url, '%OWNER%', %s) FROM portrepositories WHERE id = %s AND ( username = %s OR username IS NULL )", (
+ req.authname, self.repository, self.owner ))
+        if cursor.rowcount != 1:
+            raise TracError('SQL Error')
+        row = cursor.fetchone()
+
+        if row[1] == 'svn':
+             reponame, repo, fullrepopath = RepositoryManager(self.env).get_repository_by_path(row[2])
+             if not repo.has_node(fullrepopath[len(repo.get_path_url('/', repo.get_youngest_rev())):]):
+                 raise TracError('No permissions to schedule builds for this repository')
+             
         if isinstance(groups, basestring):
             grouplist = list()
             grouplist.append(groups)
@@ -79,7 +86,7 @@ class Build(object):
         if groups[0] == 'automatic':
             cursor.execute("SELECT buildgroup FROM automaticbuildgroups WHERE username = %s ORDER BY priority", (self.owner,) )
             if cursor.rowcount < 1:
-                return False
+                raise TracError('Cannot schedule automatic builds. You need to join a buildgroup first.')
             groups = cursor.fetchall()
         else:
             for group in groups:
