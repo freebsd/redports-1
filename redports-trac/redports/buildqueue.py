@@ -36,32 +36,29 @@ class BuildqueuePanel(Component):
     def process_request(self, req):
         req.perm('redports').assert_permission('BUILDQUEUE_VIEW')
 
-        if req.method == 'POST' and req.args.get('addbuild'):
-            build = Build(self.env)
-            build.owner = req.authname
-            build.repository = req.args.get('repository')
-            build.revision = req.args.get('revision')
-            build.description = req.args.get('description')
+        try:
+            if req.method == 'POST' and req.args.get('addbuild'):
+                build = Build(self.env)
+                build.owner = req.authname
+                build.repository = req.args.get('repository')
+                build.revision = req.args.get('revision')
+                build.description = req.args.get('description')
 
-            if not req.args.get('portname'):
-                add_notice(req, 'Portname needs to be set')
-            else:
-                if build.addBuild(req.args.get('group'), req.args.get('portname')):
-                    add_notice(req, 'New builds have been scheduled')
-                else:
-                    buildgroup = tag.a("Buildgroup", href=req.href.buildgroups())
-                    add_warning(req, tag_("Cannot schedule automatic builds. You need to join a %(buildgroup)s first.", buildgroup=buildgroup))
-            req.redirect(req.href.buildqueue())
-        elif req.method == 'POST' and req.args.get('deleteport'):
-            port = Port(self.env)
-            port.id = req.args.get('id')
-            port.delete(req)
-            req.redirect(req.href.buildqueue())
-        elif req.method == 'POST' and req.args.get('deletebuild'):
-            build = Build(self.env)
-            build.queueid = req.args.get('queueid')
-            build.delete(req)
-            req.redirect(req.href.buildqueue())
+                build.addBuild(req.args.get('group'), req.args.get('portname'), req)
+                add_notice(req, 'New builds have been scheduled')
+                req.redirect(req.href.buildqueue())
+            elif req.method == 'POST' and req.args.get('deleteport'):
+                port = Port(self.env)
+                port.id = req.args.get('id')
+                port.delete(req)
+                req.redirect(req.href.buildqueue())
+            elif req.method == 'POST' and req.args.get('deletebuild'):
+                build = Build(self.env)
+                build.queueid = req.args.get('queueid')
+                build.delete(req)
+                req.redirect(req.href.buildqueue())
+        except TracError as e:
+            add_warning(req, e.message);
 
         add_stylesheet(req, 'common/css/admin.css')
         add_stylesheet(req, 'redports/redports.css')
