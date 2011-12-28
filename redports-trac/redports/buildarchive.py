@@ -34,7 +34,6 @@ class BuildarchivePanel(Component):
     def process_request(self, req):
         uriparts = req.path_info.split('/')
 
-        add_stylesheet(req, 'common/css/admin.css')
         add_stylesheet(req, 'redports/redports.css')
         render_ctxtnav(req)
 

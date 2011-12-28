@@ -1,30 +1,20 @@
-#build_list {
-    max-width: 70%;
+/* Buildqueue / Buildgroups */
+#build_list { max-width: 66%; clear: none; }
+
+/* Listings */
+table.listing tbody td { vertical-align: middle; height: 2.5em; }
+table.listing tbody tr.headfull { background: #eed; }
+table.listing tbody tr.head { background: #F7F7F0; }
+
+/* Forms */
+#content form.addnew {
+    clear: right;
+    float: right;
+    margin: -2em 0 2em 2em;
+    width: 33%;
+    padding: 0;
 }
 
-#build_list th {
-    vertical-align: middle;
-}
-
-#build_list td {
-    height: 2.5em;
-    vertical-align: middle;
-}
-
-#build_list tr.head {
-    background: #F7F7F0;
-    border-top: 1px dashed grey;
-}
-
-#build_list tr.headfull {
-    background: #eed;
-}
-
-/* Small Listing */
-.smalllisting th {
-    font-weight: bold;
-    background: #eed;
-}
 
 /* Buildstatus */
 .status-fail {
@@ -43,11 +33,3 @@
     background: #FBF9AA;
 }
 
-
-#tabcontent {
-    margin-left: 0;
-}
-
-#tabcontent form.addnew {
-    width: 25%;
-}
