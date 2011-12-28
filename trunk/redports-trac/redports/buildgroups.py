@@ -43,7 +43,6 @@ class BuildgroupPanel(Component):
             group.join(req)
             req.redirect(req.href.buildgroups())
         
-        add_stylesheet(req, 'common/css/admin.css')
         add_stylesheet(req, 'redports/redports.css')
         render_ctxtnav(req)
 

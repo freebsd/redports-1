@@ -12,11 +12,11 @@
 
   <body>
     <h1>Build Details $builds.queueid</h1>
-    <div id="tabcontent">
+    <div id="content">
 
       <py:for each="build in builds">
 
-        <fieldset style="max-width: 400px">
+        <fieldset style="max-width: 33%">
           <legend>Build Details</legend>
           <table>
             <tr class="field">
@@ -48,7 +48,7 @@
           </table>
         </fieldset>
  
-        <table class="listing" id="build_list">
+        <table class="listing" id="archive_list">
           <thead>
             <tr>
               <th>&nbsp;</th><th>Buildgroup</th><th>Status</th><th>Buildtime</th><th>Links</th>
@@ -77,7 +77,6 @@
         </table>
 
       </py:for>
-      <br />
     </div>
   </body>
 </html>

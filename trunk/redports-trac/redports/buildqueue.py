@@ -60,7 +60,6 @@ class BuildqueuePanel(Component):
         except TracError as e:
             add_warning(req, e.message);
 
-        add_stylesheet(req, 'common/css/admin.css')
         add_stylesheet(req, 'redports/redports.css')
         render_ctxtnav(req)
 
