@@ -476,8 +476,8 @@ int handleStep71(void)
            RETURN_ROLLBACK(conn);
         }
 
-        sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), PQgetvalue(result3, i, 0),
-        		PQgetvalue(result3, i, 1), PQgetvalue(result, i, 0));
+        sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), PQgetvalue(result3, 0, 0),
+        		PQgetvalue(result3, 0, 1), PQgetvalue(result, i, 0));
         if(mkdirrec(localdir) != 0)
            RETURN_ROLLBACK(conn);
 
@@ -497,16 +497,25 @@ int handleStep71(void)
 
         if(getenv("WRKDIR") != NULL)
         {
-           sprintf(localfile, "%s/%s", localdir, basename(getenv("WRKDIR")));
-           sprintf(remotefile, "%s://%s%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1), getenv("WRKDIR"));
-           loginfo("Downloading Wrkdir %s to %s", remotefile, localfile);
-           if(downloadfile(remotefile, PQgetvalue(result2, 0, 3), localfile) != 0){
-              logerror("Download of %s failed", remotefile);
-              RETURN_ROLLBACK(conn);
+           restmp = PQselect(conn, "SELECT count(*) FROM session_attribute WHERE sid = '%s' AND name = 'build_wrkdirdownload'", PQgetvalue(result3, 0, 0));
+        if (PQresultStatus(restmp) != PGRES_TUPLES_OK)
+           RETURN_ROLLBACK(conn);
+
+           if(atol(PQgetvalue(restmp, 0, 0)) > 0)
+           {
+              sprintf(localfile, "%s/%s", localdir, basename(getenv("WRKDIR")));
+              sprintf(remotefile, "%s://%s%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1), getenv("WRKDIR"));
+              loginfo("Downloading Wrkdir %s to %s", remotefile, localfile);
+              if(downloadfile(remotefile, PQgetvalue(result2, 0, 3), localfile) != 0){
+                 logerror("Download of %s failed", remotefile);
+                 RETURN_ROLLBACK(conn);
+              }
+
+              if(!PQupdate(conn, "UPDATE builds SET wrkdir = '%s' WHERE id = %ld", basename(localfile), atol(PQgetvalue(result, i, 0))))
+                 RETURN_ROLLBACK(conn);
            }
 
-           if(!PQupdate(conn, "UPDATE builds SET wrkdir = '%s' WHERE id = %ld", basename(localfile), atol(PQgetvalue(result, i, 0))))
-              RETURN_ROLLBACK(conn);
+           PQclear(restmp);
         }
 
         loginfo("Updating build status for build %ld", atol(PQgetvalue(result, i, 0)));
