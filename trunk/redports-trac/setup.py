@@ -26,5 +26,6 @@ setup(
             'redports.buildarchive = redports.buildarchive',
             'redports.buildgroups = redports.buildgroups',
             'redports.buildqueue = redports.buildqueue',
+            'redports.preferences = redports.preferences',
         ]
     })
