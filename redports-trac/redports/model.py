@@ -1,9 +1,11 @@
 from trac.core import *
 from trac.util.datefmt import from_utimestamp, pretty_timedelta, format_datetime
 from trac.versioncontrol import RepositoryManager
+from trac.util.translation import _
 from datetime import datetime
 from time import time
 import math
+import re
 
 class PortRepository(object):
     def __init__(self, env, id):
@@ -90,6 +92,10 @@ class Build(object):
         if isinstance(ports, basestring):
             ports = ports.split()
             ports.sort()
+
+            for portname in ports:
+                if not re.match('^([a-zA-Z0-9_+.-]+)/([a-zA-Z0-9_+.-]+)$', portname):
+                    raise TracError(_('Invalid portname %(port)s', port=portname))
 
         if groups[0] == 'automatic':
             cursor.execute("SELECT buildgroup FROM automaticbuildgroups WHERE username = %s ORDER BY priority", (self.owner,) )
