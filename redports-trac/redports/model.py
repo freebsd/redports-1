@@ -63,6 +63,12 @@ class Build(object):
         if not ports:
             raise TracError('Portname needs to be set')
 
+        try:
+            if self.revision:
+                self.revision = int(self.revision)
+        except ValueError:
+            raise TracError('Revision needs to be numeric')
+
         cursor.execute("SELECT id, type, replace(url, '%OWNER%', %s) FROM portrepositories WHERE id = %s AND ( username = %s OR username IS NULL )", (
  req.authname, self.repository, self.owner ))
         if cursor.rowcount != 1:
