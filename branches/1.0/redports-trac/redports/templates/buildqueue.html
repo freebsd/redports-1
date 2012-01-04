@@ -1,0 +1,123 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="layout.html" />
+  <xi:include href="macros.html" />
+  <head>
+    <title>Your Builds</title>
+  </head>
+
+  <body>
+    <h1>Your Builds</h1>
+    <div id="content">
+
+        <form class="addnew" method="post" action="">
+        <fieldset>
+          <legend>Rebuild Port:</legend>
+          <table>
+            <tr class="field">
+              <th><label for="repository">Repository:</label></th>
+              <td>
+                <select id="repository" name="repository">
+                <py:for each="repos in repository">
+                  <option value="$repos.id">$repos.name</option>
+                </py:for>
+                </select>
+              </td>
+            </tr>
+            <tr class="field">
+              <th><label for="revision">Revision:</label></th>
+              <td><input type="text" name="revision" size="5" /></td>
+            </tr>
+            <tr class="field">
+              <th><label for="portname">Port:</label></th>
+              <td><input type="text" name="portname" /></td>
+            </tr>
+            <tr class="field">
+              <th><label for="group">Buildgroups:</label></th>
+              <td>
+                <select id="group" name="group" multiple="multiple" size="5">
+                  <option value="automatic" selected="selected">automatic</option>
+                  <option py:for="groups in allbuildgroups">$groups.name</option>
+                </select>
+              </td>
+            </tr>
+            <tr class="field">
+              <th><label for="description">Description:</label></th>
+              <td><input type="text" name="description" /></td>
+            </tr>
+          </table>
+          <p class="help">
+            Schedule a rebuild for a list of ports in your repository.
+          </p>
+          <div class="buttons">
+            <input type="submit" name="addbuild" value="Add" />
+          </div>
+        </fieldset>
+        </form>
+
+
+        <table class="listing" id="build_list">
+            <thead>
+                <tr>
+                    <th colspan="6">Port / Source</th><th rowspan="2">Options</th>
+                </tr>
+                <tr>
+                    <th>&nbsp;</th><th>&nbsp;</th><th>Buildgroup</th><th>Status</th><th>Buildtime</th><th>Links</th>
+                </tr>
+            </thead>
+            <tbody>
+              <py:for each="build in buildqueue">
+                <tr class="headfull">
+                    <td colspan="6">
+                      <strong>$build.description</strong>
+                      <py:if test="build.revision">
+                        <a href="$build.repository"><strong>(r$build.revision)</strong></a>
+                      </py:if>
+                    </td>
+                    <td>
+                      <py:if test="build.deletable">
+                        <form method="post" action="">
+                          <input type="hidden" name="queueid" value="$build.queueid" />
+                          <input type="submit" name="deletebuild" value="Delete" />
+                        </form>
+                      </py:if>
+                    </td>
+                </tr>
+                <py:for each="port in build.ports">
+                  <tr py:if="port.head" class="head">
+                    <td></td>
+                    <td colspan="6">
+                      <a href="http://www.freshports.org/$port.portname">
+                        <strong>$port.portname <py:if test="port.pkgversion">$port.pkgversion</py:if></strong>
+                      </a>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colspan="2"></td>
+                    <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
+                    <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
+                    <td>$port.startdate</td>
+                    <td>
+                      <py:if test="port.buildlog"><a href="$port.directory/$port.buildlog">log</a></py:if>
+                      <py:if test="port.wrkdir"><a href="$port.directory/$port.wrkdir">wrkdir</a></py:if>
+                    </td>
+                    <td>
+                      <py:if test="port.deletable">
+                        <form method="post" action="">
+                          <input type="hidden" name="id" value="$port.id" />
+                          <input type="submit" name="deleteport" value="Delete" />
+                        </form>
+                      </py:if>
+                    </td>
+                  </tr>
+                </py:for>
+              </py:for>
+            </tbody>
+        </table>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,35 @@
+/* Buildqueue / Buildgroups */
+#build_list { max-width: 66%; clear: none; }
+
+/* Listings */
+table.listing tbody td { vertical-align: middle; height: 2.5em; }
+table.listing tbody tr.headfull { background: #eed; }
+table.listing tbody tr.head { background: #F7F7F0; }
+
+/* Forms */
+#content form.addnew {
+    clear: right;
+    float: right;
+    margin: -2em 0 2em 2em;
+    width: 33%;
+    padding: 0;
+}
+
+
+/* Buildstatus */
+.status-fail {
+    background: #F9B5B5;
+}
+
+.status-success {
+    background: #D5FFD5;
+}
+
+.status-leftovers {
+    background: #FFFFD8;
+}
+
+.status-dud {
+    background: #FBF9AA;
+}
+
