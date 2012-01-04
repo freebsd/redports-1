@@ -79,6 +79,8 @@ class Build(object):
              reponame, repo, fullrepopath = RepositoryManager(self.env).get_repository_by_path(row[2])
              if not repo.has_node(fullrepopath[len(repo.get_path_url('/', repo.get_youngest_rev())):]):
                  raise TracError('No permissions to schedule builds for this repository')
+             if self.revision > repo.get_youngest_rev():
+                 raise TracError('Invalid Revision number')
              
         if isinstance(groups, basestring):
             grouplist = list()
