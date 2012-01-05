@@ -18,7 +18,7 @@ setup(
     """,
     zip_safe=True,
     packages=[PACKAGE],
-    package_data={PACKAGE : ['templates/*.html', 'htdocs/*']},
+    package_data={PACKAGE : ['templates/*', 'htdocs/*']},
     entry_points = {
         'trac.plugins': [
             'redports.db = redports.db',
@@ -27,5 +27,6 @@ setup(
             'redports.buildgroups = redports.buildgroups',
             'redports.buildqueue = redports.buildqueue',
             'redports.preferences = redports.preferences',
+            'redports.notify = redports.notify',
         ]
     })
