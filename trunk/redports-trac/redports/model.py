@@ -389,14 +389,18 @@ def RepositoryIterator(env, req):
         yield repository
 
 
-def BuildarchiveIterator(env, req, queueid=None):
+def BuildarchiveIterator(env, req=None, queueid=None):
     cursor = env.get_db_cnx().cursor()
     cursor2 = env.get_db_cnx().cursor()
 
     if not queueid:
         queueid = ''
+    if not req:
+        userfilter = 'anonymous'
+    else:
+        userfilter = req.authname
 
-    cursor.execute("SELECT buildqueue.id, owner, replace(replace(browseurl, '%OWNER%', buildqueue.owner), '%REVISION%', revision::text), revision, status, startdate, CASE WHEN enddate < startdate THEN startdate ELSE enddate END, description FROM buildqueue, portrepositories WHERE repository = portrepositories.id AND (owner = %s OR %s = 'anonymous') AND (buildqueue.id = %s OR %s = '') AND buildqueue.status >= 90 ORDER BY buildqueue.id DESC LIMIT 100", (req.authname, req.authname, queueid, queueid) )
+    cursor.execute("SELECT buildqueue.id, owner, replace(replace(browseurl, '%OWNER%', buildqueue.owner), '%REVISION%', revision::text), revision, status, startdate, CASE WHEN enddate < startdate THEN startdate ELSE enddate END, description FROM buildqueue, portrepositories WHERE repository = portrepositories.id AND (owner = %s OR %s = 'anonymous') AND (buildqueue.id = %s OR %s = '') AND buildqueue.status >= 90 ORDER BY buildqueue.id DESC LIMIT 100", (userfilter, userfilter, queueid, queueid) )
 
     for queueid, owner, repository, revision, status, startdate, enddate, description in cursor:
         build = Build(env)
