@@ -21,9 +21,10 @@ class PortRepository(object):
         self.browseurl = None
 
 class Build(object):
-    def __init__(self, env, id=None):
+    def __init__(self, env, queueid=None):
         self.env = env
         self.clear()
+        self.queueid = queueid
 
     def clear(self):
         self.queueid = None
@@ -43,6 +44,15 @@ class Build(object):
 
         if math.floor(self.status / 10) == 9:
             self.deletable = True
+
+    def getStatus(self):
+        cursor = self.env.get_db_cnx().cursor()
+
+        cursor.execute("SELECT status FROM buildqueue WHERE id = %s", (self.queueid,))
+        if cursor.rowcount != 1:
+            return 0
+
+        return cursor.fetchone()[0]
 
     def addBuild(self, groups, ports, req):
         db = self.env.get_db_cnx()
