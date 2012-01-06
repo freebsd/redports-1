@@ -4,13 +4,14 @@ from trac.web.chrome import ITemplateProvider, Chrome
 from trac.config import BoolOption
 from trac.notification import NotifyEmail
 from pkg_resources import resource_filename
+from model import BuildarchiveIterator
 
 class BuildNotify(Component):
     implements(ITemplateProvider)
 
-    def notify(self, build=None):
+    def notify(self, queueid=None):
          email = BuildNotifyEmail(self.env)
-         email.notify(build)
+         email.notify(queueid)
 
     # ITemplateProvider methods
     def get_templates_dirs(self):
@@ -30,26 +31,48 @@ class BuildNotifyEmail(NotifyEmail):
             self.template = Chrome(env).templates.load(
                                 self.template.filepath, cls=NewTextTemplate)
 
-    def notify(self, build):
-        self.build = build
+    def notify(self, queueid):
+        self.queueid = queueid
         self.data.update(self.template_data())
-        subject = '[redports] build finished'
-        NotifyEmail.notify(self, build, subject)
+        subject = '[%s] Build %s completed: %s' % (self.env.project_name, self.queueid, self.status)
+        NotifyEmail.notify(self, self.queueid, subject)
 
     def get_recipients(self, resid):
-        to = ['decke']
+        to = [self.build.owner]
         cc = []
         return (to, cc)
 
     def send(self, torcpts, ccrcpts):
         mime_headers = {
-            'X-Trac-Build-ID': self.build,
+            'X-Trac-Build-ID': self.queueid,
+            'X-Trac-Build-URL': self.build_link(),
             'To': NotifyEmail.get_smtp_address(self, ''.join(torcpts)),
         }
         NotifyEmail.send(self, torcpts, ccrcpts, mime_headers)
 
+    def build_link(self):
+        return self.env.abs_href.buildarchive(self.queueid)
+
+    def genstatus(self):
+        statusdict = {}
+        for port in self.build.ports:
+            if port.statusname not in statusdict:
+                statusdict[port.statusname] = 0
+            statusdict[port.statusname] += 1
+
+        self.status = ''
+        for stat, num in statusdict.iteritems():
+            self.status += '%dx %s, ' % (num, stat)
+        self.status = self.status.rstrip(', ')
+
     def template_data(self):
+        builds = BuildarchiveIterator(self.env, None, self.queueid)
+        self.build = builds.next()
+        self.genstatus()
+
         return {
-            'author': 'decke',
-            'queueid': self.build,
+            'queueid': self.queueid,
+            'build': self.build,
+            'buildurl': self.build_link(),
+            'status': self.status,
         }
