@@ -318,7 +318,7 @@ int handleStep95(void)
 
 
 /* Automatically mark finished entries as deleted after $archivedays */
-int handleStep90(void)
+int handleStep91(void)
 {
     PGconn *conn;
     PGresult *result;
@@ -329,12 +329,43 @@ int handleStep90(void)
     if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    result = PQselect(conn, "UPDATE buildqueue SET status = 95 WHERE status = 90 AND ( (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli) )", limit, limit);
+    result = PQselect(conn, "UPDATE buildqueue SET status = 95 WHERE status = 91 AND ( (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli) )", limit, limit);
     if (PQresultStatus(result) != PGRES_COMMAND_OK)
         RETURN_ROLLBACK(conn);
 
     if(atoi(PQcmdTuples(result)) > 0)
         loginfo("Updated %s buildqueue entries to status 95", PQcmdTuples(result));
+
+    RETURN_COMMIT(conn);
+}
+
+/* Send notifications for all finished builds */
+int handleStep90(void)
+{
+    PGconn *conn;
+    PGresult *result;
+    char url[250];
+    int i;
+
+    if((conn = PQautoconnect()) == NULL)
+        return -1;
+
+    result = PQexec(conn, "SELECT id FROM buildqueue WHERE status = 90 FOR UPDATE NOWAIT");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
+        RETURN_ROLLBACK(conn);
+
+    for(i=0; i < PQntuples(result); i++)
+    {
+        loginfo("Sending notifications for build %s", PQgetvalue(result, i, 0));
+
+        sprintf(url, "%s/backend/notify/%s", configget("wwwurl"), PQgetvalue(result, i, 0));
+        if(!getpage(url, NULL))
+            logcgi(url, getenv("ERROR"));
+
+        if(!PQupdate(conn, "UPDATE buildqueue SET status = 91 WHERE id = '%s'", PQgetvalue(result, i, 0)))
+           RETURN_ROLLBACK(conn);
+    }
+    PQclear(result);
 
     RETURN_COMMIT(conn);
 }
