@@ -55,7 +55,7 @@ class Build(object):
 
         row = cursor.fetchone()
 
-        if row[0] != 80:
+        if row[0] != 90:
             return False
 
         session = DetachedSession(self.env, row[1])
@@ -151,7 +151,7 @@ class Build(object):
         row = cursor.fetchone()
         if not row:
             raise TracError('SQL Error')
-        if row[0] == 90:
+        if row[0] == 90 or row[0] == 91:
             cursor.execute("UPDATE buildqueue SET status = 95 WHERE id = %s", (self.queueid,) )
 
         db.commit()
@@ -250,7 +250,7 @@ def BuildqueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
     cursor2 = env.get_db_cnx().cursor()
 
-    cursor.execute("SELECT buildqueue.id, owner, replace(replace(browseurl, '%OWNER%', owner), '%REVISION%', revision::text), revision, status, startdate, enddate, description FROM buildqueue, portrepositories WHERE buildqueue.repository = portrepositories.id AND owner = %s AND buildqueue.status <= 90 ORDER BY buildqueue.id DESC", (req.authname,) )
+    cursor.execute("SELECT buildqueue.id, owner, replace(replace(browseurl, '%OWNER%', owner), '%REVISION%', revision::text), revision, status, startdate, enddate, description FROM buildqueue, portrepositories WHERE buildqueue.repository = portrepositories.id AND owner = %s AND buildqueue.status < 95 ORDER BY buildqueue.id DESC", (req.authname,) )
 
     for queueid, owner, repository, revision, status, startdate, enddate, description in cursor:
         build = Build(env)
