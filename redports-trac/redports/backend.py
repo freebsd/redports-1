@@ -46,7 +46,7 @@ class BackendConnector(Component):
             queueid = req.path_info[16:]
 
             build = Build(self.env, queueid)
-            if build.getStatus() != 80:
+            if not build.notifyEnabled():
                req.send("ERROR", "text/plain", 500)
                return ""
 
