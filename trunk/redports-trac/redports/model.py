@@ -2,6 +2,7 @@ from trac.core import *
 from trac.util.datefmt import from_utimestamp, pretty_timedelta, format_datetime
 from trac.versioncontrol import RepositoryManager
 from trac.util.translation import _
+from trac.web.session import DetachedSession
 from datetime import datetime
 from time import time
 import math
@@ -45,14 +46,23 @@ class Build(object):
         if math.floor(self.status / 10) == 9:
             self.deletable = True
 
-    def getStatus(self):
+    def notifyEnabled(self):
         cursor = self.env.get_db_cnx().cursor()
 
-        cursor.execute("SELECT status FROM buildqueue WHERE id = %s", (self.queueid,))
+        cursor.execute("SELECT status, owner FROM buildqueue WHERE id = %s", (self.queueid,))
         if cursor.rowcount != 1:
-            return 0
+            return False
 
-        return cursor.fetchone()[0]
+        row = cursor.fetchone()
+
+        if row[0] != 80:
+            return False
+
+        session = DetachedSession(self.env, row[1])
+
+        if session and session.get('build_notifications'):
+            return True
+        return False
 
     def addBuild(self, groups, ports, req):
         db = self.env.get_db_cnx()
