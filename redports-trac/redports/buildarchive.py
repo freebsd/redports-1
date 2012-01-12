@@ -17,7 +17,7 @@ from buildqueue import render_ctxtnav
 class BuildarchivePanel(Component):
     implements(INavigationContributor, ITemplateProvider, IRequestHandler, IPermissionRequestor)
 
-    items_per_page = IntOption('buildarchive', 'items_per_page', 50,
+    items_per_page = IntOption('buildarchive', 'items_per_page', 25,
         """Number of builds displayed per page in buildarchive""")
 
     def get_active_navigation_item(self, req):
@@ -59,13 +59,13 @@ class BuildarchivePanel(Component):
             shown_pages = paginator.get_shown_pages()
 
             for p in shown_pages:
-                pagedata.append([req.href.buildarchive(page=p), None, str(p), _('Page %(num)d', num=p)])
+                pagedata.append([req.href.buildarchive(page=p, owner=req.args.get('owner', None)), None, str(p), _('Page %(num)d', num=p)])
 
             if paginator.has_next_page:
-                add_link(req, 'next', req.href.buildarchive(page=page+1), _('Next Page'))
+                add_link(req, 'next', req.href.buildarchive(page=page+1, owner=req.args.get('owner', None)), _('Next Page'))
 
             if paginator.has_previous_page:
-                add_link(req, 'prev', req.href.buildarchive(page=page-1), _('Previous Page'))
+                add_link(req, 'prev', req.href.buildarchive(page=page-1, owner=req.args.get('owner', None)), _('Previous Page'))
 
             fields = ['href', 'class', 'string', 'title']
             paginator.shown_pages = [dict(zip(fields, p)) for p in pagedata]
