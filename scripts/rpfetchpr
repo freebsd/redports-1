@@ -1,0 +1,106 @@
+#!/bin/sh
+
+SCRIPT=`basename $0`
+TMPPR=`mktemp /tmp/${SCRIPT}.pr.XXXXXX` || exit 1
+TMPPATCH=`mktemp /tmp/${SCRIPT}.patch.XXXXXX` || exit 1
+
+fetchpr()
+{
+   PR=$1
+
+   fetch -qo ${TMPPR} "http://www.freebsd.org/cgi/query-pr.cgi?pr=${PR}&f=raw" || exit 1
+
+   return 0
+}
+
+fetchpatch()
+{
+   PR=$1
+   PATCH=$2
+
+   if [ -z "${PATCH}" ]; then
+      PATCH=1
+   fi
+
+   fetch -qo ${TMPPATCH} "http://www.freebsd.org/cgi/query-pr.cgi?pr=${PR}&getpatch=${PATCH}" || exit 1
+
+   return 0
+}
+
+detectpatchtype()
+{
+   if [ "`head -1 ${TMPPATCH}`" = "# This is a shell archive.  Save it in a file, remove anything before" ]; then
+      echo "SH"
+   elif egrep "^\-\-\- " ${TMPPATCH} >/dev/null && egrep "^\+\+\+ " ${TMPPATCH} >/dev/null ; then
+      echo "PATCH"
+   else
+      echo "UNKNOWN"
+   fi
+}
+
+detectport()
+{
+   # Remove synopsis, strip tags in [...], trim, take first word until ":" or space
+   grep -i ">Synopsis:" ${TMPPR} | cut -b11- | sed 's/\[.*\]//' | sed 's/^[[:space:]]*\(.*\)[[:space:]]*$/\1/' | sed 's/\([^[:space:]\:]*\).*/\1/'
+}
+
+fixpaths()
+{
+   PORT=$1
+   FILE=`egrep "^\+\+\+ " ${TMPPATCH} | cut -d' ' -f2 | cut -s -f1 | head -1`
+
+   # /home/pcvs/ports/devel/py-thrift/Makefile
+   if echo "${FILE}" | grep "${PORT}" - >/dev/null ; then
+      SUBPATH=`echo "${FILE}" | sed "s%\(.*\)${PORT}\(.*\)%\1%"`
+      replacepath "${SUBPATH}" "" ${TMPPATCH}
+      return 0
+   fi
+
+   # Makefile
+   if [ "${FILE}" = "Makefile" ]; then
+      replacepath "" "${PORT}/" ${TMPPATCH}
+      return 0
+   fi
+
+   # xfce4-wm/Makefile
+   if [ "${FILE##*/}" = "Makefile" ]; then
+      replacepath `dirname "${FILE}"` "${PORT}" ${TMPPATCH}
+      return 0
+   fi
+
+   echo "Could not fix path for ${FILE}"
+   return 1
+}
+
+replacepath()
+{
+   SEARCH=$1
+   REPLACE=$2
+   FILE=$3
+
+   sed -i.bak "s%^\+\+\+ ${SEARCH}%\+\+\+ ${REPLACE}%" ${FILE}
+}
+
+
+fetchpr "$1" || exit 1
+fetchpatch "$1" "" || exit 1
+
+PORT=`detectport`
+TYPE=`detectpatchtype`
+
+if [ -z "${PORT}" -o -z "${PORT%${PORT##*/}}" -o ! -d "/usr/ports/${PORT%${PORT##*/}}" ]; then
+   echo "Invalid portname ${PORT}"
+   return 1
+fi
+
+if [ "${TYPE}" = "PATCH" ]; then
+   fixpaths "${PORT}"
+   diff -uN ${TMPPATCH}.bak ${TMPPATCH}
+   cp -p ${TMPPATCH} ${PR}.diff
+elif [ "${TYPE}" = "SH" ]; then
+   echo "TODO: support sh archives"
+fi
+
+rm -f ${TMPPR} ${TMPPATCH} ${TMPPATCH}.bak
+return 0
+
