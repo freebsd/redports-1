@@ -409,56 +409,80 @@ def RepositoryIterator(env, req):
         yield repository
 
 
-def BuildarchiveIterator(env, req=None, queueid=None):
-    cursor = env.get_db_cnx().cursor()
-    cursor2 = env.get_db_cnx().cursor()
+class BuildarchiveIterator(object):
+    def __init__(self, env):
+        self.env = env
 
-    if not queueid:
-        queueid = ''
-    if not req:
-        userfilter = 'anonymous'
-    else:
-        userfilter = req.authname
+    def filter(self, owner=None, queueid=None, uniqueports=False):
+        self.owner = owner
+        self.queueid = queueid
+        self.uniqueports = uniqueports
 
-    cursor.execute("SELECT buildqueue.id, owner, replace(replace(browseurl, '%OWNER%', buildqueue.owner), '%REVISION%', revision::text), revision, status, startdate, CASE WHEN enddate < startdate THEN startdate ELSE enddate END, description FROM buildqueue, portrepositories WHERE repository = portrepositories.id AND (owner = %s OR %s = 'anonymous') AND (buildqueue.id = %s OR %s = '') AND buildqueue.status >= 90 ORDER BY buildqueue.id DESC LIMIT 100", (userfilter, userfilter, queueid, queueid) )
+    def count(self):
+        cursor = self.env.get_db_cnx().cursor()
+        cursor.execute("SELECT count(*) FROM buildqueue WHERE status >= 90" + self._get_filter())
+        if cursor.rowcount > 0:
+            return cursor.fetchall()[0][0]
 
-    for queueid, owner, repository, revision, status, startdate, enddate, description in cursor:
-        build = Build(env)
-        build.queueid = queueid
-        build.owner = owner
-        build.repository = repository
-        build.revision = revision
-        build.setStatus(status)
-        build.runtime = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
-        build.endtime = format_datetime(enddate)
-        build.description = description
+        return 0
 
-        cursor2.execute("SELECT id, buildgroup, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, CASE WHEN enddate < startdate THEN extract(epoch from now())*1000000 ELSE enddate END FROM builds WHERE queueid = %s ORDER BY id", (queueid,) )
+    def _get_filter(self):
+        filter = ''
 
-        lastport = None
-        for id, group, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate in cursor2:
-            port = Port(env)
-            port.id = id
-            port.group = group
-            port.portname = portname
-            port.pkgversion = pkgversion
-            port.buildstatus = buildstatus
-            port.buildlog = buildlog
-            port.wrkdir = wrkdir
-            port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
-            port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
+        if self.queueid:
+            filter += "AND buildqueue.id = '%s'" % (self.queueid)
 
-            if buildstatus:
-                port.buildstatus = buildstatus.lower()
-            if buildstatus and not buildreason:
-                buildreason = buildstatus.lower()
+        if self.owner:
+            filter += "AND buildqueue.owner = '%s'" % (self.owner)
 
-            port.setStatus(status, buildreason)
+        return filter
 
-            if lastport != portname:
-                port.head = True
-                lastport = portname
+    def get_data(self, limit=100, offset=0):
+        cursor = self.env.get_db_cnx().cursor()
+        cursor2 = self.env.get_db_cnx().cursor()
 
-            build.ports.append(port)
+        cursor.execute("SELECT buildqueue.id, owner, replace(replace(browseurl, '%OWNER%', buildqueue.owner), '%REVISION%', revision::text), revision, status, startdate, CASE WHEN enddate < startdate THEN startdate ELSE enddate END, description FROM buildqueue, portrepositories WHERE repository = portrepositories.id AND buildqueue.status >= 90 " + self._get_filter() + " ORDER BY buildqueue.id DESC LIMIT %s OFFSET %s", (limit, offset) )
 
-        yield build
+        for queueid, owner, repository, revision, status, startdate, enddate, description in cursor:
+            build = Build(self.env)
+            build.queueid = queueid
+            build.owner = owner
+            build.repository = repository
+            build.revision = revision
+            build.setStatus(status)
+            build.runtime = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+            build.endtime = format_datetime(enddate)
+            build.description = description
+
+            cursor2.execute("SELECT id, buildgroup, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, CASE WHEN enddate < startdate THEN extract(epoch from now())*1000000 ELSE enddate END FROM builds WHERE queueid = %s ORDER BY id", (queueid,) )
+
+            lastport = None
+            for id, group, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate in cursor2:
+                port = Port(self.env)
+                port.id = id
+                port.group = group
+                port.portname = portname
+                port.pkgversion = pkgversion
+                port.buildstatus = buildstatus
+                port.buildlog = buildlog
+                port.wrkdir = wrkdir
+                port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+                port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
+
+                if buildstatus:
+                    port.buildstatus = buildstatus.lower()
+                if buildstatus and not buildreason:
+                    buildreason = buildstatus.lower()
+
+                port.setStatus(status, buildreason)
+
+                if self.uniqueports and lastport == portname:
+                    continue
+
+                if lastport != portname:
+                    port.head = True
+                    lastport = portname
+
+                build.ports.append(port)
+
+            yield build

@@ -7,12 +7,15 @@
   <xi:include href="layout.html" />
   <xi:include href="macros.html" />
   <head>
-    <title>Your Builds</title>
+    <title>Archive</title>
   </head>
 
   <body>
-    <h1>$sitename</h1>
+    <h1>Archive</h1>
     <div id="content">
+        <h2 class="builds-result" py:if="paginator.has_more_pages">
+            Results <span class="numresults">(${paginator.displayed_items()})</span>
+        </h2>
 
         <table class="listing" id="archive_list">
             <thead>
@@ -21,35 +24,39 @@
                     <th>Source</th>
                     <th>Buildtime</th>
                     <th>Endtime</th>
+                    <th>Owner</th>
                     <th>Links</th>
                 </tr>
                 <tr>
-                    <th colspan="5">Ports</th>
+                    <th colspan="6">Ports</th>
                 </tr>
             </thead>
             <tbody>
               <py:for each="build in builds">
                 <tr class="headfull">
-                    <td><strong>$build.description</strong></td>
-                    <td>
-                      <py:if test="build.revision">
-                        <a href="$build.repository">r$build.revision</a>
-                      </py:if>
-                    </td>
-                    <td>$build.runtime</td>
-                    <td>$build.endtime</td>
-                    <td><a href="/buildarchive/$build.queueid/">Details</a></td>
+                  <td><strong>$build.description</strong></td>
+                  <td>
+                    <py:if test="build.revision">
+                      <a href="$build.repository">r$build.revision</a>
+                    </py:if>
+                  </td>
+                  <td>$build.runtime</td>
+                  <td>$build.endtime</td>
+                  <td>$build.owner</td>
+                  <td><a href="/buildarchive/$build.queueid/">Details</a></td>
                 </tr>
                 <tr>
-                    <td colspan="5">
-                      <py:for each="i, port in enumerate(build.ports)">
-                        ${i is not 0 and ',' or ''} <a href="/buildarchive/$build.queueid/">$port.portname<py:if test="port.pkgversion"> $port.pkgversion</py:if></a>
-                      </py:for>
-                    </td>
+                  <td colspan="6">
+                    <py:for each="i, port in enumerate(build.ports)">
+                      ${i is not 0 and ',' or ''} <a href="/buildarchive/$build.queueid/">$port.portname<py:if test="port.pkgversion"> $port.pkgversion</py:if></a>
+                    </py:for>
+                  </td>
                 </tr>
               </py:for>
             </tbody>
         </table>
+
+        <xi:include py:if="paginator.show_index" href="page_index.html" />
     </div>
   </body>
 </html>
