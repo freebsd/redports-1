@@ -1,6 +1,6 @@
 from trac.core import *
 from trac.prefs import IPreferencePanelProvider
-from trac.web.chrome import add_notice
+from trac.web.chrome import add_notice, add_warning
 
 class RedportsPreferencePanel(Component):
 
@@ -24,6 +24,8 @@ class RedportsPreferencePanel(Component):
                 if req.session.get('build_wrkdirdownload'):
                     del req.session['build_wrkdirdownload']
 
+            if req.session.get('build_notifications') and ( not req.session.get('email') or req.session.get('email_verification_token')):
+                add_warning(req, 'You need to verify your EMail to get notifications.')
 
             add_notice(req, 'Your preferences have been saved.')
             req.redirect(req.href.prefs(panel or None))
