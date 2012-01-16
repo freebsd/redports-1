@@ -1,0 +1,31 @@
+$build.description
+---------------------------------------------------------------------
+
+  Build ID:          $queueid
+  Job owner:         $build.owner
+  Buildtime:         $build.runtime
+  Endtime:           $build.endtime
+
+{% if build.revision %}\
+  Revision:          r$build.revision
+  Repository:        $build.repository
+
+{% end if %}\
+{% for port in build.ports %}\
+{%  if port.head %}\
+---------------------------------------------------------------------
+
+    Port:            $port.portname $port.pkgversion
+
+{%  end if %}\
+      Builgroup:     $port.group
+      Buildstatus:   ${port.statusname.upper()}
+{%    if port.buildlog %}\
+      Log: $project.url$port.directory/$port.buildlog
+{%    end if %}\
+
+{% end for %}\
+
+--
+Buildarchive URL: <$buildurl>
+$project.name <${project.url or abs_href()}>

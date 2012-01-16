@@ -76,6 +76,7 @@ class BuildqueuePanel(Component):
 def render_ctxtnav(req):
     if 'BUILDQUEUE_VIEW' in req.perm('buildqueue'):
         add_ctxtnav(req, _('Your Builds'), req.href.buildqueue())
+        add_ctxtnav(req, _('Your Archive'), req.href.buildarchive(owner=req.authname))
 
     add_ctxtnav(req, _('Buildgroups'), req.href.buildgroups())
     add_ctxtnav(req, _('Archive'), req.href.buildarchive())

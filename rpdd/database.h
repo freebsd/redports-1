@@ -61,10 +61,19 @@
     logsql(conn); \
     return -1; \
 }
+
+/**
+ * PostgreSQL Error Codes
+ *
+ * http://www.postgresql.org/docs/9.1/static/errcodes-appendix.html
+ */
+
+#define PQERROR_LOCK_NOT_AVAILABLE "55P03"
    
 
 extern PGconn* PQautoconnect(void);
 extern int PQupdate(PGconn *conn, char *queryfmt, ...);
 extern PGresult* PQselect(PGconn *conn, char *queryfmt, ...);
+extern char* PQgetErrorCode(PGresult *res);
 
 #endif /* _DATABASE_H */
