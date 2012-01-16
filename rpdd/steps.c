@@ -426,6 +426,11 @@ int handleStep80(void)
         else if(atol(PQgetvalue(result3, 0, 0)) > 3000)
            priority += 2;
 
+        if(priority < 1)
+           priority = 1;
+        if priority > 9)
+           priority = 9;
+
         if(!PQupdate(conn, "UPDATE buildqueue SET priority = %ld WHERE id = '%s'", priority, PQgetvalue(result, i, 3)))
            RETURN_ROLLBACK(conn);
 
