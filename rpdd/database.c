@@ -95,3 +95,8 @@ PGresult* PQselect(PGconn *conn, char *queryfmt, ...)
 
     return res;
 }
+
+char* PQgetErrorCode(PGresult *res)
+{
+    return PQresultErrorField(res, PG_DIAG_SQLSTATE);
+}
