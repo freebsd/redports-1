@@ -428,7 +428,7 @@ int handleStep80(void)
 
         if(priority < 1)
            priority = 1;
-        if priority > 9)
+        if(priority > 9)
            priority = 9;
 
         if(!PQupdate(conn, "UPDATE buildqueue SET priority = %ld WHERE id = '%s'", priority, PQgetvalue(result, i, 3)))
@@ -840,17 +840,29 @@ int handleStep20(void)
     PGresult *result2;
     PGresult *result3;
     PGresult *result4;
-    int i, j;
+    PGresult *reslock;
+    int i, j, done;
+
+    done = 0;
 
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT builds.id, builds.buildgroup, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status < 90 AND builds.status = 20 AND builds.backendid = 0 ORDER BY priority, builds.id DESC FOR UPDATE NOWAIT");
+    result = PQexec(conn, "SELECT builds.id, builds.buildgroup, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status < 90 AND builds.status = 20 AND builds.backendid = 0 ORDER BY priority, builds.id DESC");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
-    for(i=0; i < PQntuples(result); i++)
+    for(i=0; i < PQntuples(result) && done < 1; i++)
     {
+        reslock = PQselect(conn, "SELECT id FROM buildqueue WHERE id = %s FOR UPDATE NOWAIT", PQgetvalue(result, i, 2));
+        if (PQresultStatus(reslock) != PGRES_TUPLES_OK)
+        {
+            if (strcmp(PQgetErrorCode(reslock), PQERROR_LOCK_NOT_AVAILABLE) == 0)
+                continue;
+
+            RETURN_ROLLBACK(conn);
+        }
+
         result2 = PQselect(conn, "SELECT backendid, maxparallel FROM backendbuilds, backends WHERE backendid = backends.id AND buildgroup = '%s' AND backendbuilds.status = 1 AND backends.status = 1 ORDER BY priority", PQgetvalue(result, i, 1));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
             RETURN_ROLLBACK(conn);
@@ -875,6 +887,8 @@ int handleStep20(void)
 
                     if(!PQupdate(conn, "UPDATE builds SET backendid = %ld, status = 30, startdate = %lli WHERE id = %ld", atol(PQgetvalue(result2, j, 0)), microtime(), atol(PQgetvalue(result, i, 0))))
                         RETURN_ROLLBACK(conn);
+
+                    done++;
                 }
 
                 PQclear(result4);
