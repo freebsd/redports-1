@@ -52,7 +52,7 @@ struct StepHandler
 };
 
 struct StepHandler stepreg[] = {
-    { "20", handleStep20, 1, 0, 0 },
+    { "20", handleStep20, 1, 10, 0 },
     { "30", handleStep30, 1, 0, 0 },
     { "31", handleStep31, 1, 0, 0 },
     { "50", handleStep50, 1, 0, 0 },
@@ -60,7 +60,8 @@ struct StepHandler stepreg[] = {
     { "70", handleStep70, 1, 0, 0 },
     { "71", handleStep71, 2, 0, 0 },
     { "80", handleStep80, 1, 0, 0 },
-    { "90", handleStep90, 1, 7200, 0 },
+    { "90", handleStep90, 1, 0, 0 },
+    { "91", handleStep91, 1, 7200, 0 },
     { "95", handleStep95, 1, 3600, 0 },
     { "96", handleStep96, 1, 3600, 0 },
     { "98", handleStep98, 1, 3600, 0 },

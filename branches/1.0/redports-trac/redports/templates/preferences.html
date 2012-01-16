@@ -1,0 +1,28 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="prefs.html" />
+  <head>
+    <title>Build settings</title>
+  </head>
+  <body>
+    <label>
+      <input type="checkbox" name="wrkdir" checked="${options.wrkdir or None}" />
+      Save compressed working directory
+      <p class="hint">
+        In case of an build failure the ports working directory is compressed
+        and linked at a failed build.
+      </p>
+    </label>
+    <label>
+      <input type="checkbox" name="notifications" checked="${options.notifications or None}" />
+      EMail notification when finished
+      <p class="hint">
+        Sends an EMail for each job with a summary once all builds for the job have finished.
+      </p>
+    </label>
+  </body>
+</html>

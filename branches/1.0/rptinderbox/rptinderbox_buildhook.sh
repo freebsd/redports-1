@@ -40,8 +40,8 @@ if [ -f "${LOCK}" ]; then
         else
             echo "FAIL_REASON=\"depend (${FAIL_REASON} in ${PORTDIR})\"" >> ${FINISHED}
         fi
-
-        curl -s "${FINISHURL}" >/dev/null
+    else
+        FINISHURL=""
     fi
 fi
 
@@ -60,4 +60,8 @@ elif [ "${STATUS}" != "DUD" ]; then
         echo "BUILDLOG=\"/errors/${BUILD}/${PACKAGE_NAME}.log\"" >> ${FINISHED}
     fi
     compress_wrkdir
+fi
+
+if [ ! -z "${FINISHURL}" ]; then
+    curl -s "${FINISHURL}" >/dev/null
 fi

@@ -44,7 +44,7 @@
 #include "steputil.h"
 #include "util.h"
 
-#define RPD_VERSION "0.9.91"
+#define RPD_VERSION "0.9.92"
 #define DAEMON_NAME "rpdd"
 #define CONF_FILE "rpdd.conf"
 #define PID_FILE "/var/run/rpdd.pid"
@@ -90,6 +90,7 @@ void run(void)
                     exit(0);
                 }
                 setlastrun(step);
+                usleep(250000);
                 break;
             }
         }
@@ -107,8 +108,6 @@ void run(void)
                 }
             }
         }
-
-        usleep(500000);
     }
 }
  

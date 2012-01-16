@@ -318,7 +318,7 @@ int handleStep95(void)
 
 
 /* Automatically mark finished entries as deleted after $archivedays */
-int handleStep90(void)
+int handleStep91(void)
 {
     PGconn *conn;
     PGresult *result;
@@ -329,12 +329,43 @@ int handleStep90(void)
     if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    result = PQselect(conn, "UPDATE buildqueue SET status = 95 WHERE status = 90 AND ( (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli) )", limit, limit);
+    result = PQselect(conn, "UPDATE buildqueue SET status = 95 WHERE status = 91 AND ( (enddate > 0 AND enddate < %lli) OR (startdate > 0 AND startdate < %lli) )", limit, limit);
     if (PQresultStatus(result) != PGRES_COMMAND_OK)
         RETURN_ROLLBACK(conn);
 
     if(atoi(PQcmdTuples(result)) > 0)
         loginfo("Updated %s buildqueue entries to status 95", PQcmdTuples(result));
+
+    RETURN_COMMIT(conn);
+}
+
+/* Send notifications for all finished builds */
+int handleStep90(void)
+{
+    PGconn *conn;
+    PGresult *result;
+    char url[250];
+    int i;
+
+    if((conn = PQautoconnect()) == NULL)
+        return -1;
+
+    result = PQexec(conn, "SELECT id FROM buildqueue WHERE status = 90 FOR UPDATE NOWAIT");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
+        RETURN_ROLLBACK(conn);
+
+    for(i=0; i < PQntuples(result); i++)
+    {
+        loginfo("Sending notifications for build %s", PQgetvalue(result, i, 0));
+
+        sprintf(url, "%s/backend/notify/%s", configget("wwwurl"), PQgetvalue(result, i, 0));
+        if(!getpage(url, NULL))
+            logcgi(url, getenv("ERROR"));
+
+        if(!PQupdate(conn, "UPDATE buildqueue SET status = 91 WHERE id = '%s'", PQgetvalue(result, i, 0)))
+           RETURN_ROLLBACK(conn);
+    }
+    PQclear(result);
 
     RETURN_COMMIT(conn);
 }
@@ -394,6 +425,11 @@ int handleStep80(void)
            priority -= 1;
         else if(atol(PQgetvalue(result3, 0, 0)) > 3000)
            priority += 2;
+
+        if(priority < 1)
+           priority = 1;
+        if(priority > 9)
+           priority = 9;
 
         if(!PQupdate(conn, "UPDATE buildqueue SET priority = %ld WHERE id = '%s'", priority, PQgetvalue(result, i, 3)))
            RETURN_ROLLBACK(conn);
@@ -476,8 +512,8 @@ int handleStep71(void)
            RETURN_ROLLBACK(conn);
         }
 
-        sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), PQgetvalue(result3, i, 0),
-        		PQgetvalue(result3, i, 1), PQgetvalue(result, i, 0));
+        sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), PQgetvalue(result3, 0, 0),
+        		PQgetvalue(result3, 0, 1), PQgetvalue(result, i, 0));
         if(mkdirrec(localdir) != 0)
            RETURN_ROLLBACK(conn);
 
@@ -497,16 +533,25 @@ int handleStep71(void)
 
         if(getenv("WRKDIR") != NULL)
         {
-           sprintf(localfile, "%s/%s", localdir, basename(getenv("WRKDIR")));
-           sprintf(remotefile, "%s://%s%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1), getenv("WRKDIR"));
-           loginfo("Downloading Wrkdir %s to %s", remotefile, localfile);
-           if(downloadfile(remotefile, PQgetvalue(result2, 0, 3), localfile) != 0){
-              logerror("Download of %s failed", remotefile);
-              RETURN_ROLLBACK(conn);
+           restmp = PQselect(conn, "SELECT count(*) FROM session_attribute WHERE sid = '%s' AND name = 'build_wrkdirdownload'", PQgetvalue(result3, 0, 0));
+        if (PQresultStatus(restmp) != PGRES_TUPLES_OK)
+           RETURN_ROLLBACK(conn);
+
+           if(atol(PQgetvalue(restmp, 0, 0)) > 0)
+           {
+              sprintf(localfile, "%s/%s", localdir, basename(getenv("WRKDIR")));
+              sprintf(remotefile, "%s://%s%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1), getenv("WRKDIR"));
+              loginfo("Downloading Wrkdir %s to %s", remotefile, localfile);
+              if(downloadfile(remotefile, PQgetvalue(result2, 0, 3), localfile) != 0){
+                 logerror("Download of %s failed", remotefile);
+                 RETURN_ROLLBACK(conn);
+              }
+
+              if(!PQupdate(conn, "UPDATE builds SET wrkdir = '%s' WHERE id = %ld", basename(localfile), atol(PQgetvalue(result, i, 0))))
+                 RETURN_ROLLBACK(conn);
            }
 
-           if(!PQupdate(conn, "UPDATE builds SET wrkdir = '%s' WHERE id = %ld", basename(localfile), atol(PQgetvalue(result, i, 0))))
-              RETURN_ROLLBACK(conn);
+           PQclear(restmp);
         }
 
         loginfo("Updating build status for build %ld", atol(PQgetvalue(result, i, 0)));
@@ -730,7 +775,7 @@ int handleStep30(void)
 
     for(i=0; i < PQntuples(result); i++)
     {
-        loginfo("Start checkout for build %s", PQgetvalue(result, i, 0));
+        loginfo("Trying to lock backend %s for buildgroup %s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2));
 
         result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
@@ -753,6 +798,8 @@ int handleStep30(void)
         result3 = PQselect(conn, "SELECT type, replace(replace(replace(replace(url, '%%OWNER%%', owner), '%%PORTNAME%%', portname), '%%QUEUEID%%', buildqueue.id::text), '%%BUILDID%%', builds.id::text) FROM portrepositories, buildqueue, builds WHERE portrepositories.id = repository AND buildqueue.id = queueid AND builds.id = %ld", atol(PQgetvalue(result, i, 0)));
         if (PQresultStatus(result3) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
+
+        loginfo("Start checkout for build %s", PQgetvalue(result, i, 0));
 
         sprintf(url, "%s://%s%scheckout?type=%s&repository=%s&revision=%s&build=%s", PQgetvalue(result2, 0, 0),
         		PQgetvalue(result2, 0, 1), PQgetvalue(result2, 0, 2), PQgetvalue(result3, 0, 0),
@@ -793,17 +840,29 @@ int handleStep20(void)
     PGresult *result2;
     PGresult *result3;
     PGresult *result4;
-    int i, j;
+    PGresult *reslock;
+    int i, j, done;
+
+    done = 0;
 
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT builds.id, builds.buildgroup, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status < 90 AND builds.status = 20 AND builds.backendid = 0 ORDER BY priority, builds.id DESC FOR UPDATE NOWAIT");
+    result = PQexec(conn, "SELECT builds.id, builds.buildgroup, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status < 90 AND builds.status = 20 AND builds.backendid = 0 ORDER BY priority, builds.id DESC");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
-    for(i=0; i < PQntuples(result); i++)
+    for(i=0; i < PQntuples(result) && done < 1; i++)
     {
+        reslock = PQselect(conn, "SELECT id FROM buildqueue WHERE id = %s FOR UPDATE NOWAIT", PQgetvalue(result, i, 2));
+        if (PQresultStatus(reslock) != PGRES_TUPLES_OK)
+        {
+            if (strcmp(PQgetErrorCode(reslock), PQERROR_LOCK_NOT_AVAILABLE) == 0)
+                continue;
+
+            RETURN_ROLLBACK(conn);
+        }
+
         result2 = PQselect(conn, "SELECT backendid, maxparallel FROM backendbuilds, backends WHERE backendid = backends.id AND buildgroup = '%s' AND backendbuilds.status = 1 AND backends.status = 1 ORDER BY priority", PQgetvalue(result, i, 1));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
             RETURN_ROLLBACK(conn);
@@ -828,6 +887,8 @@ int handleStep20(void)
 
                     if(!PQupdate(conn, "UPDATE builds SET backendid = %ld, status = 30, startdate = %lli WHERE id = %ld", atol(PQgetvalue(result2, j, 0)), microtime(), atol(PQgetvalue(result, i, 0))))
                         RETURN_ROLLBACK(conn);
+
+                    done++;
                 }
 
                 PQclear(result4);

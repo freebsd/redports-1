@@ -8,7 +8,7 @@ setup(
     name=PACKAGE,
     description='Plugin which integrates an automatic FreeBSD package buildfarm',
     keywords='trac plugin freebsd tinderbox redports',
-    version='0.9.91',
+    version='0.9.92',
     url='http://www.bluelife.at/',
     license='http://www.opensource.org/licenses/bsd-license.php',
     author='Bernhard Froehlich',
@@ -18,7 +18,7 @@ setup(
     """,
     zip_safe=True,
     packages=[PACKAGE],
-    package_data={PACKAGE : ['templates/*.html', 'htdocs/*']},
+    package_data={PACKAGE : ['templates/*', 'htdocs/*']},
     entry_points = {
         'trac.plugins': [
             'redports.db = redports.db',
@@ -26,5 +26,7 @@ setup(
             'redports.buildarchive = redports.buildarchive',
             'redports.buildgroups = redports.buildgroups',
             'redports.buildqueue = redports.buildqueue',
+            'redports.preferences = redports.preferences',
+            'redports.notify = redports.notify',
         ]
     })
