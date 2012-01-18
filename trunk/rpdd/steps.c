@@ -854,7 +854,7 @@ int handleStep20(void)
 
     for(i=0; i < PQntuples(result) && done < 1; i++)
     {
-        reslock = PQselect(conn, "SELECT id FROM buildqueue WHERE id = %s FOR UPDATE NOWAIT", PQgetvalue(result, i, 2));
+        reslock = PQselect(conn, "SELECT id FROM buildqueue WHERE id = '%s' FOR UPDATE NOWAIT", PQgetvalue(result, i, 2));
         if (PQresultStatus(reslock) != PGRES_TUPLES_OK)
         {
             if (strcmp(PQgetErrorCode(reslock), PQERROR_LOCK_NOT_AVAILABLE) == 0)
