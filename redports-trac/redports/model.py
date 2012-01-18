@@ -64,7 +64,7 @@ class Build(object):
             return False
 
         # email not verified or no email set
-        if not req.session.get('email') or req.session.get('email_verification_token'):
+        if not session.get('email') or session.get('email_verification_token'):
             return False
 
         if not session.get('build_notifications'):
@@ -449,7 +449,7 @@ class BuildarchiveIterator(object):
         cursor = self.env.get_db_cnx().cursor()
         cursor2 = self.env.get_db_cnx().cursor()
 
-        cursor.execute("SELECT buildqueue.id, owner, replace(replace(browseurl, '%OWNER%', buildqueue.owner), '%REVISION%', revision::text), revision, status, startdate, CASE WHEN enddate < startdate THEN startdate ELSE enddate END, description FROM buildqueue, portrepositories WHERE repository = portrepositories.id AND buildqueue.status >= 20 " + self._get_filter() + " ORDER BY buildqueue.id DESC LIMIT %s OFFSET %s", (limit, offset) )
+        cursor.execute("SELECT buildqueue.id, owner, replace(replace(browseurl, '%OWNER%', buildqueue.owner), '%REVISION%', revision::text), revision, status, startdate, CASE WHEN enddate < startdate THEN startdate ELSE enddate END, description FROM buildqueue, portrepositories WHERE repository = portrepositories.id AND buildqueue.status >= 10 " + self._get_filter() + " ORDER BY buildqueue.id DESC LIMIT %s OFFSET %s", (limit, offset) )
 
         for queueid, owner, repository, revision, status, startdate, enddate, description in cursor:
             build = Build(self.env)

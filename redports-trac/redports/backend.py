@@ -47,7 +47,7 @@ class BackendConnector(Component):
 
             build = Build(self.env, queueid)
             if not build.notifyEnabled():
-               req.send("ERROR", "text/plain", 500)
+               req.send("OK", "text/plain", 200)
                return ""
 
             notifier = BuildNotify(self.env)
