@@ -66,8 +66,9 @@ class BuildNotifyEmail(NotifyEmail):
         self.status = self.status.rstrip(', ')
 
     def template_data(self):
-        builds = BuildarchiveIterator(self.env, None, self.queueid)
-        self.build = builds.next()
+        builds = BuildarchiveIterator(self.env)
+        builds.filter(None, self.queueid)
+        self.build = builds.get_data().next()
         self.genstatus()
 
         return {
