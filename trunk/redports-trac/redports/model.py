@@ -64,7 +64,7 @@ class Build(object):
             return False
 
         # email not verified or no email set
-        if not req.session.get('email') or req.session.get('email_verification_token'):
+        if not session.get('email') or session.get('email_verification_token'):
             return False
 
         if not session.get('build_notifications'):
