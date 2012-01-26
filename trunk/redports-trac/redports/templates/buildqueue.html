@@ -102,8 +102,16 @@
                     <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
                     <td>$port.startdate</td>
                     <td>
-                      <py:if test="port.buildlog"><a href="$port.directory/$port.buildlog">log</a></py:if>
-                      <py:if test="port.wrkdir"><a href="$port.directory/$port.wrkdir">wrkdir</a></py:if>
+                      <py:if test="port.buildlog">
+                        <a href="$port.directory/$port.buildlog">
+                          <img src="${href.chrome('/redports/details.png')}" alt="Buildlog" title="Buildlog" />
+                        </a>
+                      </py:if>
+                      <py:if test="port.wrkdir">
+                        <a href="$port.directory/$port.wrkdir">
+                          <img src="${href.chrome('/redports/wrkdir.png')}" alt="Work directory" title="Work directory" />
+                        </a>
+                      </py:if>
                     </td>
                     <td>
                       <py:if test="port.deletable">
