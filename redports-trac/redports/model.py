@@ -21,6 +21,61 @@ class PortRepository(object):
         self.url = None
         self.browseurl = None
 
+class Backend(object):
+    def __init__(self, env, id=None):
+        self.env = env
+        self.clear()
+        self.id = id
+
+    def clear(self):
+        self.id = None
+        self.protocol = None
+        self.host = None
+        self.uri = None
+        self.credentials = None
+        self.maxparallel = None
+        self.type = None
+        self.status = None
+
+    def setStatus(self, status):
+        self.status = int(status)
+
+        if self.status == 0:
+            self.disabled = True
+            self.statusname = 'fail'
+        elif self.status == 1:
+            self.enabled = True
+            self.statusname = 'success'
+        elif self.status == 2:
+            self.disabled = True
+            self.failed = True
+            self.statusname = 'fail'
+        else:
+            raise TracError('Invalid backend status')
+
+    def updateStatus(self, status):
+        self.setStatus(status)
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("UPDATE backends SET status = %s WHERE id = %s", ( self.status, self.id ) )
+        db.commit()
+
+    def delete(self):
+        raise TracError('Not implemented')
+
+    def add(self):
+        if self.id:
+            raise TracError('Already existing backend object cannot be added again')
+
+        if self.uri[0] != '/':
+            raise TracError('')
+
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("INSERT INTO backends (host, protocol, uri, credentials, maxparallel, status, type) VALUES(%s, %s, %s, %s, %s, %s, %s)", ( self.host, self.protocol, self.uri, self.credentials, self.maxparallel, self.status, self.type ) )
+        db.commit()
+
+
 class Build(object):
     def __init__(self, env, queueid=None):
         self.env = env
@@ -415,6 +470,23 @@ def RepositoryIterator(env, req):
         repository.browseurl = browseurl
 
         yield repository
+
+
+def BackendsIterator(env):
+    cursor = env.get_db_cnx().cursor()
+    cursor.execute("SELECT id, protocol, host, uri, credentials, maxparallel, status, type FROM backends ORDER BY id")
+
+    for id, protocol, host, uri, credentials, maxparallel, status, type in cursor:
+        backend = Backend(env, id)
+        backend.protocol = protocol
+        backend.host = host
+        backend.uri = uri
+        backend.credentials = credentials
+        backend.maxparallel = maxparallel
+        backend.type = type
+        backend.setStatus(status)
+
+        yield backend
 
 
 class BuildarchiveIterator(object):

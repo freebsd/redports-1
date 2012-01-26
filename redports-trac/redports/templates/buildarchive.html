@@ -34,7 +34,7 @@
             <tbody>
               <py:for each="build in builds">
                 <tr class="headfull">
-                  <td><strong>$build.description</strong></td>
+                  <td><a href="/buildarchive/$build.queueid/"><strong>$build.description</strong></a></td>
                   <td>
                     <py:if test="build.revision">
                       <a href="$build.repository">r$build.revision</a>
@@ -43,7 +43,11 @@
                   <td>$build.runtime</td>
                   <td>$build.endtime</td>
                   <td>$build.owner</td>
-                  <td><a href="/buildarchive/$build.queueid/">Details</a></td>
+                  <td><a href="/buildarchive/$build.queueid/">
+                         <img src="${href.chrome('/redports/details.png')}"
+                         alt="Build details" title="Build details" />
+                      </a>
+                  </td>
                 </tr>
                 <tr>
                   <td colspan="6">

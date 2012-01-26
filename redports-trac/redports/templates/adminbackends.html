@@ -1,0 +1,99 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/" 
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="admin.html" />
+  <head>
+    <title>Backends</title>
+  </head>
+
+  <body>
+    <h2>Manage Backends</h2>
+
+    <form id="backend-editor" class="addnew" method="post">
+      <fieldset>
+        <legend>Add/Edit Backend:</legend>
+        <div class="field">
+          <label>Protocol:<br />
+            <select id="protocol" name="protocol">
+              <option value=""></option>
+              <option value="http">http</option>
+              <option value="https">https</option>
+            </select>
+          </label>
+        </div>
+        <div class="field">
+          <label>Host:<br />
+            <input type="text" name="host" id="host"
+                   class="textwidget" value="${backend.host}" />
+          </label>
+        </div>
+        <div class="field">
+          <label>URI:<br />
+            <input type="text" name="uri" id="uri"
+                   class="textwidget" value="${backend.uri}" />
+          </label>
+        </div>
+        <div class="field">
+          <label>Credentials:<br />
+            <input type="text" name="credentials" id="credentials"
+                   class="textwidget" value="${backend.credentials}" />
+          </label>
+        </div>
+        <div class="field">
+          <label>Max Parallel:<br />
+             <select id="maxparallel" name="maxparallel">
+               <option>1</option>
+               <option>2</option>
+               <option>3</option>
+               <option>4</option>
+               <option>5</option>
+               <option>6</option>
+               <option>7</option>
+               <option>8</option>
+             </select>
+          </label>
+        </div>
+        <p class="help">Add a new backend or edit an existing one.</p>
+        <div class="buttons">
+          <input type="submit" name="add" value="Add" />
+          <input type="submit" name="change" value="Change" />
+        </div>
+      </fieldset>
+    </form>
+
+    <div id="backendlist" style="overflow: auto; padding: 0 1px;" >
+      <table class="listing" id="backendlist">
+        <thead>
+          <tr>
+            <th>&nbsp;</th>
+            <th>Host</th>
+            <th width="10%">Max Parallel</th>
+            <th>Type</th>
+            <th>Options</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr py:for="backend in backends">
+            <td class="status-${backend.statusname}">&nbsp;</td>
+            <td>
+              <a href="${backend.protocol}://${backend.credentials}@${backend.host}${backend.uri}ping">${backend.host}</a>
+            </td>
+            <td>${backend.maxparallel}</td>
+            <td>${backend.type}</td>
+            <td>
+              <form method="post" action="">
+                <input type="hidden" name="backend" value="$backend.id" />
+                <input py:if="backend.enabled" type="submit" name="disable" value="disable" />
+                <input py:if="backend.disabled" type="submit" name="enable" value="enable" />
+                <input type="submit" name="delete" value="delete" />
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>
