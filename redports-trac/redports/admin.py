@@ -6,7 +6,7 @@ from trac.web.chrome import ITemplateProvider, add_notice, add_warning, add_styl
 
 from pkg_resources import resource_filename
 
-from model import Backend, BackendsIterator, Backendbuild, BackendbuildsIterator, AllBuildgroupsIterator
+from model import Backend, BackendsIterator, Backendbuild, BackendbuildsIterator, Buildgroup, AllBuildgroupsIterator
 
 class AdminPanel(Component):
 
@@ -28,6 +28,8 @@ class AdminPanel(Component):
             return self.show_backends(req)
         elif page == 'backendbuilds':
             return self.show_backendbuilds(req)
+        elif page == 'buildgroups':
+            return self.show_buildgroups(req)
 
     def get_htdocs_dirs(self):
         """Return the absolute path of a directory containing additional
@@ -106,4 +108,24 @@ class AdminPanel(Component):
                  'backends': BackendsIterator(self.env),
                  'buildgroups': AllBuildgroupsIterator(self.env),
                  'backendbuilds': BackendbuildsIterator(self.env)
+               }
+
+    def show_buildgroups(self, req):
+        if req.method == 'POST':
+            if req.args.get('delete') and req.args.get('buildgroup'):
+                buildgroup = Buildgroup(self.env, req.args.get('buildgroup'))
+                buildgroup.delete()
+                req.redirect(req.href.admin('redports/buildgroups'))
+            elif req.args.get('add'):
+                buildgroup = Buildgroup(self.env, req.args.get('buildgroup'))
+                buildgroup.version = req.args.get('version')
+                buildgroup.arch = req.args.get('arch')
+                buildgroup.type = 'tinderbox'
+                buildgroup.description = req.args.get('description')
+                buildgroup.add()
+                req.redirect(req.href.admin('redports/buildgroups'))
+
+        add_stylesheet(req, 'redports/redports.css')
+        return 'adminbuildgroups.html', {
+                 'buildgroups': AllBuildgroupsIterator(self.env)
                }
