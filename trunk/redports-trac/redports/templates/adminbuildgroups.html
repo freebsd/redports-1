@@ -1,0 +1,76 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/" 
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="admin.html" />
+  <head>
+    <title>Buildgroups</title>
+  </head>
+
+  <body>
+    <h2>Manage Buildgroups</h2>
+
+    <form class="addnew" method="post">
+      <fieldset>
+        <legend>Add Buildgroup:</legend>
+        <div class="field">
+          <label>Buildgroup:<br />
+            <input type="text" name="buildgroup" id="buildgroup" class="textwidget" value="" />
+          </label>
+        </div>
+        <div class="field">
+          <label>Version:<br />
+            <input type="text" name="version" id="version" class="textwidget" value="" />
+          </label>
+        </div>
+        <div class="field">
+          <label>Architecture:<br />
+            <select id="arch" name="arch">
+              <option>i386</option>
+              <option>amd64</option>
+            </select>
+          </label>
+        </div>
+        <div class="field">
+          <label>Description:<br />
+            <input type="text" name="description" id="description" class="textwidget" value="" />
+          </label>
+        </div>
+        <p class="help">Add a new buildgroup.</p>
+        <div class="buttons">
+          <input type="submit" name="add" value="Add" />
+        </div>
+      </fieldset>
+    </form>
+
+    <div style="overflow: auto; padding: 0 1px;" >
+      <table class="listing">
+        <thead>
+          <tr>
+            <th>Buildgroup</th>
+            <th>Version</th>
+            <th>Arch</th>
+            <th>Description</th>
+            <th>Options</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr py:for="buildgroup in buildgroups">
+            <td>${buildgroup.name}</td>
+            <td>${buildgroup.version}</td>
+            <td>${buildgroup.arch}</td>
+            <td>${buildgroup.description}</td>
+            <td>
+              <form method="post" action="">
+                <input type="hidden" name="buildgroup" value="${buildgroup.name}" />
+                <input type="submit" name="delete" value="delete" />
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>

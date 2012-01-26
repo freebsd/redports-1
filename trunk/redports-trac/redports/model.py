@@ -476,6 +476,26 @@ class Buildgroup(object):
         cursor.execute("INSERT INTO automaticbuildgroups (username, buildgroup, priority) VALUES(%s, %s, %s)", ( req.authname, self.name, self.priority ) )
         db.commit()
 
+   def delete(self):
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        
+        cursor.execute("SELECT count(*) FROM backendbuilds WHERE buildgroup = %s", ( self.name, ))
+        row = cursor.fetchone()
+        if not row:
+            raise TracError('SQL Error')
+        if row[0] > 0:
+            raise TracError('Backendbuilds for this buildgroup still exist')
+
+        cursor.execute("DELETE FROM buildgroups WHERE name = %s", (self.name,) )
+        db.commit()
+
+   def add(self):
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("INSERT INTO buildgroups (name, version, arch, type, description) VALUES(%s, %s, %s, %s, %s)", ( self.name, self.version, self.arch, self.type, self.description) )
+        db.commit()
+
 
 def BuildgroupsIterator(env, req):
    cursor = env.get_db_cnx().cursor()
@@ -518,10 +538,14 @@ def AvailableBuildgroupsIterator(env, req):
 
 def AllBuildgroupsIterator(env):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT name FROM buildgroups ORDER BY version DESC, name")
+    cursor.execute("SELECT name, version, arch, type, description FROM buildgroups ORDER BY version DESC, name")
 
-    for name in cursor:
+    for name, version, arch, type, description in cursor:
         buildgroup = Buildgroup(env, name)
+        buildgroup.version = version
+        buildgroup.arch = arch
+        buildgroup.type = type
+        buildgroup.description = description
 
         yield buildgroup
 
