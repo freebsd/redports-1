@@ -117,7 +117,22 @@ class Backendbuild(object):
         db.commit()
 
     def delete(self):
-        raise TracError('Not implemented')
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+
+        cursor.execute("SELECT buildgroup, backendid FROM backendbuilds WHERE id = %s", ( self.id, ))
+        row = cursor.fetchone()
+
+        cursor.execute("SELECT count(*) FROM builds WHERE buildgroup = %s AND backendid = %s AND status < 90", ( row[0], row[1] ))
+        row = cursor.fetchone()
+        if not row:
+            raise TracError('SQL Error')
+        if row[0] > 0:
+            raise TracError('There are running builds for this Backendbuild')
+
+        cursor.execute("DELETE FROM backendbuilds WHERE id = %s", ( self.id, ))
+        db.commit()
+
 
     def add(self):
         if self.id:
