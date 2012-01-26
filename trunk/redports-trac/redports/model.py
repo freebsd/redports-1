@@ -37,6 +37,9 @@ class Backend(object):
         self.type = None
         self.status = None
 
+    def getURL(self):
+        return self.protocol + '://' + self.host + self.uri
+
     def setStatus(self, status):
         self.status = int(status)
 
@@ -73,6 +76,56 @@ class Backend(object):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
         cursor.execute("INSERT INTO backends (host, protocol, uri, credentials, maxparallel, status, type) VALUES(%s, %s, %s, %s, %s, %s, %s)", ( self.host, self.protocol, self.uri, self.credentials, self.maxparallel, self.status, self.type ) )
+        db.commit()
+
+
+class Backendbuild(object):
+    def __init__(self, env, id=None):
+        self.env = env
+        self.clear()
+        self.id = id
+
+    def clear(self):
+        self.id = None
+        self.buildgroup = None
+        self.backendid = None
+        self.priority = None
+        self.status = None
+        self.buildname = None
+
+    def setStatus(self, status):
+        self.status = int(status)
+
+        if self.status == 0:
+            self.disabled = True
+            self.statusname = 'fail'
+        elif self.status == 1:
+            self.enabled = True
+            self.statusname = 'success'
+        elif self.status == 2:
+            self.disabled = True
+            self.failed = True
+            self.statusname = 'fail'
+        else:
+            raise TracError('Invalid backend status')
+
+    def updateStatus(self, status):
+        self.setStatus(status)
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("UPDATE backendbuilds SET status = %s WHERE id = %s", ( self.status, self.id ) )
+        db.commit()
+
+    def delete(self):
+        raise TracError('Not implemented')
+
+    def add(self):
+        if self.id:
+            raise TracError('Already existing backendbuild object cannot be added again')
+
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("INSERT INTO backendbuilds (buildgroup, backendid, priority, status, buildname) VALUES(%s, %s, %s, %s, %s)", ( self.buildgroup, self.backendid, self.priority, self.status, self.buildname) )
         db.commit()
 
 
@@ -484,9 +537,31 @@ def BackendsIterator(env):
         backend.credentials = credentials
         backend.maxparallel = maxparallel
         backend.type = type
+        backend.url = backend.getURL()
         backend.setStatus(status)
 
         yield backend
+
+
+def BackendbuildsIterator(env):
+    cursor = env.get_db_cnx().cursor()
+    cursor.execute("SELECT backendbuilds.id, backendbuilds.buildgroup, backendbuilds.backendid, backendbuilds.priority, backendbuilds.status, backendbuilds.buildname, backends.protocol || '://' || backends.host || backends.uri FROM backendbuilds, backends WHERE backendbuilds.backendid = backends.id ORDER BY backendbuilds.backendid, backendbuilds.id")
+
+    lastbackend = None
+    for id, buildgroup, backendid, priority, status, buildname, backend in cursor:
+        backendbuild = Backendbuild(env, id)
+        backendbuild.buildgroup = buildgroup
+        backendbuild.backendid = backendid
+        backendbuild.priority = priority
+        backendbuild.buildname = buildname
+        backendbuild.backend = backend
+        backendbuild.setStatus(status)
+
+        if lastbackend != backendid:
+            backendbuild.head = True
+            lastbackend = backendid
+
+        yield backendbuild
 
 
 class BuildarchiveIterator(object):
