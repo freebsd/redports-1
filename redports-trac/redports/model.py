@@ -64,7 +64,18 @@ class Backend(object):
         db.commit()
 
     def delete(self):
-        raise TracError('Not implemented')
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+
+        cursor.execute("SELECT count(*) FROM backendbuilds WHERE backendid = %s", ( self.id, ))
+        row = cursor.fetchone()
+        if not row:
+            raise TracError('SQL Error')
+        if row[0] > 0:
+            raise TracError('There are still backendbuilds for this backend')
+
+        cursor.execute("DELETE FROM backends WHERE id = %s", ( self.id, ))
+        db.commit()
 
     def add(self):
         if self.id:
