@@ -79,7 +79,7 @@
           <tr py:for="backend in backends">
             <td class="status-${backend.statusname}">&nbsp;</td>
             <td>
-              <a href="${backend.protocol}://${backend.credentials}@${backend.host}${backend.uri}ping">${backend.host}</a>
+              <a href="${backend.url}ping">${backend.url}</a>
             </td>
             <td>${backend.maxparallel}</td>
             <td>${backend.type}</td>

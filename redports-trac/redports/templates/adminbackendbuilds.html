@@ -1,0 +1,94 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/" 
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="admin.html" />
+  <head>
+    <title>Backendbuilds</title>
+  </head>
+
+  <body>
+    <h2>Manage Backendbuilds</h2>
+
+    <form class="addnew" method="post">
+      <fieldset>
+        <legend>Add Backendbuild:</legend>
+        <div class="field">
+          <label>Buildgroup:<br />
+            <select id="buildgroup" name="buildgroup">
+              <py:for each="buildgroup in buildgroups">
+                <option value="$buildgroup.id">$buildgroup.name</option>
+              </py:for>
+            </select>
+          </label>
+        </div>
+        <div class="field">
+          <label>Backend:<br />
+            <select id="backendid" name="backendid">
+              <py:for each="backend in backends">
+                <option value="$backend.id">${backend.url}</option>
+              </py:for>
+            </select>
+          </label>
+        </div>
+        <div class="field">
+          <label>Priority:<br />
+            <select id="priority" name="priority">
+              <option value="1">very high</option>
+              <option value="3">high</option>
+              <option value="5">normal</option>
+              <option value="7">low</option>
+              <option value="9">very low</option>
+            </select>
+          </label>
+        </div>
+        <div class="field">
+          <label>TB Buildname:<br />
+            <input type="text" name="buildname" id="buildname" class="textwidget" value="" />
+          </label>
+        </div>
+        <p class="help">Add a new backendbuild.</p>
+        <div class="buttons">
+          <input type="submit" name="add" value="Add" />
+        </div>
+      </fieldset>
+    </form>
+
+    <div id="backendlist" style="overflow: auto; padding: 0 1px;" >
+      <table class="listing" id="backendlist">
+        <thead>
+          <tr>
+            <th>&nbsp;</th>
+            <th>Buildgroup</th>
+            <th>Buildname</th>
+            <th width="10%">Priority</th>
+            <th>Options</th>
+          </tr>
+        </thead>
+        <tbody>
+        <py:for each="backendbuild in backendbuilds">
+          <tr py:if="backendbuild.head" class="head">
+            <td colspan="5"><strong>${backendbuild.backend}</strong></td>
+          </tr>
+          <tr>
+            <td class="status-${backendbuild.statusname}">&nbsp;</td>
+            <td>${backendbuild.buildgroup}</td>
+            <td>${backendbuild.buildname}</td>
+            <td>${backendbuild.priority}</td>
+            <td>
+              <form method="post" action="">
+                <input type="hidden" name="backendbuild" value="$backendbuild.id" />
+                <input py:if="backendbuild.enabled" type="submit" name="disable" value="disable" />
+                <input py:if="backendbuild.disabled" type="submit" name="enable" value="enable" />
+                <input type="submit" name="delete" value="delete" />
+              </form>
+            </td>
+          </tr>
+        </py:for>
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>

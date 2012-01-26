@@ -6,7 +6,7 @@ from trac.web.chrome import ITemplateProvider, add_notice, add_warning, add_styl
 
 from pkg_resources import resource_filename
 
-from model import Backend, BackendsIterator
+from model import Backend, BackendsIterator, Backendbuild, BackendbuildsIterator, AllBuildgroupsIterator
 
 class AdminPanel(Component):
 
@@ -20,14 +20,14 @@ class AdminPanel(Component):
     def get_admin_panels(self, req):
         if req.perm.has_permission('REDPORTS_ADMIN'):
             yield ('redports', _("Redports"), 'backends', _("Backends"))
-            yield ('redports', _("Redports"), 'builds', _("Builds"))
+            yield ('redports', _("Redports"), 'backendbuilds', _("Backendbuilds"))
             yield ('redports', _("Redports"), 'buildgroups', _("Buildgroups"))
 
     def render_admin_panel(self, req, cat, page, path_info):
         if page == 'backends':
             return self.show_backends(req)
-        elif page == 'buildgroups':
-            return ""
+        elif page == 'backendbuilds':
+            return self.show_backendbuilds(req)
 
     def get_htdocs_dirs(self):
         """Return the absolute path of a directory containing additional
@@ -75,3 +75,35 @@ class AdminPanel(Component):
                  'backends': BackendsIterator(self.env)
                }
 
+    def show_backendbuilds(self, req):
+        if req.method == 'POST':
+            if req.args.get('disable') and req.args.get('backendbuild'):
+                backendbuild = Backendbuild(self.env, req.args.get('backendbuild'))
+                backendbuild.updateStatus(0)
+                req.redirect(req.href.admin('redports/backendbuilds'))
+            elif req.args.get('enable') and req.args.get('backendbuild'):
+                backendbuild = Backendbuild(self.env, req.args.get('backendbuild'))
+                backendbuild.updateStatus(1)
+                req.redirect(req.href.admin('redports/backendbuilds'))
+            elif req.args.get('delete') and req.args.get('backendbuild'):
+                backendbuild = Backendbuild(self.env, req.args.get('backendbuild'))
+                backendbuild.delete()
+                req.redirect(req.href.admin('redports/backendbuilds'))
+            elif req.args.get('add'):
+                backendbuild = Backendbuild(self.env)
+                backendbuild.buildgroup = req.args.get('buildgroup')
+                backendbuild.backendid = req.args.get('backendid')
+                backendbuild.priority = req.args.get('priority')
+                backendbuild.buildname = req.args.get('buildname')
+                backendbuild.setStatus(1)
+                backendbuild.add()
+                req.redirect(req.href.admin('redports/backendbuilds'))
+            else:
+                raise TracError('Invalid form fields')
+
+        add_stylesheet(req, 'redports/redports.css')
+        return 'adminbackendbuilds.html', {
+                 'backends': BackendsIterator(self.env),
+                 'buildgroups': AllBuildgroupsIterator(self.env),
+                 'backendbuilds': BackendbuildsIterator(self.env)
+               }
