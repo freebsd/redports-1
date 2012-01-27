@@ -417,6 +417,7 @@ def BuildqueueIterator(env, req):
             port.buildlog = buildlog
             port.wrkdir = wrkdir
             port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+            port.enddate = enddate
             port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
 
             if buildstatus:
@@ -672,6 +673,7 @@ class BuildarchiveIterator(object):
                 port.buildlog = buildlog
                 port.wrkdir = wrkdir
                 port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+                port.enddate = enddate
                 port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
 
                 if buildstatus:
