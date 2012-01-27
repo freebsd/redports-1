@@ -23,11 +23,11 @@
         <link py:if="port.buildlog">$project.url$port.directory/$port.buildlog</link>
         <guid>${abs_href.buildarchive(build.queueid)}/#${port.id}</guid>
         <description>
-            Port: $port.portname $port.pkgversion%lt;br%gt;
-            Builgroup: $port.group%lt;br%gt;
-            Buildstatus: ${port.statusname.upper()}%lt;br%gt;
-            <py:if test="port.buildlog">%lt;br%gt;
-                Log: $project.url$port.directory/$port.buildlog%lt;br%gt;
+            Port: $port.portname $port.pkgversion&lt;br /&gt;
+            Builgroup: $port.group&lt;br /&gt;
+            Buildstatus: ${port.statusname.upper()}&lt;br /&gt;
+            <py:if test="port.buildlog">
+                Log: $project.url$port.directory/$port.buildlog&lt;br /&gt;
             </py:if>
         </description>
         <category>redports</category>
