@@ -383,7 +383,7 @@ class Port(object):
         if not row:
             raise TracError('SQL Error')
         if row[0] == 0:
-            cursor.execute("UPDATE buildqueue SET status = 95 WHERE id = %s", (queueid,) )
+            cursor.execute("UPDATE buildqueue SET status = 95, enddate = %s WHERE id = %s", (long(time()*1000000), queueid ))
 
         db.commit()
 
