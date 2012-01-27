@@ -27,7 +27,7 @@
             Builgroup: $port.group&lt;br /&gt;
             Buildstatus: ${port.statusname.upper()}&lt;br /&gt;
             <py:if test="port.buildlog">
-                Log: $project.url$port.directory/$port.buildlog&lt;br /&gt;
+                Log: $project.url$port.directory/$port.buildlog
             </py:if>
         </description>
         <category>redports</category>
