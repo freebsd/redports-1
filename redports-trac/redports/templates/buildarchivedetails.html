@@ -33,7 +33,7 @@
             </tr>
             <tr class="field">
                 <th><strong>Endtime:</strong></th>
-                <td>$build.endtime</td>
+                <td>${http_date(build.enddate)}</td>
             </tr>
             <py:if test="build.revision">
               <tr class="field">
@@ -67,7 +67,7 @@
                 <td></td>
                 <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
                 <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
-                <td>$port.startdate</td>
+                <td>$port.runtime</td>
                 <td>
                   <py:if test="port.buildlog"><a href="$port.directory/$port.buildlog"><img src="${href.chrome('/redports/details.png')}" alt="Buildlog" title="Buildlog" /></a></py:if>
                 </td>

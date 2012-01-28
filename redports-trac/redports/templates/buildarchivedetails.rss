@@ -30,7 +30,7 @@
                 Log: $project.url$port.directory/$port.buildlog
             </py:if>
         </description>
-        <category>redports</category>
+        <category>${project.name}</category>
       </item>
     </py:for>
   </channel>

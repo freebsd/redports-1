@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<rss version="2.0" xmlns:py="http://genshi.edgewall.org/"
+                   xmlns:dc="http://purl.org/dc/elements/1.1/"
+                   xmlns:atom="http://www.w3.org/2005/Atom"
+                   xmlns:xi="http://www.w3.org/2001/XInclude">
+  <channel>
+    <title>Archive</title>
+    <link>${abs_href.buildarchive()}/</link>
+    <atom:link href="${abs_href.buildarchive()}/?format=rss" rel="self" type="application/rss+xml" />
+    <language>en-us</language>
+    <description>Buildarchive for $project.name</description>
+    <image py:if="chrome.logo.src_abs">
+      <title>Archive</title>
+      <url>$chrome.logo.src_abs</url>
+      <link>${abs_href.buildarchive()}/</link>
+    </image>
+
+    <py:for each="build in builds">
+    <item>
+      <title>${build.description}</title>
+      <dc:creator>${build.owner}</dc:creator>
+      <pubDate>${http_date(build.enddate)}</pubDate>
+      <link>${abs_href.buildarchive(build.queueid)}/</link>
+      <guid>${abs_href.buildarchive(build.queueid)}/</guid>
+      <description>
+        <py:for each="i, port in enumerate(build.ports)">
+          ${i is not 0 and ',' or ''} ${port.portname}<py:if test="port.pkgversion"> ${port.pkgversion}</py:if>
+        </py:for>
+      </description>
+      <category>${project.name}</category>
+    </item>
+    </py:for>
+  </channel>
+</rss>
