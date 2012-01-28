@@ -43,7 +43,14 @@
             </py:if>
             <tr class="field">
                 <th><strong>Description:</strong></th>
-                <td>$build.description</td>
+                <td>
+                  <py:for each="i, line in enumerate(build.description.split('\n'))">
+                    <py:choose>
+                      <py:when test="i == 0"><strong>${line}</strong></py:when>
+                      <py:otherwise>${line}</py:otherwise><br />
+                    </py:choose>
+                  </py:for>
+                </td>
             </tr>
           </table>
         </fieldset>
