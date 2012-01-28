@@ -1,5 +1,5 @@
 from trac.core import *
-from trac.util.datefmt import from_utimestamp, pretty_timedelta, format_datetime
+from trac.util.datefmt import from_utimestamp, pretty_timedelta
 from trac.versioncontrol import RepositoryManager
 from trac.util.translation import _
 from trac.web.session import DetachedSession
@@ -21,6 +21,140 @@ class PortRepository(object):
         self.url = None
         self.browseurl = None
 
+class Backend(object):
+    def __init__(self, env, id=None):
+        self.env = env
+        self.clear()
+        self.id = id
+
+    def clear(self):
+        self.id = None
+        self.protocol = None
+        self.host = None
+        self.uri = None
+        self.credentials = None
+        self.maxparallel = None
+        self.type = None
+        self.status = None
+
+    def getURL(self):
+        return self.protocol + '://' + self.host + self.uri
+
+    def setStatus(self, status):
+        self.status = int(status)
+
+        if self.status == 0:
+            self.disabled = True
+            self.statusname = 'fail'
+        elif self.status == 1:
+            self.enabled = True
+            self.statusname = 'success'
+        elif self.status == 2:
+            self.disabled = True
+            self.failed = True
+            self.statusname = 'fail'
+        else:
+            raise TracError('Invalid backend status')
+
+    def updateStatus(self, status):
+        self.setStatus(status)
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("UPDATE backends SET status = %s WHERE id = %s", ( self.status, self.id ) )
+        db.commit()
+
+    def delete(self):
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+
+        cursor.execute("SELECT count(*) FROM backendbuilds WHERE backendid = %s", ( self.id, ))
+        row = cursor.fetchone()
+        if not row:
+            raise TracError('SQL Error')
+        if row[0] > 0:
+            raise TracError('There are still backendbuilds for this backend')
+
+        cursor.execute("DELETE FROM backends WHERE id = %s", ( self.id, ))
+        db.commit()
+
+    def add(self):
+        if self.id:
+            raise TracError('Already existing backend object cannot be added again')
+
+        if self.uri[0] != '/':
+            raise TracError('')
+
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("INSERT INTO backends (host, protocol, uri, credentials, maxparallel, status, type) VALUES(%s, %s, %s, %s, %s, %s, %s)", ( self.host, self.protocol, self.uri, self.credentials, self.maxparallel, self.status, self.type ) )
+        db.commit()
+
+
+class Backendbuild(object):
+    def __init__(self, env, id=None):
+        self.env = env
+        self.clear()
+        self.id = id
+
+    def clear(self):
+        self.id = None
+        self.buildgroup = None
+        self.backendid = None
+        self.priority = None
+        self.status = None
+        self.buildname = None
+
+    def setStatus(self, status):
+        self.status = int(status)
+
+        if self.status == 0:
+            self.disabled = True
+            self.statusname = 'fail'
+        elif self.status == 1:
+            self.enabled = True
+            self.statusname = 'success'
+        elif self.status == 2:
+            self.disabled = True
+            self.failed = True
+            self.statusname = 'fail'
+        else:
+            raise TracError('Invalid backend status')
+
+    def updateStatus(self, status):
+        self.setStatus(status)
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("UPDATE backendbuilds SET status = %s WHERE id = %s", ( self.status, self.id ) )
+        db.commit()
+
+    def delete(self):
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+
+        cursor.execute("SELECT buildgroup, backendid FROM backendbuilds WHERE id = %s", ( self.id, ))
+        row = cursor.fetchone()
+
+        cursor.execute("SELECT count(*) FROM builds WHERE buildgroup = %s AND backendid = %s AND status < 90", ( row[0], row[1] ))
+        row = cursor.fetchone()
+        if not row:
+            raise TracError('SQL Error')
+        if row[0] > 0:
+            raise TracError('There are running builds for this Backendbuild')
+
+        cursor.execute("DELETE FROM backendbuilds WHERE id = %s", ( self.id, ))
+        db.commit()
+
+
+    def add(self):
+        if self.id:
+            raise TracError('Already existing backendbuild object cannot be added again')
+
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("INSERT INTO backendbuilds (buildgroup, backendid, priority, status, buildname) VALUES(%s, %s, %s, %s, %s)", ( self.buildgroup, self.backendid, self.priority, self.status, self.buildname) )
+        db.commit()
+
+
 class Build(object):
     def __init__(self, env, queueid=None):
         self.env = env
@@ -33,7 +167,8 @@ class Build(object):
         self.revision = None
         self.description = None
         self.runtime = None
-        self.endtime = None
+        self.startdate = None
+        self.enddate = None
         self.owner = None
         self.priority = None
         self.ports = list()
@@ -181,7 +316,9 @@ class Port(object):
         self.reason = None
         self.buildlog = None
         self.wrkdir = None
+        self.runtime = None
         self.startdate = None
+        self.enddate = None
         self.deletable = None
 
     def setStatus(self, status, statusname=None):
@@ -249,7 +386,7 @@ class Port(object):
         if not row:
             raise TracError('SQL Error')
         if row[0] == 0:
-            cursor.execute("UPDATE buildqueue SET status = 95 WHERE id = %s", (queueid,) )
+            cursor.execute("UPDATE buildqueue SET status = 95, enddate = %s WHERE id = %s", (long(time()*1000000), queueid ))
 
         db.commit()
 
@@ -268,6 +405,8 @@ def BuildqueueIterator(env, req):
         build.revision = revision
         build.setStatus(status)
         build.runtime = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+        build.startdate = startdate
+        build.enddate = enddate
         build.description = description
 
         cursor2.execute("SELECT id, buildgroup, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, CASE WHEN enddate < startdate THEN extract(epoch from now())*1000000 ELSE enddate END FROM builds WHERE queueid = %s AND status <= 90 ORDER BY id", (queueid,) )
@@ -282,7 +421,9 @@ def BuildqueueIterator(env, req):
             port.buildstatus = buildstatus
             port.buildlog = buildlog
             port.wrkdir = wrkdir
-            port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+            port.runtime = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+            port.startdate = startdate
+            port.enddate = enddate
             port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
 
             if buildstatus:
@@ -353,11 +494,31 @@ class Buildgroup(object):
         cursor.execute("INSERT INTO automaticbuildgroups (username, buildgroup, priority) VALUES(%s, %s, %s)", ( req.authname, self.name, self.priority ) )
         db.commit()
 
+   def delete(self):
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        
+        cursor.execute("SELECT count(*) FROM backendbuilds WHERE buildgroup = %s", ( self.name, ))
+        row = cursor.fetchone()
+        if not row:
+            raise TracError('SQL Error')
+        if row[0] > 0:
+            raise TracError('Backendbuilds for this buildgroup still exist')
+
+        cursor.execute("DELETE FROM buildgroups WHERE name = %s", (self.name,) )
+        db.commit()
+
+   def add(self):
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("INSERT INTO buildgroups (name, version, arch, type, description) VALUES(%s, %s, %s, %s, %s)", ( self.name, self.version, self.arch, self.type, self.description) )
+        db.commit()
+
 
 def BuildgroupsIterator(env, req):
    cursor = env.get_db_cnx().cursor()
    cursor2 = env.get_db_cnx().cursor()
-   cursor.execute("SELECT name, version, arch, type, description, (SELECT count(*) FROM backendbuilds, backends WHERE buildgroup = name AND backendbuilds.status = 1 AND backendbuilds.backendid = backends.id AND backends.status = 1) FROM buildgroups WHERE 1=1 ORDER BY version DESC, arch")
+   cursor.execute("SELECT name, version, arch, type, description, (SELECT count(*) FROM backendbuilds, backends WHERE buildgroup = name AND backendbuilds.status = 1 AND backendbuilds.backendid = backends.id AND backends.status = 1) FROM buildgroups WHERE 1=1 ORDER BY version DESC, name")
 
    for name, version, arch, type, description, available in cursor:
         buildgroup = Buildgroup(env, name)
@@ -385,7 +546,7 @@ def BuildgroupsIterator(env, req):
 
 def AvailableBuildgroupsIterator(env, req):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT name FROM buildgroups WHERE name NOT IN (SELECT buildgroup FROM automaticbuildgroups WHERE username = %s) ORDER BY name", (req.authname,) )
+    cursor.execute("SELECT name FROM buildgroups WHERE name NOT IN (SELECT buildgroup FROM automaticbuildgroups WHERE username = %s) ORDER BY version DESC, name", (req.authname,) )
 
     for name in cursor:
         buildgroup = Buildgroup(env, name)
@@ -395,10 +556,14 @@ def AvailableBuildgroupsIterator(env, req):
 
 def AllBuildgroupsIterator(env):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT name FROM buildgroups ORDER BY name")
+    cursor.execute("SELECT name, version, arch, type, description FROM buildgroups ORDER BY version DESC, name")
 
-    for name in cursor:
+    for name, version, arch, type, description in cursor:
         buildgroup = Buildgroup(env, name)
+        buildgroup.version = version
+        buildgroup.arch = arch
+        buildgroup.type = type
+        buildgroup.description = description
 
         yield buildgroup
 
@@ -415,6 +580,45 @@ def RepositoryIterator(env, req):
         repository.browseurl = browseurl
 
         yield repository
+
+
+def BackendsIterator(env):
+    cursor = env.get_db_cnx().cursor()
+    cursor.execute("SELECT id, protocol, host, uri, credentials, maxparallel, status, type FROM backends ORDER BY id")
+
+    for id, protocol, host, uri, credentials, maxparallel, status, type in cursor:
+        backend = Backend(env, id)
+        backend.protocol = protocol
+        backend.host = host
+        backend.uri = uri
+        backend.credentials = credentials
+        backend.maxparallel = maxparallel
+        backend.type = type
+        backend.url = backend.getURL()
+        backend.setStatus(status)
+
+        yield backend
+
+
+def BackendbuildsIterator(env):
+    cursor = env.get_db_cnx().cursor()
+    cursor.execute("SELECT backendbuilds.id, backendbuilds.buildgroup, backendbuilds.backendid, backendbuilds.priority, backendbuilds.status, backendbuilds.buildname, backends.protocol || '://' || backends.host || backends.uri FROM backendbuilds, backends WHERE backendbuilds.backendid = backends.id ORDER BY backendbuilds.backendid, backendbuilds.id")
+
+    lastbackend = None
+    for id, buildgroup, backendid, priority, status, buildname, backend in cursor:
+        backendbuild = Backendbuild(env, id)
+        backendbuild.buildgroup = buildgroup
+        backendbuild.backendid = backendid
+        backendbuild.priority = priority
+        backendbuild.buildname = buildname
+        backendbuild.backend = backend
+        backendbuild.setStatus(status)
+
+        if lastbackend != backendid:
+            backendbuild.head = True
+            lastbackend = backendid
+
+        yield backendbuild
 
 
 class BuildarchiveIterator(object):
@@ -459,7 +663,8 @@ class BuildarchiveIterator(object):
             build.revision = revision
             build.setStatus(status)
             build.runtime = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
-            build.endtime = format_datetime(enddate)
+            build.startdate = startdate
+            build.enddate = enddate
             build.description = description
 
             cursor2.execute("SELECT id, buildgroup, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, CASE WHEN enddate < startdate THEN extract(epoch from now())*1000000 ELSE enddate END FROM builds WHERE queueid = %s ORDER BY id", (queueid,) )
@@ -474,7 +679,9 @@ class BuildarchiveIterator(object):
                 port.buildstatus = buildstatus
                 port.buildlog = buildlog
                 port.wrkdir = wrkdir
-                port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+                port.runtime = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+                port.startdate = startdate
+                port.enddate = enddate
                 port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
 
                 if buildstatus:

@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+<rss version="2.0" xmlns:py="http://genshi.edgewall.org/"
+                   xmlns:dc="http://purl.org/dc/elements/1.1/"
+                   xmlns:atom="http://www.w3.org/2005/Atom"
+                   xmlns:xi="http://www.w3.org/2001/XInclude">
+  <channel>
+    <py:for each="build in builds">
+      <title>Build: $build.queueid</title>
+      <link>${abs_href.buildarchive(build.queueid)}/</link>
+      <atom:link href="${abs_href.buildarchive(build.queueid)}/?format=rss" rel="self" type="application/rss+xml" />
+      <description>$build.description</description>
+      <language>en-us</language>
+      <image py:if="chrome.logo.src_abs">
+        <title>Build: $build.queueid</title>
+        <url>$chrome.logo.src_abs</url>
+        <link>${abs_href.buildarchive(build.queueid)}/</link>
+      </image>
+
+      <item py:for="port in build.ports">
+        <title>$port.portname <py:if test="port.pkgversion">$port.pkgversion</py:if> on $port.group: $port.statusname</title>
+        <dc:creator>$build.owner</dc:creator>
+        <pubDate>${http_date(port.enddate)}</pubDate>
+        <link py:if="port.buildlog">$project.url$port.directory/$port.buildlog</link>
+        <guid>${abs_href.buildarchive(build.queueid)}/#${port.id}</guid>
+        <description>
+            Port: $port.portname $port.pkgversion&lt;br /&gt;
+            Builgroup: $port.group&lt;br /&gt;
+            Buildstatus: ${port.statusname.upper()}&lt;br /&gt;
+            <py:if test="port.buildlog">
+                Log: $project.url$port.directory/$port.buildlog
+            </py:if>
+        </description>
+        <category>${project.name}</category>
+      </item>
+    </py:for>
+  </channel>
+</rss>
