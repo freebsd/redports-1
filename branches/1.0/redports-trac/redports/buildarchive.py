@@ -42,7 +42,8 @@ class BuildarchivePanel(Component):
         add_stylesheet(req, 'redports/redports.css')
         render_ctxtnav(req)
 
-        if len(uriparts) == 2:
+        if len(uriparts) == 2 or (len(uriparts) == 3 and len(uriparts[2]) < 1):
+            # Buildarchive list
             page = int(req.args.get('page', '1'))
             limit = self.items_per_page
             offset = (page - 1) * limit
@@ -73,16 +74,34 @@ class BuildarchivePanel(Component):
                                     'string': str(paginator.page + 1),
                                     'title': None}
 
+            if req.args.get('format') == 'rss':
+                return ('buildarchive.rss', {
+                        'builds': builddata,
+                        'paginator': paginator
+                    }, 'application/rss+xml')
+
+            add_link(req, 'alternate', req.href.buildarchive(page=page, owner=req.args.get('owner', None), format='rss'),
+                _('RSS Feed'), 'application/rss+xml', 'rss')
+
             return ('buildarchive.html', 
                 {   'builds': builddata,
                     'paginator': paginator
                 },  None)
         else:
+            # Buildarchive details
             builds = BuildarchiveIterator(self.env)
             builds.filter(None, uriparts[2])
 
-            return ('buildarchivedetails.html', 
-                {   'builds': builds.get_data()
+            if req.args.get('format') == 'rss':
+                return ('buildarchivedetails.rss', {
+                        'builds': builds.get_data(),
+                    }, 'application/rss+xml')
+
+            add_link(req, 'alternate', req.href.buildarchive(uriparts[2], format='rss'),
+                _('RSS Feed'), 'application/rss+xml', 'rss')
+
+            return ('buildarchivedetails.html', {
+                    'builds': builds.get_data()
                 },  None)
 
     def get_permission_actions(self):

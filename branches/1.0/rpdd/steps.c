@@ -792,7 +792,7 @@ int handleStep30(void)
               RETURN_ROLLBACK(conn);
 
            PQclear(result2);
-           continue;
+           break;
         }
 
         result3 = PQselect(conn, "SELECT type, replace(replace(replace(replace(url, '%%OWNER%%', owner), '%%PORTNAME%%', portname), '%%QUEUEID%%', buildqueue.id::text), '%%BUILDID%%', builds.id::text) FROM portrepositories, buildqueue, builds WHERE portrepositories.id = repository AND buildqueue.id = queueid AND builds.id = %ld", atol(PQgetvalue(result, i, 0)));

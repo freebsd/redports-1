@@ -26,6 +26,7 @@ fi
 REPOS=$1
 REV=$2
 USER=`svnlook author -r ${REV} ${REPOS} 2>/dev/null`
+LOGMSG=`svnlook log -r ${REV} ${REPOS} 2>/dev/null`
 COMMITROOT=`svnlook changed -r ${REV} ${REPOS} | cut -b5- | cut -d'/' -f1 | uniq`
 
 if [ -z "${USER}" ]; then
@@ -42,23 +43,33 @@ if [ -z "${REPOSITORYID}" ]; then
     exit 1
 fi
 
-SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, '%s');" "${BUILDID}" "${USER}" ${REPOSITORYID} ${REV} 10 ${PRIORITY} ${START} 0 "Subversion commit"`
+SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, '%s');" "${BUILDID}" "${USER}" ${REPOSITORYID} ${REV} 10 ${PRIORITY} ${START} 0 "${LOGMSG}"`
 SQLBUILDS=""
 
 # add affected ports to buildqueue
 for PORT in `svnlook changed ${REPOS} -r ${REV} | grep -v "D   " | cut -b5- | cut -d'/' -f2-3 | uniq`
 do
-    TMP=`echo "${PORT}" | cut -d'/' -f2`
+    CATEGORY=`echo "${PORT}" | cut -d'/' -f1`
+    PORTNAME=`echo "${PORT}" | cut -d'/' -f2`
 
-    # skip lines with category only
-    if [ ! -n "${TMP}" ]; then
-        echo "Skipping ${PORT}"
+    echo "Testing ${PORT}"
+
+    # skip if it doesn't look like "category/portname"
+    if ! echo "${PORT}" | grep -Eq '^[a-z0-9-]+/[a-zA-Z0-9_+.-]+$' ; then
+        echo "Skipping invalid port ${PORT}"
         continue;
     fi
 
     # skip commits to Mk
-    if [ "${TMP}" = "Mk" ]; then
+    if [ "${CATEGORY}" = "Mk" ]; then
+        echo "Skipping commits to Mk"
         continue;
+    fi
+
+    # skip ports named as the usual portfiles
+    if [ "${PORTNAME}" = "Makefile" -o "${PORTNAME}" = "distinfo" -o "${PORTNAME}" = "pkg-descr" -o "${PORTNAME}" = "pkg-plist" -o "${PORTNAME}" = "files" ]; then
+       echo "Skipping bogus port ${PORT}"
+       continue;
     fi
 
     SQL=""

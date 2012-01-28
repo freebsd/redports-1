@@ -4,7 +4,7 @@ $build.description
   Build ID:          $queueid
   Job owner:         $build.owner
   Buildtime:         $build.runtime
-  Endtime:           $build.endtime
+  Enddate:           ${http_date(build.enddate)}
 
 {% if build.revision %}\
   Revision:          r$build.revision
