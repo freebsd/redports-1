@@ -74,6 +74,15 @@ class BuildarchivePanel(Component):
                                     'string': str(paginator.page + 1),
                                     'title': None}
 
+            if req.args.get('format') == 'rss':
+                return ('buildarchive.rss', {
+                        'builds': builddata,
+                        'paginator': paginator
+                    }, 'application/rss+xml')
+
+            add_link(req, 'alternate', req.href.buildarchive(page=page, owner=req.args.get('owner', None), format='rss'),
+                _('RSS Feed'), 'application/rss+xml', 'rss')
+
             return ('buildarchive.html', 
                 {   'builds': builddata,
                     'paginator': paginator

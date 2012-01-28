@@ -1,5 +1,5 @@
 from trac.core import *
-from trac.util.datefmt import from_utimestamp, pretty_timedelta, format_datetime
+from trac.util.datefmt import from_utimestamp, pretty_timedelta
 from trac.versioncontrol import RepositoryManager
 from trac.util.translation import _
 from trac.web.session import DetachedSession
@@ -167,7 +167,8 @@ class Build(object):
         self.revision = None
         self.description = None
         self.runtime = None
-        self.endtime = None
+        self.startdate = None
+        self.enddate = None
         self.owner = None
         self.priority = None
         self.ports = list()
@@ -315,7 +316,9 @@ class Port(object):
         self.reason = None
         self.buildlog = None
         self.wrkdir = None
+        self.runtime = None
         self.startdate = None
+        self.enddate = None
         self.deletable = None
 
     def setStatus(self, status, statusname=None):
@@ -402,6 +405,8 @@ def BuildqueueIterator(env, req):
         build.revision = revision
         build.setStatus(status)
         build.runtime = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+        build.startdate = startdate
+        build.enddate = enddate
         build.description = description
 
         cursor2.execute("SELECT id, buildgroup, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, CASE WHEN enddate < startdate THEN extract(epoch from now())*1000000 ELSE enddate END FROM builds WHERE queueid = %s AND status <= 90 ORDER BY id", (queueid,) )
@@ -416,7 +421,8 @@ def BuildqueueIterator(env, req):
             port.buildstatus = buildstatus
             port.buildlog = buildlog
             port.wrkdir = wrkdir
-            port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+            port.runtime = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+            port.startdate = startdate
             port.enddate = enddate
             port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
 
@@ -657,7 +663,8 @@ class BuildarchiveIterator(object):
             build.revision = revision
             build.setStatus(status)
             build.runtime = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
-            build.endtime = format_datetime(enddate)
+            build.startdate = startdate
+            build.enddate = enddate
             build.description = description
 
             cursor2.execute("SELECT id, buildgroup, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, CASE WHEN enddate < startdate THEN extract(epoch from now())*1000000 ELSE enddate END FROM builds WHERE queueid = %s ORDER BY id", (queueid,) )
@@ -672,7 +679,8 @@ class BuildarchiveIterator(object):
                 port.buildstatus = buildstatus
                 port.buildlog = buildlog
                 port.wrkdir = wrkdir
-                port.startdate = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+                port.runtime = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+                port.startdate = startdate
                 port.enddate = enddate
                 port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
 
