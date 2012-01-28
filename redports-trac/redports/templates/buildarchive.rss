@@ -6,7 +6,7 @@
   <channel>
     <title>Archive</title>
     <link>${abs_href.buildarchive()}/</link>
-    <atom:link href="${abs_href.buildarchive()}/?format=rss" rel="self" type="application/rss+xml" />
+    <atom:link href="${abs_href.buildarchive()}?format=rss" rel="self" type="application/rss+xml" />
     <language>en-us</language>
     <description>Buildarchive for $project.name</description>
     <image py:if="chrome.logo.src_abs">

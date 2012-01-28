@@ -42,8 +42,8 @@ class BuildarchivePanel(Component):
         add_stylesheet(req, 'redports/redports.css')
         render_ctxtnav(req)
 
-        if len(uriparts) == 2:
-            # Buildarchive details
+        if len(uriparts) == 2 or (len(uriparts) == 3 and len(uriparts[2]) < 1):
+            # Buildarchive list
             page = int(req.args.get('page', '1'))
             limit = self.items_per_page
             offset = (page - 1) * limit
@@ -88,7 +88,7 @@ class BuildarchivePanel(Component):
                     'paginator': paginator
                 },  None)
         else:
-            # Buildarchive
+            # Buildarchive details
             builds = BuildarchiveIterator(self.env)
             builds.filter(None, uriparts[2])
 
