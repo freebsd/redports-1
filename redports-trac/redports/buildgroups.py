@@ -9,7 +9,7 @@ from genshi.builder import tag
 from pkg_resources import resource_filename
 import re
 
-from model import Buildgroup, BuildgroupsIterator, AvailableBuildgroupsIterator
+from model import Buildgroup, BuildgroupsIterator, AvailableBuildgroupsIterator, GlobalBuildqueueIterator
 from buildqueue import render_ctxtnav
 
 class BuildgroupPanel(Component):
@@ -49,6 +49,7 @@ class BuildgroupPanel(Component):
         return ('buildgroups.html', 
             {   'buildgroups': BuildgroupsIterator(self.env, req),
                 'availablegroups': AvailableBuildgroupsIterator(self.env, req),
+                'buildqueue': GlobalBuildqueueIterator(self.env, req),
                 'authenticated': (req.authname and req.authname != 'anonymous')
             },  None)
 

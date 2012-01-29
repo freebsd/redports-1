@@ -49,6 +49,7 @@
         </fieldset>
         </form>
 
+
         <table class="listing" id="build_list">
           <thead>
             <tr><th py:if="authenticated">Status</th><th py:if="authenticated">Priority</th><th>Name</th><th>Backends</th><th>Queued</th><th>Description</th></tr>
@@ -69,7 +70,39 @@
             </tr>
           </tbody>
         </table>
+
         <br style="clear: right" />
+
+        <h2>Buildqueue</h2>
+
+        <table class="listing" style="width: 66%">
+          <thead>
+            <tr>
+              <th>Port</th>
+              <th>Buildgroup</th>
+              <th>Status</th>
+              <th>Buildtime</th>
+              <th>Priority</th>
+              <th>User</th>
+            </tr>
+          </thead>
+          <tbody>
+            <py:for each="port in buildqueue">
+              <tr>
+                <td>
+                  <a href="http://www.freshports.org/$port.portname">
+                    $port.portname <py:if test="port.pkgversion">$port.pkgversion</py:if>
+                  </a>
+                </td>
+                <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
+                <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
+                <td>$port.runtime</td>
+                <td>$port.priority</td>
+                <td>$port.owner</td>
+              </tr>
+            </py:for>
+          </tbody>
+        </table>
 
       </div>
 
