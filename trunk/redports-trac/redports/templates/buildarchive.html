@@ -34,7 +34,14 @@
             <tbody>
               <py:for each="build in builds">
                 <tr class="headfull">
-                  <td><a href="/buildarchive/$build.queueid/"><strong>$build.description</strong></a></td>
+                  <td>
+                    <py:for each="i, line in enumerate(build.description.split('\n'))">
+                      <py:choose>
+		        <py:when test="i == 0"><a href="/buildarchive/$build.queueid/"><strong>${line}</strong></a></py:when>
+		        <py:otherwise>${line}</py:otherwise><br />
+	              </py:choose>
+	            </py:for>
+                  </td>
                   <td>
                     <py:if test="build.revision">
                       <a href="$build.repository">r$build.revision</a>
