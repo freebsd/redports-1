@@ -416,15 +416,18 @@ int handleStep80(void)
 
         priority = atol(PQgetvalue(result, i, 4));
 
-        if(strcmp(PQgetvalue(result3, 0, 1), "SUCCESS") == 0)
-           priority -= 1;
-        else
-           priority += 1;
+        if(priority > 1 && priority < 9)
+        {
+           if(strcmp(PQgetvalue(result3, 0, 1), "SUCCESS") == 0)
+              priority -= 1;
+           else
+              priority += 1;
 
-        if(atol(PQgetvalue(result3, 0, 0)) < 300)
-           priority -= 1;
-        else if(atol(PQgetvalue(result3, 0, 0)) > 3000)
-           priority += 2;
+           if(atol(PQgetvalue(result3, 0, 0)) < 300)
+              priority -= 1;
+           else if(atol(PQgetvalue(result3, 0, 0)) > 3000)
+              priority += 2;
+        }
 
         if(priority < 1)
            priority = 1;
