@@ -47,7 +47,7 @@
             </tr>
             <tr class="field">
               <th><label for="description">Description:</label></th>
-              <td><input type="text" name="description" /></td>
+              <td><textarea name="description" rows="1" /></td>
             </tr>
           </table>
           <p class="help">
@@ -63,19 +63,35 @@
         <table class="listing" id="build_list">
             <thead>
                 <tr>
-                    <th colspan="6">Port / Source</th><th rowspan="2">Options</th>
+                    <th>&nbsp;</th>
+                    <th colspan="5">Port</th>
+                    <th rowspan="2">Options</th>
                 </tr>
                 <tr>
-                    <th>&nbsp;</th><th>&nbsp;</th><th>Buildgroup</th><th>Status</th><th>Buildtime</th><th>Links</th>
+                    <th>&nbsp;</th>
+                    <th>&nbsp;</th>
+                    <th>Buildgroup</th>
+                    <th>Status</th>
+                    <th>Buildtime</th>
+                    <th>Links</th>
                 </tr>
             </thead>
             <tbody>
               <py:for each="build in buildqueue">
                 <tr class="headfull">
-                    <td colspan="6">
-                      <strong>$build.description</strong>
+                    <td colspan="5">
+                      <py:for each="i, line in enumerate(build.description.split('\n'))">
+                        <py:choose>
+                          <py:when test="i == 0">
+                            <a href="/buildarchive/$build.queueid/"><strong>${line}</strong></a>
+                          </py:when>
+                          <py:otherwise>${line}</py:otherwise><br />
+                        </py:choose>
+                      </py:for>
+                    </td>
+                    <td>
                       <py:if test="build.revision">
-                        <a href="$build.repository"><strong>(r$build.revision)</strong></a>
+                        <a href="$build.repository">r$build.revision</a>
                       </py:if>
                     </td>
                     <td>
