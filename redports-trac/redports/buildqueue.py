@@ -43,6 +43,7 @@ class BuildqueuePanel(Component):
                 build.repository = req.args.get('repository')
                 build.revision = req.args.get('revision')
                 build.description = req.args.get('description')
+                build.priority = req.args.get('priority')
 
                 build.addBuild(req.args.get('group'), req.args.get('portname'), req)
                 add_notice(req, 'New builds have been scheduled')

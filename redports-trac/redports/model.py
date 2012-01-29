@@ -217,12 +217,21 @@ class Build(object):
 
         if not self.priority:
             self.priority = 5
+        self.priority = int(self.priority)
 
         if not self.description:
             self.description = 'Web rebuild'
 
         if not ports:
             raise TracError('Portname needs to be set')
+
+        if self.priority < 3:
+            cursor.execute("SELECT count(*) FROM buildqueue WHERE owner = %s AND priority < 3 AND status < 90", ( req.authname, ))
+            row = cursor.fetchone()
+            if not row:
+                raise TracError('SQL Error')
+            if row[0] > 0:
+                self.priority = 5
 
         try:
             if self.revision:
@@ -266,6 +275,9 @@ class Build(object):
                 cursor.execute("SELECT name FROM buildgroups WHERE name = %s", (group,) )
                 if cursor.rowcount != 1:
                     raise TracError('Invalid Buildqueue')
+
+        if len(ports) > 2 and self.priority < 3:
+            self.priority = 5
 
         cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", ( self.queueid, self.owner, self.repository, self.revision, self.status, self.priority, long(time()*1000000), 0, self.description ))
 
