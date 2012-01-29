@@ -408,6 +408,41 @@ class Port(object):
 
         db.commit()
 
+def GlobalBuildqueueIterator(env, req):
+    cursor = env.get_db_cnx().cursor()
+
+    cursor.execute("SELECT builds.id, builds.buildgroup, builds.portname, builds.pkgversion, builds.status, builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, CASE WHEN builds.enddate < builds.startdate THEN extract(epoch from now())*1000000 ELSE builds.enddate END, buildqueue.id, buildqueue.priority, buildqueue.owner FROM builds, buildqueue WHERE buildqueue.id = builds.queueid AND buildqueue.status < 90 ORDER BY priority, builds.id DESC")
+
+    lastport = None
+    for id, group, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate, queueid, priority, owner in cursor:
+        port = Port(env)
+        port.id = id
+        port.group = group
+        port.portname = portname
+        port.pkgversion = pkgversion
+        port.buildstatus = buildstatus
+        port.buildlog = buildlog
+        port.wrkdir = wrkdir
+        port.runtime = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+        port.startdate = startdate
+        port.enddate = enddate
+        port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
+        port.priority = priority
+        port.owner = owner
+
+        if buildstatus:
+            port.buildstatus = buildstatus.lower()
+        if buildstatus and not buildreason:
+            buildreason = buildstatus.lower()
+
+        port.setStatus(status, buildreason)
+
+        if lastport != portname:
+            port.head = True
+            lastport = portname
+
+        yield port
+
 
 def BuildqueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
