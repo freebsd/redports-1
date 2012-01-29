@@ -47,7 +47,7 @@
             </tr>
             <tr class="field">
               <th><label for="description">Description:</label></th>
-              <td><textarea name="description" rows="1" /></td>
+              <td><textarea name="description" rows="1" cols="25" /></td>
             </tr>
           </table>
           <p class="help">
@@ -95,12 +95,10 @@
                       </py:if>
                     </td>
                     <td>
-                      <py:if test="build.deletable">
-                        <form method="post" action="">
-                          <input type="hidden" name="queueid" value="$build.queueid" />
-                          <input type="submit" name="deletebuild" value="Delete" />
-                        </form>
-                      </py:if>
+                      <form method="post" action="">
+                        <input type="hidden" name="queueid" value="$build.queueid" />
+                        <input type="submit" name="deletebuild" value="Delete" />
+                      </form>
                     </td>
                 </tr>
                 <py:for each="port in build.ports">

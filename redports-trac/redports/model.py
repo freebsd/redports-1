@@ -172,14 +172,10 @@ class Build(object):
         self.owner = None
         self.priority = None
         self.ports = list()
-        self.deletable = None
         self.status = None
 
     def setStatus(self, status):
         self.status = status
-
-        if math.floor(self.status / 10) == 9:
-            self.deletable = True
 
     def notifyEnabled(self):
         cursor = self.env.get_db_cnx().cursor()
@@ -290,20 +286,26 @@ class Build(object):
         if row[0] != 1:
             raise TracError('Invalid QueueID')
 
-        cursor.execute("SELECT status FROM buildqueue WHERE id = %s", (self.queueid,) )
-        row = cursor.fetchone()
-        if not row:
-            raise TracError('SQL Error')
-        if row[0] == 90 or row[0] == 91:
-            cursor.execute("UPDATE buildqueue SET status = 95 WHERE id = %s", (self.queueid,) )
+        cursor.execute("SELECT id FROM builds WHERE queueid = %s FOR UPDATE NOWAIT", ( self.queueid, ) )
+
+        error = None
+        for id in cursor:
+            try:
+                port = Port(self.env, id)
+                port.delete(req)
+            except TracError as e:
+                error = e
 
         db.commit()
+        if error:
+            raise error
 
 
 class Port(object):
     def __init__(self, env, id=None):
         self.env = env
         self.clear()
+        self.id = id
 
     def clear(self):
         self.id = None
@@ -370,7 +372,7 @@ class Port(object):
         if row[0] != 1:
             raise TracError('Invalid ID')
 
-        cursor.execute("SELECT buildqueue.id FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND builds.id = %s AND buildqueue.owner = %s", ( self.id, req.authname ))
+        cursor.execute("SELECT buildqueue.id, builds.status FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND builds.id = %s AND buildqueue.owner = %s", ( self.id, req.authname ))
         row = cursor.fetchone()
         if not row:
             raise TracError('SQL Error')
@@ -378,8 +380,12 @@ class Port(object):
             raise TracError('Invalid ID')
 
         queueid = row[0]
+        status = row[1]
 
-        cursor.execute("UPDATE builds SET status = 95 WHERE id = %s AND (status < 30 OR status > 89)", (self.id,) )
+        if status >= 30 and status < 90:
+            raise TracError('Cannot delete running build')
+
+        cursor.execute("UPDATE builds SET status = 95 WHERE id = %s", (self.id,) )
 
         cursor.execute("SELECT count(*) FROM builds WHERE queueid = %s AND status <= 90", (queueid,) )
         row = cursor.fetchone()
