@@ -98,7 +98,7 @@
                 <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
                 <td>$port.runtime</td>
                 <td>$port.priorityname</td>
-                <td>$port.owner</td>
+                <td><a href="${abs_href.wiki('Users')}/${port.owner}">${port.owner}</a></td>
               </tr>
             </py:for>
           </tbody>
