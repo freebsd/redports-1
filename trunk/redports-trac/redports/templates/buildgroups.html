@@ -88,7 +88,7 @@
           </thead>
           <tbody>
             <py:for each="port in buildqueue">
-              <tr>
+              <tr class="${port.owner == authname and 'headfull' or None}">
                 <td>
                   <a href="http://www.freshports.org/$port.portname">
                     $port.portname <py:if test="port.pkgversion">$port.pkgversion</py:if>
@@ -97,7 +97,7 @@
                 <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
                 <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
                 <td>$port.runtime</td>
-                <td>$port.priority</td>
+                <td>$port.priorityname</td>
                 <td>$port.owner</td>
               </tr>
             </py:for>
