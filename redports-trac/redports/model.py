@@ -361,6 +361,22 @@ class Port(object):
         if statusname:
             self.statusname = statusname.lower()
 
+    def setPriority(self, priority):
+        self.priority = int(priority)
+
+        if self.priority == 1 or self.priority == 2:
+            self.priorityname = 'highest'
+        elif self.priority == 3 or self.priority == 4:
+            self.priorityname = 'high'
+        elif self.priority == 5:
+            self.priorityname = 'standard'
+        elif self.priority == 6 or self.priority == 7:
+            self.priorityname = 'low'
+        elif self.priority == 8 or self.priority == 9:
+            self.priorityname = 'lowest'
+        else:
+            raise TracError('Invalid Priority')
+
     def updateStatus(self, status, key):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
@@ -427,8 +443,8 @@ def GlobalBuildqueueIterator(env, req):
         port.startdate = startdate
         port.enddate = enddate
         port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
-        port.priority = priority
         port.owner = owner
+        port.setPriority(priority)
 
         if buildstatus:
             port.buildstatus = buildstatus.lower()

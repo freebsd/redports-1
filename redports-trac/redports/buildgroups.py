@@ -50,7 +50,8 @@ class BuildgroupPanel(Component):
             {   'buildgroups': BuildgroupsIterator(self.env, req),
                 'availablegroups': AvailableBuildgroupsIterator(self.env, req),
                 'buildqueue': GlobalBuildqueueIterator(self.env, req),
-                'authenticated': (req.authname and req.authname != 'anonymous')
+                'authenticated': (req.authname and req.authname != 'anonymous'),
+                'authname': req.authname
             },  None)
 
     def get_permission_actions(self):
