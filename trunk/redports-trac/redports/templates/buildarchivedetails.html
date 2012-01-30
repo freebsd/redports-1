@@ -33,7 +33,7 @@
             </tr>
             <tr class="field">
                 <th><strong>Endtime:</strong></th>
-                <td>${http_date(build.enddate)}</td>
+                <td>${dateinfo(build.enddate)} ago</td>
             </tr>
             <py:if test="build.revision">
               <tr class="field">
