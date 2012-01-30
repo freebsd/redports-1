@@ -172,14 +172,10 @@ class Build(object):
         self.owner = None
         self.priority = None
         self.ports = list()
-        self.deletable = None
         self.status = None
 
     def setStatus(self, status):
         self.status = status
-
-        if math.floor(self.status / 10) == 9:
-            self.deletable = True
 
     def notifyEnabled(self):
         cursor = self.env.get_db_cnx().cursor()
@@ -221,12 +217,21 @@ class Build(object):
 
         if not self.priority:
             self.priority = 5
+        self.priority = int(self.priority)
 
         if not self.description:
             self.description = 'Web rebuild'
 
         if not ports:
             raise TracError('Portname needs to be set')
+
+        if self.priority < 3:
+            cursor.execute("SELECT count(*) FROM buildqueue WHERE owner = %s AND priority < 3 AND status < 90", ( req.authname, ))
+            row = cursor.fetchone()
+            if not row:
+                raise TracError('SQL Error')
+            if row[0] > 0:
+                self.priority = 5
 
         try:
             if self.revision:
@@ -271,6 +276,9 @@ class Build(object):
                 if cursor.rowcount != 1:
                     raise TracError('Invalid Buildqueue')
 
+        if len(ports) > 2 and self.priority < 3:
+            self.priority = 5
+
         cursor.execute("INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)", ( self.queueid, self.owner, self.repository, self.revision, self.status, self.priority, long(time()*1000000), 0, self.description ))
 
         for portname in ports:
@@ -290,20 +298,26 @@ class Build(object):
         if row[0] != 1:
             raise TracError('Invalid QueueID')
 
-        cursor.execute("SELECT status FROM buildqueue WHERE id = %s", (self.queueid,) )
-        row = cursor.fetchone()
-        if not row:
-            raise TracError('SQL Error')
-        if row[0] == 90 or row[0] == 91:
-            cursor.execute("UPDATE buildqueue SET status = 95 WHERE id = %s", (self.queueid,) )
+        cursor.execute("SELECT id FROM builds WHERE queueid = %s FOR UPDATE NOWAIT", ( self.queueid, ) )
+
+        error = None
+        for id in cursor:
+            try:
+                port = Port(self.env, id)
+                port.delete(req)
+            except TracError as e:
+                error = e
 
         db.commit()
+        if error:
+            raise error
 
 
 class Port(object):
     def __init__(self, env, id=None):
         self.env = env
         self.clear()
+        self.id = id
 
     def clear(self):
         self.id = None
@@ -347,6 +361,22 @@ class Port(object):
         if statusname:
             self.statusname = statusname.lower()
 
+    def setPriority(self, priority):
+        self.priority = int(priority)
+
+        if self.priority == 1 or self.priority == 2:
+            self.priorityname = 'highest'
+        elif self.priority == 3 or self.priority == 4:
+            self.priorityname = 'high'
+        elif self.priority == 5:
+            self.priorityname = 'standard'
+        elif self.priority == 6 or self.priority == 7:
+            self.priorityname = 'low'
+        elif self.priority == 8 or self.priority == 9:
+            self.priorityname = 'lowest'
+        else:
+            raise TracError('Invalid Priority')
+
     def updateStatus(self, status, key):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
@@ -370,7 +400,7 @@ class Port(object):
         if row[0] != 1:
             raise TracError('Invalid ID')
 
-        cursor.execute("SELECT buildqueue.id FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND builds.id = %s AND buildqueue.owner = %s", ( self.id, req.authname ))
+        cursor.execute("SELECT buildqueue.id, builds.status FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND builds.id = %s AND buildqueue.owner = %s", ( self.id, req.authname ))
         row = cursor.fetchone()
         if not row:
             raise TracError('SQL Error')
@@ -378,8 +408,12 @@ class Port(object):
             raise TracError('Invalid ID')
 
         queueid = row[0]
+        status = row[1]
 
-        cursor.execute("UPDATE builds SET status = 95 WHERE id = %s AND (status < 30 OR status > 89)", (self.id,) )
+        if status >= 30 and status < 90:
+            raise TracError('Cannot delete running build')
+
+        cursor.execute("UPDATE builds SET status = 95 WHERE id = %s", (self.id,) )
 
         cursor.execute("SELECT count(*) FROM builds WHERE queueid = %s AND status <= 90", (queueid,) )
         row = cursor.fetchone()
@@ -389,6 +423,41 @@ class Port(object):
             cursor.execute("UPDATE buildqueue SET status = 95, enddate = %s WHERE id = %s", (long(time()*1000000), queueid ))
 
         db.commit()
+
+def GlobalBuildqueueIterator(env, req):
+    cursor = env.get_db_cnx().cursor()
+
+    cursor.execute("SELECT builds.id, builds.buildgroup, builds.portname, builds.pkgversion, builds.status, builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, CASE WHEN builds.enddate < builds.startdate THEN extract(epoch from now())*1000000 ELSE builds.enddate END, buildqueue.id, buildqueue.priority, buildqueue.owner FROM builds, buildqueue WHERE buildqueue.id = builds.queueid AND buildqueue.status < 90 ORDER BY priority, builds.id DESC")
+
+    lastport = None
+    for id, group, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate, queueid, priority, owner in cursor:
+        port = Port(env)
+        port.id = id
+        port.group = group
+        port.portname = portname
+        port.pkgversion = pkgversion
+        port.buildstatus = buildstatus
+        port.buildlog = buildlog
+        port.wrkdir = wrkdir
+        port.runtime = pretty_timedelta( from_utimestamp(startdate), from_utimestamp(enddate) )
+        port.startdate = startdate
+        port.enddate = enddate
+        port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
+        port.owner = owner
+        port.setPriority(priority)
+
+        if buildstatus:
+            port.buildstatus = buildstatus.lower()
+        if buildstatus and not buildreason:
+            buildreason = buildstatus.lower()
+
+        port.setStatus(status, buildreason)
+
+        if lastport != portname:
+            port.head = True
+            lastport = portname
+
+        yield port
 
 
 def BuildqueueIterator(env, req):
