@@ -389,18 +389,23 @@ class Port(object):
         cursor.execute("UPDATE builds SET status = %s WHERE backendkey = %s AND status < %s", ( status, key, status ))
         db.commit()
 
-    def delete(self, req):
+    def delete(self, req=None):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
 
-        cursor.execute("SELECT count(*) FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND builds.id = %s AND buildqueue.owner = %s", ( self.id, req.authname ))
+        if req:
+            username = req.authname
+        else:
+            username = 'anonymous'
+
+        cursor.execute("SELECT count(*) FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND builds.id = %s AND (buildqueue.owner = %s OR %s = 'anonymous')", ( self.id, username, username ))
         row = cursor.fetchone()
         if not row:
             raise TracError('SQL Error')
         if row[0] != 1:
             raise TracError('Invalid ID')
 
-        cursor.execute("SELECT buildqueue.id, builds.status FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND builds.id = %s AND buildqueue.owner = %s", ( self.id, req.authname ))
+        cursor.execute("SELECT buildqueue.id, builds.status FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND builds.id = %s", ( self.id, ))
         row = cursor.fetchone()
         if not row:
             raise TracError('SQL Error')
@@ -423,6 +428,7 @@ class Port(object):
             cursor.execute("UPDATE buildqueue SET status = 95, enddate = %s WHERE id = %s", (long(time()*1000000), queueid ))
 
         db.commit()
+
 
 def GlobalBuildqueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
