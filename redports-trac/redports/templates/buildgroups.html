@@ -75,7 +75,7 @@
 
         <h2>Buildqueue</h2>
 
-        <table class="listing" style="width: 66%">
+        <table class="listing" style="width: 80%">
           <thead>
             <tr>
               <th>Port</th>
@@ -84,6 +84,7 @@
               <th>Buildtime</th>
               <th>Priority</th>
               <th>User</th>
+              <th>Links</th>
             </tr>
           </thead>
           <tbody>
@@ -99,6 +100,12 @@
                 <td>$port.runtime</td>
                 <td>$port.priorityname</td>
                 <td><a href="${abs_href.wiki('Users')}/${port.owner}">${port.owner}</a></td>
+                <td>
+                  <a href="/buildarchive/$port.queueid/">
+                    <img src="${href.chrome('/redports/details.png')}"
+                    alt="Build details" title="Build details" />
+                  </a>
+                </td>
               </tr>
             </py:for>
           </tbody>
