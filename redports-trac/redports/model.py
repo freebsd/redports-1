@@ -443,6 +443,7 @@ def GlobalBuildqueueIterator(env, req):
         port.startdate = startdate
         port.enddate = enddate
         port.directory = '/~%s/%s-%s' % ( owner, queueid, id )
+        port.queueid = queueid
         port.owner = owner
         port.setPriority(priority)
 
