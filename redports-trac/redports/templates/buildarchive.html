@@ -48,7 +48,7 @@
                     </py:if>
                   </td>
                   <td>$build.runtime</td>
-                  <td>${http_date(build.enddate)}</td>
+                  <td>${dateinfo(build.enddate)} ago</td>
                   <td><a href="${abs_href.wiki('Users')}/${build.owner}">${build.owner}</a></td>
                   <td><a href="/buildarchive/$build.queueid/">
                          <img src="${href.chrome('/redports/details.png')}"
