@@ -20,6 +20,21 @@ class PortRepository(object):
         self.type = None
         self.url = None
         self.browseurl = None
+        self.username = None
+
+    def delete(self):
+        raise TracError('Not implemented')
+
+    def add(self):
+        if self.id:
+            raise TracError('Already existing portrepository object cannot be added again')
+
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("INSERT INTO portrepositories (name, type, url, browseurl, username) VALUES(%s, %s, %s, %s, %s)", ( self.name, self.type, self.url, self.browseurl, self.username ) )
+        db.commit()
+
+
 
 class Backend(object):
     def __init__(self, env, id=None):
@@ -646,14 +661,30 @@ def AllBuildgroupsIterator(env):
 
 def RepositoryIterator(env, req):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT id, replace(name, '%OWNER%', %s), type, url, replace(browseurl, '%OWNER%', %s) FROM portrepositories WHERE username IS NULL OR username = %s ORDER BY id", (req.authname, req.authname, req.authname))
+    cursor.execute("SELECT id, replace(name, '%OWNER%', %s), type, url, replace(browseurl, '%OWNER%', %s), username FROM portrepositories WHERE username IS NULL OR username = %s ORDER BY id", (req.authname, req.authname, req.authname))
 
-    for id, name, type, url, browseurl in cursor:
+    for id, name, type, url, browseurl, username in cursor:
         repository = PortRepository(env, id)
         repository.name = name
         repository.type = type
         repository.url = url
         repository.browseurl = browseurl
+        repository.username = username
+
+        yield repository
+
+
+def PortRepositoryIterator(env):
+    cursor = env.get_db_cnx().cursor()
+    cursor.execute("SELECT id, name, type, url, browseurl, username FROM portrepositories ORDER BY id")
+
+    for id, name, type, url, browseurl, username in cursor:
+        repository = PortRepository(env, id)
+        repository.name = name
+        repository.type = type
+        repository.url = url
+        repository.browseurl = browseurl
+        repository.username = username
 
         yield repository
 
