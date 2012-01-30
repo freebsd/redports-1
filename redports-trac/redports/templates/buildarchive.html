@@ -49,7 +49,7 @@
                   </td>
                   <td>$build.runtime</td>
                   <td>${http_date(build.enddate)}</td>
-                  <td>$build.owner</td>
+                  <td><a href="${abs_href.wiki('Users')}/${build.owner}">${build.owner}</a></td>
                   <td><a href="/buildarchive/$build.queueid/">
                          <img src="${href.chrome('/redports/details.png')}"
                          alt="Build details" title="Build details" />
