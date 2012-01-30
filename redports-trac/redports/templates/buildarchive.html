@@ -34,15 +34,22 @@
             <tbody>
               <py:for each="build in builds">
                 <tr class="headfull">
-                  <td><a href="/buildarchive/$build.queueid/"><strong>$build.description</strong></a></td>
+                  <td>
+                    <py:for each="i, line in enumerate(build.description.split('\n'))">
+                      <py:choose>
+		        <py:when test="i == 0"><a href="/buildarchive/$build.queueid/"><strong>${line}</strong></a></py:when>
+		        <py:otherwise>${line}</py:otherwise><br />
+	              </py:choose>
+	            </py:for>
+                  </td>
                   <td>
                     <py:if test="build.revision">
                       <a href="$build.repository">r$build.revision</a>
                     </py:if>
                   </td>
                   <td>$build.runtime</td>
-                  <td>${http_date(build.enddate)}</td>
-                  <td>$build.owner</td>
+                  <td>${dateinfo(build.enddate)} ago</td>
+                  <td><a href="${abs_href.wiki('Users')}/${build.owner}">${build.owner}</a></td>
                   <td><a href="/buildarchive/$build.queueid/">
                          <img src="${href.chrome('/redports/details.png')}"
                          alt="Build details" title="Build details" />

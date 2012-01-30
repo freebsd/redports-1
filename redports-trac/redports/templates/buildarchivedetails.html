@@ -25,7 +25,7 @@
             </tr>
             <tr class="field">
                 <th><strong>Job Owner:</strong></th>
-                <td>$build.owner</td>
+                <td><a href="${abs_href.wiki('Users')}/${build.owner}">${build.owner}</a></td>
             </tr>
             <tr class="field">
                 <th><strong>Buildtime:</strong></th>
@@ -33,7 +33,7 @@
             </tr>
             <tr class="field">
                 <th><strong>Endtime:</strong></th>
-                <td>${http_date(build.enddate)}</td>
+                <td>${dateinfo(build.enddate)} ago</td>
             </tr>
             <py:if test="build.revision">
               <tr class="field">
@@ -42,8 +42,15 @@
               </tr>
             </py:if>
             <tr class="field">
-                <th><strong>Description:</strong></th>
-                <td>$build.description</td>
+                <th style="vertical-align: top"><strong>Description:</strong></th>
+                <td>
+                  <py:for each="i, line in enumerate(build.description.split('\n'))">
+                    <py:choose>
+                      <py:when test="i == 0"><strong>${line}</strong></py:when>
+                      <py:otherwise>${line}</py:otherwise><br />
+                    </py:choose>
+                  </py:for>
+                </td>
             </tr>
           </table>
         </fieldset>
