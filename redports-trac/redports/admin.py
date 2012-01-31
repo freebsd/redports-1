@@ -6,7 +6,7 @@ from trac.web.chrome import ITemplateProvider, add_notice, add_warning, add_styl
 
 from pkg_resources import resource_filename
 
-from model import Backend, BackendsIterator, Backendbuild, BackendbuildsIterator, Buildgroup, AllBuildgroupsIterator
+from model import Backend, BackendsIterator, Backendbuild, BackendbuildsIterator, Buildgroup, AllBuildgroupsIterator, Port, GlobalBuildqueueIterator, PortRepository, PortRepositoryIterator
 
 class AdminPanel(Component):
 
@@ -22,6 +22,8 @@ class AdminPanel(Component):
             yield ('redports', _("Redports"), 'backends', _("Backends"))
             yield ('redports', _("Redports"), 'backendbuilds', _("Backendbuilds"))
             yield ('redports', _("Redports"), 'buildgroups', _("Buildgroups"))
+            yield ('redports', _("Redports"), 'builds', _("Builds"))
+            yield ('redports', _("Redports"), 'repository', _("Repository"))
 
     def render_admin_panel(self, req, cat, page, path_info):
         if page == 'backends':
@@ -30,6 +32,10 @@ class AdminPanel(Component):
             return self.show_backendbuilds(req)
         elif page == 'buildgroups':
             return self.show_buildgroups(req)
+        elif page == 'builds':
+            return self.show_builds(req)
+        elif page == 'repository':
+            return self.show_repositories(req)
 
     def get_htdocs_dirs(self):
         """Return the absolute path of a directory containing additional
@@ -129,3 +135,37 @@ class AdminPanel(Component):
         return 'adminbuildgroups.html', {
                  'buildgroups': AllBuildgroupsIterator(self.env)
                }
+
+    def show_builds(self, req):
+        if req.method == 'POST':
+            if req.args.get('delete') and req.args.get('buildid'):
+                port = Port(self.env, req.args.get('buildid'))
+                port.delete()
+                req.redirect(req.href.admin('redports/builds'))
+
+        add_stylesheet(req, 'redports/redports.css')
+        return 'adminbuildqueue.html', {
+                 'buildqueue': GlobalBuildqueueIterator(self.env, req)
+               }
+
+    def show_repositories(self, req):
+        if req.method == 'POST':
+            if req.args.get('delete') and req.args.get('id'):
+                repo = PortRepository(self.env, req.args.get('id'))
+                repo.delete()
+                req.redirect(req.href.admin('redports/repository'))
+            elif req.args.get('add'):
+                repo = PortRepository(self.env, req.args.get('id'))
+                repo.type = req.args.get('type')
+                repo.name = req.args.get('name')
+                repo.url = req.args.get('url')
+                repo.browseurl = req.args.get('browseurl')
+                repo.username = req.args.get('username')
+                repo.add()
+                req.redirect(req.href.admin('redports/repository'))
+
+        add_stylesheet(req, 'redports/redports.css')
+        return 'adminrepositories.html', {
+                 'repositories': PortRepositoryIterator(self.env)
+               }
+
