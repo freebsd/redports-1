@@ -23,7 +23,18 @@ class PortRepository(object):
         self.username = None
 
     def delete(self):
-        raise TracError('Not implemented')
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+
+        cursor.execute("SELECT count(*) FROM buildqueue WHERE repository = %s", ( self.id, ))
+        row = cursor.fetchone()
+        if not row:
+            raise TracError('SQL Error')
+        if row[0] > 0:
+            raise TracError('There are still buildqueue entries that need this repository')
+
+        cursor.execute("DELETE FROM portrepositories WHERE id = %s", ( self.id, ))
+        db.commit()
 
     def add(self):
         if self.id:
