@@ -607,6 +607,7 @@ class Buildgroup(object):
         if row[0] > 0:
             raise TracError('Backendbuilds for this buildgroup still exist')
 
+        cursor.execute("DELETE FROM automaticbuildgroups WHERE buildgroup = %s", (self.name,) )
         cursor.execute("DELETE FROM buildgroups WHERE name = %s", (self.name,) )
         db.commit()
 
