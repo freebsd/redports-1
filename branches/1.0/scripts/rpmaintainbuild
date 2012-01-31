@@ -8,11 +8,6 @@
 
 TINDERBOX=/usr/local/tinderbox
 
-DBUSER=root
-DBPASS=
-DBNAME=tinderbox
-DBHOST=localhost
-
 CLEANDATABASE=no
 CLEANJAIL=no
 CLEANLOCK=no
@@ -64,6 +59,11 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
+getvar()
+{
+    cat ${TINDERBOX}/scripts/ds.ph | grep $1 | cut -d"'" -f2
+}
+
 if ! ${TINDERBOX}/scripts/tc listJails | grep ${BUILD} >/dev/null ; then
     echo "Tinderbox jail ${BUILD} does not exist"
     exit 1
@@ -84,11 +84,18 @@ if ${TINDERBOX}/scripts/tc listBuildPortsQueue -s PROCESSING -r | egrep ":${BUIL
 fi
 
 if [ "${CLEANDATABASE}" = "yes" ]; then
+    DBUSER=`getvar DB_USER`
+    DBPASS=`getvar DB_PASS`
+    DBHOST=`getvar DB_HOST`
+    DBNAME=`getvar DB_NAME`
+
     echo "Reset build_status in database to IDLE"
-    if [ -z "${DBPASS}" ]; then
-        echo "MySQL Database ${DBNAME} ${DBUSER}@${DBHOST}"
+    echo "MySQL Database ${DBNAME} ${DBUSER}@${DBHOST}"
+
+    if [ ! -z "${DBPASS}" ]; then
+        DBPASS="-p${DBPASS}"
     fi
-    mysql -u${DBUSER} -p${DBPASS} -h ${DBHOST} -e "UPDATE builds SET build_status = \"IDLE\" WHERE build_name = \"${BUILD}\";" ${DBNAME} || exit 1
+    mysql -u${DBUSER} ${DBPASS} -h ${DBHOST} -e "UPDATE builds SET build_status = \"IDLE\" WHERE build_name = \"${BUILD}\";" ${DBNAME} || exit 1
 fi
 
 if [ "${CLEANJAIL}" = "yes" ]; then

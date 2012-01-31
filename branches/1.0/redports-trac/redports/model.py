@@ -20,6 +20,32 @@ class PortRepository(object):
         self.type = None
         self.url = None
         self.browseurl = None
+        self.username = None
+
+    def delete(self):
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+
+        cursor.execute("SELECT count(*) FROM buildqueue WHERE repository = %s", ( self.id, ))
+        row = cursor.fetchone()
+        if not row:
+            raise TracError('SQL Error')
+        if row[0] > 0:
+            raise TracError('There are still buildqueue entries that need this repository')
+
+        cursor.execute("DELETE FROM portrepositories WHERE id = %s", ( self.id, ))
+        db.commit()
+
+    def add(self):
+        if self.id:
+            raise TracError('Already existing portrepository object cannot be added again')
+
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("INSERT INTO portrepositories (name, type, url, browseurl, username) VALUES(%s, %s, %s, %s, %s)", ( self.name, self.type, self.url, self.browseurl, self.username ) )
+        db.commit()
+
+
 
 class Backend(object):
     def __init__(self, env, id=None):
@@ -389,18 +415,23 @@ class Port(object):
         cursor.execute("UPDATE builds SET status = %s WHERE backendkey = %s AND status < %s", ( status, key, status ))
         db.commit()
 
-    def delete(self, req):
+    def delete(self, req=None):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
 
-        cursor.execute("SELECT count(*) FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND builds.id = %s AND buildqueue.owner = %s", ( self.id, req.authname ))
+        if req:
+            username = req.authname
+        else:
+            username = 'anonymous'
+
+        cursor.execute("SELECT count(*) FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND builds.id = %s AND (buildqueue.owner = %s OR %s = 'anonymous')", ( self.id, username, username ))
         row = cursor.fetchone()
         if not row:
             raise TracError('SQL Error')
         if row[0] != 1:
             raise TracError('Invalid ID')
 
-        cursor.execute("SELECT buildqueue.id, builds.status FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND builds.id = %s AND buildqueue.owner = %s", ( self.id, req.authname ))
+        cursor.execute("SELECT buildqueue.id, builds.status FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND builds.id = %s", ( self.id, ))
         row = cursor.fetchone()
         if not row:
             raise TracError('SQL Error')
@@ -423,6 +454,7 @@ class Port(object):
             cursor.execute("UPDATE buildqueue SET status = 95, enddate = %s WHERE id = %s", (long(time()*1000000), queueid ))
 
         db.commit()
+
 
 def GlobalBuildqueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
@@ -640,14 +672,30 @@ def AllBuildgroupsIterator(env):
 
 def RepositoryIterator(env, req):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT id, replace(name, '%OWNER%', %s), type, url, replace(browseurl, '%OWNER%', %s) FROM portrepositories WHERE username IS NULL OR username = %s ORDER BY id", (req.authname, req.authname, req.authname))
+    cursor.execute("SELECT id, replace(name, '%OWNER%', %s), type, url, replace(browseurl, '%OWNER%', %s), username FROM portrepositories WHERE username IS NULL OR username = %s ORDER BY id", (req.authname, req.authname, req.authname))
 
-    for id, name, type, url, browseurl in cursor:
+    for id, name, type, url, browseurl, username in cursor:
         repository = PortRepository(env, id)
         repository.name = name
         repository.type = type
         repository.url = url
         repository.browseurl = browseurl
+        repository.username = username
+
+        yield repository
+
+
+def PortRepositoryIterator(env):
+    cursor = env.get_db_cnx().cursor()
+    cursor.execute("SELECT id, name, type, url, browseurl, username FROM portrepositories ORDER BY id")
+
+    for id, name, type, url, browseurl, username in cursor:
+        repository = PortRepository(env, id)
+        repository.name = name
+        repository.type = type
+        repository.url = url
+        repository.browseurl = browseurl
+        repository.username = username
 
         yield repository
 
