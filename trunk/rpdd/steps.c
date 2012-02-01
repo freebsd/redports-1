@@ -861,7 +861,19 @@ int handleStep20(void)
         if (PQresultStatus(reslock) != PGRES_TUPLES_OK)
         {
             if (strcmp(PQgetErrorCode(reslock), PQERROR_LOCK_NOT_AVAILABLE) == 0)
+            {
+                logwarn("Could not lock build %s. Continuing.", PQgetvalue(result, i, 2));
+
+                reslock = PQexec(conn, "ROLLBACK");
+                if (PQresultStatus(reslock) != PGRES_COMMAND_OK)
+                    RETURN_ROLLBACK(conn);
+
+                reslock = PQexec(conn, "BEGIN");
+                if (PQresultStatus(reslock) != PGRES_COMMAND_OK)
+                    RETURN_ROLLBACK(conn);
+
                 continue;
+            }
 
             RETURN_ROLLBACK(conn);
         }
