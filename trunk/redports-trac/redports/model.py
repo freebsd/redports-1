@@ -324,7 +324,7 @@ class Build(object):
         if row[0] != 1:
             raise TracError('Invalid QueueID')
 
-        cursor.execute("SELECT id FROM builds WHERE queueid = %s FOR UPDATE NOWAIT", ( self.queueid, ) )
+        cursor.execute("SELECT id FROM builds WHERE queueid = %s FOR UPDATE", ( self.queueid, ) )
 
         error = None
         for id in cursor:
