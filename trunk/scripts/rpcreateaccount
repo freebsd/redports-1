@@ -14,6 +14,9 @@ USER=$1
 REPOSITORY=file:///var/subversion/redports
 SVNUSER=redports
 
+DBNAME=trac
+DBUSER=trac
+
 if [ -z "$USER" ]; then
     echo "Usage: rpcreateaccount <username>"
     exit 1
@@ -57,6 +60,19 @@ if ! egrep "^\[/${USER}\]" ${SVNACCESS} >/dev/null ; then
     echo "" >> ${SVNACCESS}
 else
     echo "SVN permissions already granted"
+fi
+
+# require email verification for user
+SQL=`printf "SELECT value FROM session_attribute WHERE sid = '%s' and name = 'email' and value = (SELECT value FROM session_attribute WHERE sid = '%s' AND name = 'email_verification_sent_to');" "${USER}" "${USER}"`
+
+EMAIL=`echo "${SQL}" | psql -qtA ${DBNAME} ${DBUSER}`
+
+if [ -z "${EMAIL}" ]; then
+   SQL=`printf "INSERT INTO session_attribute VALUES ('%s', '1', 'email_verification_token', SUBSTRING(MD5(RANDOM()::text), 1, 10));" "${USER}"`
+
+   echo "${SQL}" | psql -qtA ${DBNAME} ${DBUSER}
+else
+   echo "EMail is verified: ${EMAIL}"
 fi
 
 exit 0
