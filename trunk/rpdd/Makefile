@@ -16,6 +16,8 @@ install: rpdd
 	install -o root -g wheel -m 0755 rpdd /usr/local/bin/rpdd
 	install -o root -g wheel -m 0755 rpdd.in /usr/local/etc/rc.d/rpdd
 	install -o root -g wheel -m 0644 rpdd.conf-dist /usr/local/etc/rpdd.conf-dist
+	install -o root -g wheel -m 0755 -d /usr/local/share/rpdd
+	install -o root -g wheel -m 0755 scripts/hook.sh /usr/local/share/rpdd/hook.sh
 
 clean:
 	@rm -f *.o *.core
