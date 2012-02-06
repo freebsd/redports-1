@@ -25,3 +25,7 @@ cleandays  62
 
 # Maximum age for portstrees on tinderbox backends (hours)
 tbPortsTreeMaxAge 48
+
+# Hook script
+#hookCmd    /usr/local/share/rpdd/hook.sh
+

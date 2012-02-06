@@ -477,7 +477,7 @@ int handleStep71(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT id, backendid, buildgroup FROM builds WHERE status = 71");
+    result = PQexec(conn, "SELECT id, backendid, buildgroup, portname, pkgversion FROM builds WHERE status = 71");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
@@ -562,6 +562,20 @@ int handleStep71(void)
         		getenv("BUILDSTATUS") != NULL ? getenv("BUILDSTATUS") : "",
         		getenv("FAIL_REASON") != NULL ? getenv("FAIL_REASON") : "", microtime(), atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
+
+        setenv("RPSTATUS", "71", 1);
+        setenv("RPOWNER", PQgetvalue(result3, 0, 0), 1);
+        setenv("RPBUILDID", PQgetvalue(result, i, 0), 1);
+        setenv("RPBUILDQUEUEID", PQgetvalue(result3, i, 1), 1);
+        setenv("RPBUILDGROUP", PQgetvalue(result, i, 2), 1);
+        setenv("RPPORTNAME", PQgetvalue(result, i, 3), 1);
+        setenv("RPPKGVERSION", PQgetvalue(result, i, 4), 1);
+        setenv("RPBUILDSTATUS", getenv("BUILDSTATUS") != NULL ? getenv("BUILDSTATUS") : "", 1);
+        setenv("RPBUILDREASON", getenv("FAIL_REASON") != NULL ? getenv("FAIL_REASON") : "", 1);
+        setenv("RPBUILDLOG", "", 1);
+        if(getenv("BUILDLOG") != NULL)
+            setenv("RPBUILDLOG", basename(getenv("BUILDLOG")), 1);
+        callHook(71);
 
         PQclear(result3);
         PQclear(result2);
@@ -709,6 +723,7 @@ int handleStep31(void)
     PGconn *conn;
     PGresult *result;
     PGresult *result2;
+    PGresult *result3;
     char url[500];
     int i;
 
@@ -726,6 +741,23 @@ int handleStep31(void)
         result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
     	if (PQresultStatus(result2) != PGRES_TUPLES_OK)
             RETURN_ROLLBACK(conn);
+
+        result3 = PQselect(conn, "SELECT owner FROM buildqueue WHERE id = '%s'", PQgetvalue(result, i, 4));
+    	if (PQresultStatus(result3) != PGRES_TUPLES_OK)
+            RETURN_ROLLBACK(conn);
+        
+
+        setenv("RPSTATUS", "31", 1);
+        setenv("RPOWNER", PQgetvalue(result3, 0, 0), 1);
+        setenv("RPBUILDID", PQgetvalue(result, i, 0), 1);
+        setenv("RPBUILDQUEUEID", PQgetvalue(result, i, 4), 1);
+        setenv("RPBUILDGROUP", PQgetvalue(result, i, 2), 1);
+        setenv("RPPORTNAME", PQgetvalue(result, i, 5), 1);
+        setenv("RPPKGVERSION", "", 1);
+        setenv("RPBUILDSTATUS", "", 1);
+        setenv("RPBUILDREASON", "", 1);
+        setenv("RPBUILDLOG", "", 1);
+        callHook(31);
 
         sprintf(url, "%s://%s%sbuild?port=%s&build=%s&priority=%s&finishurl=%s/backend/finished/%s",
         		PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1), PQgetvalue(result2, 0, 2),
@@ -750,6 +782,7 @@ int handleStep31(void)
                 RETURN_ROLLBACK(conn);
         }
 
+        PQclear(result3);
         PQclear(result2);
     }
 

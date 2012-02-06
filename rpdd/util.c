@@ -52,6 +52,7 @@ struct configparam config[] = {
     { "dbUsername",    "root" },
     { "dbPassword",    "" },
     { "dbDatabase",    "trac" },
+    { "hookCmd",       "" },
     { "logFile",       "/var/log/rpdd.log" },
     { "tbPortsTreeMaxAge", "48" },
     { "wwwurl",        "" },
@@ -255,6 +256,33 @@ int cleanolddir(char *directory)
     }
 
     closedir(dp);
+
+    return 0;
+}
+
+int callHook(int status)
+{
+    char *hook;
+
+    hook = configget("hookCmd");
+
+    if(hook == NULL || strlen(hook) < 1)
+        return 1;
+
+    loginfo("Calling hook %s", hook);
+
+    switch (fork())
+    {
+        case 0:
+            setenv("RPWWWURL", configget("wwwurl"), 1);
+
+            if(execl(hook, hook, (char *) 0) == -1)
+                logwarn("execl hook %s failed", hook);
+        break;
+        case -1:
+            logwarn("Fork failed");
+        break;
+    }
 
     return 0;
 }

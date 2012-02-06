@@ -38,5 +38,6 @@ extern int mkdirrec(char *directory);
 extern int rmdirrec(char *directory);
 extern int checkdir(char *directory);
 extern int cleanolddir(char *directory);
+extern int callHook(int status);
 
 #endif /* _UTIL_H_ */
