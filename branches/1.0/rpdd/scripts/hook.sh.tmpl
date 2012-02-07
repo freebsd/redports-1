@@ -22,7 +22,7 @@ fi
 
 if [ "${RPSTATUS}" = "71" ]; then
     MSG="[${RPBUILDGROUP}] (${RPOWNER}) - ${RPBUILDQUEUEID}-${RPBUILDID} - ${RPPORTNAME} ${RPPKGVERSION} - ${RPBUILDSTATUS} ${RPBUILDREASON}"
-    if [ ! -z "${RPBUILDLOG}" ] ; then
+    if [ ! -z "${RPBUILDLOG}" -a ! -z "${BUILDREASON}" ] ; then
         MSG="${MSG} - ${RPWWWURL}/~${RPOWNER}/${RPBUILDQUEUEID}-${RPBUILDID}/${RPBUILDLOG}"
     fi
 fi

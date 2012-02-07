@@ -44,7 +44,7 @@
 #include "steputil.h"
 #include "util.h"
 
-#define RPD_VERSION "0.9.92"
+#define RPD_VERSION "0.9.93"
 #define DAEMON_NAME "rpdd"
 #define CONF_FILE "rpdd.conf"
 #define PID_FILE "/var/run/rpdd.pid"
