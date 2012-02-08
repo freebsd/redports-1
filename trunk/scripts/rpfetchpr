@@ -81,11 +81,17 @@ replacepath()
    sed -i.bak "s%^\+\+\+ ${SEARCH}%\+\+\+ ${REPLACE}%" ${FILE}
 }
 
+PR=${1}
+PATCH=${2}
+PORT=${3}
 
-fetchpr "$1" || exit 1
-fetchpatch "$1" "" || exit 1
+fetchpr ${PR} || exit 1
+fetchpatch ${PR} ${PATCH} || exit 1
 
-PORT=`detectport`
+if [ -z "${PORT}" ]; then
+   PORT=`detectport`
+fi
+
 TYPE=`detectpatchtype`
 
 if [ -z "${PORT}" -o -z "${PORT%${PORT##*/}}" -o ! -d "/usr/ports/${PORT%${PORT##*/}}" ]; then
@@ -94,13 +100,14 @@ if [ -z "${PORT}" -o -z "${PORT%${PORT##*/}}" -o ! -d "/usr/ports/${PORT%${PORT#
 fi
 
 if [ "${TYPE}" = "PATCH" ]; then
-   fixpaths "${PORT}"
-   diff -uN ${TMPPATCH}.bak ${TMPPATCH}
+   fixpaths "${PORT}" || exit 1
    cp -p ${TMPPATCH} ${PR}.diff
 elif [ "${TYPE}" = "SH" ]; then
-   echo "TODO: support sh archives"
+   cp -p ${TMPPATCH} ${PR}.sh
 fi
 
 rm -f ${TMPPR} ${TMPPATCH} ${TMPPATCH}.bak
+
+echo ${PORT}
 return 0
 
