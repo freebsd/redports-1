@@ -1,0 +1,101 @@
+#!/bin/sh
+
+SVNUSER=
+SVNPASS=
+SVNROOT=http://svn.beta.redports.org/${SVNUSER}
+
+PR=$1
+PATCH=$2
+PORT=$3
+
+PORTSTREE=/usr/ports
+SCRIPTROOT=`pwd`
+SCRIPT=`basename $0`
+TMPDIR=`mktemp -d /tmp/${SCRIPT}.prbot.XXXXXX` || exit 1
+
+cd ${TMPDIR} || exit 1
+
+if [ -z "${PATCH}" ]; then
+   PATCH=1
+fi
+
+PORT=`${SCRIPTROOT}/rpfetchpr ${PR} ${PATCH} ${PORT}`
+if [ $? -ne 0 ]; then
+   echo ${PORT}
+   exit 1
+fi
+
+PORTCATEGORY=${PORT%${PORT##*/}}
+
+svn co --non-interactive ${SVNROOT} ${TMPDIR}/ports || exit 1
+
+if ls ${TMPDIR}/ports/* 2>/dev/null ; then
+   svn rm ${TMPDIR}/ports/* || exit 1
+
+   svn ci --non-interactive --username ${SVNUSER} --password ${SVNPASS} \
+          --message "Cleanup repository" ${TMPDIR}/ports || exit 1
+fi
+
+if [ -f "${TMPDIR}/${PR}.diff" ]; then
+   if [ ! -d "${PORTSTREE}/${PORT}" ]; then
+      echo "Port ${PORT} not found"
+      exit 1
+   fi
+
+   # copy port from porstree to our svn repo
+   mkdir -p ${TMPDIR}/ports/${PORT}
+   cp -pR ${PORTSTREE}/${PORT}/ ${TMPDIR}/ports/${PORT}
+   svn add ${TMPDIR}/ports/*
+
+   echo "Add ${PORT}" > ${TMPDIR}/ci
+   echo "" >> ${TMPDIR}/ci
+   echo "Redports: ignore" >> ${TMPDIR}/ci
+
+   svn ci --non-interactive --username ${SVNUSER} --password ${SVNPASS} \
+          --file ${TMPDIR}/ci ${TMPDIR}/ports || exit 1
+
+   # apply user patch to our svn repo
+   cd ${TMPDIR}/ports && patch -p0 -us < ${TMPDIR}/${PR}.diff || exit 1
+
+   # cleanup .orig files
+   find ${TMPDIR}/ports -iname "*.orig" -exec rm {} \;
+
+   # remove empty files
+   find ${TMPDIR}/ports -size 0c -exec svn rm --force {} \;
+   
+   # commit our patched port
+   svn add --force ${TMPDIR}/ports/* || exit 1
+
+   echo "Build ${PORT}" > ${TMPDIR}/ci
+   echo "" >> ${TMPDIR}/ci
+   echo "PR:	${PR}" >> ${TMPDIR}/ci
+   
+   svn ci --non-interactive --username ${SVNUSER} --password ${SVNPASS} \
+          --file ${TMPDIR}/ci ${TMPDIR}/ports || exit 1
+
+   rm -Rf ${TMPDIR}
+
+elif [ -f "${TMPDIR}/${PR}.sh" ]; then
+   # extract shar script
+   mkdir -p ${TMPDIR}/ports/${PORTCATEGORY}
+   cd ${TMPDIR}/ports/${PORTCATEGORY}
+   sh ${TMPDIR}/${PR}.sh || exit 1
+
+   # commit our patched port
+   svn add ${TMPDIR}/ports/${PORTCATEGORY} || exit 1
+
+   echo "Build ${PORT}" > ${TMPDIR}/ci
+   echo "" >> ${TMPDIR}/ci
+   echo "PR:	${PR}" >> ${TMPDIR}/ci
+   
+   svn ci --non-interactive --username ${SVNUSER} --password ${SVNPASS} \
+          --file ${TMPDIR}/ci ${TMPDIR}/ports || exit 1
+
+   rm -Rf ${TMPDIR}
+   
+else
+   echo "Invalid PR patch!"
+   exit 1
+fi
+
+exit 0
