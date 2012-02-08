@@ -1,0 +1,55 @@
+#!/bin/sh
+
+LOGDIR=/tmp/rpwatchpr
+PRDIR=${LOGDIR}/PR
+THISPR=${LOGDIR}/prlist.log
+LASTPR=${LOGDIR}/prlist.log.bak
+TMPPR=`mktemp /tmp/rpwatchpr.fetch.XXXXXX` || exit 1
+
+if [ "$1" = "update" ]; then
+   if [ ! -d "${LOGDIR}" ]; then
+      mkdir -p ${LOGDIR}
+   fi
+
+   if [ ! -d "${PRDIR}" ]; then
+      mkdir -p ${PRDIR}
+   fi
+      
+
+   fetch -qo ${TMPPR} "http://www.freebsd.org/cgi/query-pr-summary.cgi?category=ports" || exit 1
+
+   if [ ! -f "${LASTPR}" ]; then
+      touch ${LASTPR}
+   fi
+
+   if [ -f "${THISPR}" ]; then
+      mv ${THISPR} ${LASTPR}
+   fi
+
+   fgrep "<td><a href='/cgi/query-pr.cgi?pr=" ${TMPPR} > ${THISPR}
+fi
+
+diff ${LASTPR} ${THISPR} | grep "^>" | head -n 5 | while read LINE
+do
+   PR=`echo ${LINE} | cut -d'/' -f8 | cut -d"'" -f1`
+   DATE=`echo ${LINE} | cut -d'>' -f6 | cut -d'<' -f1`
+   SUBJECT=`echo ${LINE} | cut -d'>' -f14 | cut -d'<' -f1`
+
+   echo "-----------------------------------" >> ${PRDIR}/${PR}.log
+   echo `date` >> ${PRDIR}/${PR}.log
+   echo "PR:      ${PR}" >> ${PRDIR}/${PR}.log
+   echo "DATE:    ${DATE}" >> ${PRDIR}/${PR}.log
+   echo "SUBJECT: ${SUBJECT}" >> ${PRDIR}/${PR}.log
+   echo "" >> ${PRDIR}/${PR}.log
+   
+   ./rpcommitpr ${PR} >> ${PRDIR}/${PR}.log 2>&1
+
+   if [ $? -eq 0 ]; then
+      echo `date` ${DATE} ${PR} ${SUBJECT} >> ${LOGDIR}/success.log
+   else
+      echo `date` ${DATE} ${PR} ${SUBJECT} >> ${LOGDIR}/failed.log
+   fi
+done
+
+exit 0
+
