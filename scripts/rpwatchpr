@@ -29,25 +29,33 @@ if [ "$1" = "update" ]; then
    fgrep "<td><a href='/cgi/query-pr.cgi?pr=" ${TMPPR} > ${THISPR}
 fi
 
-diff ${LASTPR} ${THISPR} | grep "^>" | head -n 5 | while read LINE
+diff ${LASTPR} ${THISPR} | grep "^>" | while read LINE
 do
    PR=`echo ${LINE} | cut -d'/' -f8 | cut -d"'" -f1`
    DATE=`echo ${LINE} | cut -d'>' -f6 | cut -d'<' -f1`
    SUBJECT=`echo ${LINE} | cut -d'>' -f14 | cut -d'<' -f1`
 
-   echo "-----------------------------------" >> ${PRDIR}/${PR}.log
-   echo `date` >> ${PRDIR}/${PR}.log
-   echo "PR:      ${PR}" >> ${PRDIR}/${PR}.log
-   echo "DATE:    ${DATE}" >> ${PRDIR}/${PR}.log
-   echo "SUBJECT: ${SUBJECT}" >> ${PRDIR}/${PR}.log
-   echo "" >> ${PRDIR}/${PR}.log
-   
-   ./rpcommitpr ${PR} >> ${PRDIR}/${PR}.log 2>&1
+   echo "-----------------------------------" | tee -a ${PRDIR}/${PR}.log
+   echo `date` | tee -a ${PRDIR}/${PR}.log
+   echo "PR:      ${PR}" | tee -a ${PRDIR}/${PR}.log
+   echo "DATE:    ${DATE}" | tee -a ${PRDIR}/${PR}.log
+   echo "SUBJECT: ${SUBJECT}" | tee -a ${PRDIR}/${PR}.log
+   echo "" | tee -a ${PRDIR}/${PR}.log
 
-   if [ $? -eq 0 ]; then
-      echo `date` ${DATE} ${PR} ${SUBJECT} >> ${LOGDIR}/success.log
+   if fgrep " ${PR} " ${LOGDIR}/success.log >/dev/null 2>&1 ; then
+      echo "PR already successfully scheduled. skipping"
+   elif [ `echo ${DATE} | cut -d'/' -f1` != "2012" ]; then
+      echo "PR too old. skipping"
    else
-      echo `date` ${DATE} ${PR} ${SUBJECT} >> ${LOGDIR}/failed.log
+      ./rpcommitpr "${PR}" "1" "" "${SUBJECT}" | tee -a ${PRDIR}/${PR}.log 2>&1
+
+      if [ $? -eq 0 ]; then
+         echo "success."
+         echo `date` ${DATE} ${PR} ${SUBJECT} >> ${LOGDIR}/success.log
+      else
+         echo "failed."
+         echo `date` ${DATE} ${PR} ${SUBJECT} >> ${LOGDIR}/failed.log
+      fi
    fi
 done
 
