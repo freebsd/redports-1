@@ -43,12 +43,22 @@ detectport()
    # Remove synopsis, strip tags in [...], trim, take first word until ":" or space
    PORT=`grep -i ">Synopsis:" ${TMPPR} | cut -b11- | sed 's/\[.*\]//' | sed 's/^[[:space:]]*\(.*\)[[:space:]]*$/\1/' | sed 's/\([^[:space:]\:]*\).*/\1/'`
 
-   if [ -z "${PORT}" -o -z "${PORT%${PORT##*/}}" -o ! -d "/usr/ports/${PORT%${PORT##*/}}" ]; then
-      return 1
+   if [ ! -z "${PORT}" -a ! -z "${PORT%${PORT##*/}}" -a  -d "/usr/ports/${PORT%${PORT##*/}}" ]; then
+      echo ${PORT}
+      return 0
    fi
 
-   echo ${PORT}
-   return 0
+   for WORD in `grep -i ">Synopsis:" ${TMPPR} | cut -b11-`
+   do
+      PORT=`echo ${WORD} | cut -d':' -f1`
+      
+      if [ ! -z "${PORT}" -a ! -z "${PORT%${PORT##*/}}" -a  -d "/usr/ports/${PORT%${PORT##*/}}" ]; then
+         echo ${PORT}
+         return 0
+      fi
+   done
+
+   return 1
 }
 
 fixpaths()
