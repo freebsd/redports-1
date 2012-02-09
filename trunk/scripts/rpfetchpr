@@ -41,7 +41,14 @@ detectpatchtype()
 detectport()
 {
    # Remove synopsis, strip tags in [...], trim, take first word until ":" or space
-   grep -i ">Synopsis:" ${TMPPR} | cut -b11- | sed 's/\[.*\]//' | sed 's/^[[:space:]]*\(.*\)[[:space:]]*$/\1/' | sed 's/\([^[:space:]\:]*\).*/\1/'
+   PORT=`grep -i ">Synopsis:" ${TMPPR} | cut -b11- | sed 's/\[.*\]//' | sed 's/^[[:space:]]*\(.*\)[[:space:]]*$/\1/' | sed 's/\([^[:space:]\:]*\).*/\1/'`
+
+   if [ -z "${PORT}" -o -z "${PORT%${PORT##*/}}" -o ! -d "/usr/ports/${PORT%${PORT##*/}}" ]; then
+      return 1
+   fi
+
+   echo ${PORT}
+   return 0
 }
 
 fixpaths()
@@ -90,14 +97,13 @@ fetchpatch ${PR} ${PATCH} || exit 1
 
 if [ -z "${PORT}" ]; then
    PORT=`detectport`
+   if [ $? -ne 0 ]; then
+      echo "Portname not detected"
+      exit 1
+   fi
 fi
 
 TYPE=`detectpatchtype`
-
-if [ -z "${PORT}" -o -z "${PORT%${PORT##*/}}" -o ! -d "/usr/ports/${PORT%${PORT##*/}}" ]; then
-   echo "Invalid portname ${PORT}"
-   return 1
-fi
 
 if [ "${TYPE}" = "PATCH" ]; then
    fixpaths "${PORT}" || exit 1
