@@ -66,6 +66,11 @@ fixpaths()
    PORT=$1
    FILE=`egrep "^\+\+\+ " ${TMPPATCH} | cut -d' ' -f2 | cut -s -f1 | head -1`
 
+   if [ -z "${FILE}" ]; then
+      echo "Looks like an invalid patch!"
+      return 1
+   fi
+
    # /home/pcvs/ports/devel/py-thrift/Makefile
    if echo "${FILE}" | grep "${PORT}" - >/dev/null ; then
       SUBPATH=`echo "${FILE}" | sed "s%\(.*\)${PORT}\(.*\)%\1%"`
@@ -74,7 +79,14 @@ fixpaths()
    fi
 
    # Makefile
-   if [ "${FILE}" = "Makefile" ]; then
+   if [ "${FILE}" = "Makefile" -o "${FILE}" = "distinfo" -o "${FILE}" = "pkg-plist" ]; then
+      replacepath "" "${PORT}/" ${TMPPATCH}
+      return 0
+   fi
+
+   # files/patch-something
+   TMP=`echo ${FILE} | cut -d'/' -f1`
+   if [ ! -z "${TMP}" -a "${TMP}" = "files" ]; then
       replacepath "" "${PORT}/" ${TMPPATCH}
       return 0
    fi
