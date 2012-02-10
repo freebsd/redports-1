@@ -1,14 +1,17 @@
 #!/bin/sh
 
-SCRIPT=`basename $0`
-TMPPR=`mktemp /tmp/${SCRIPT}.pr.XXXXXX` || exit 1
-TMPPATCH=`mktemp /tmp/${SCRIPT}.patch.XXXXXX` || exit 1
+#
+# FreeBSD GNATS PR fetch script
+#
+# $Id$
+#
 
 fetchpr()
 {
    PR=$1
+   TARGET=$2
 
-   fetch -qo ${TMPPR} "http://www.freebsd.org/cgi/query-pr.cgi?pr=${PR}&f=raw" || exit 1
+   fetch -qo ${TARGET} "http://www.freebsd.org/cgi/query-pr.cgi?pr=${PR}&f=raw" || exit 1
 
    return 0
 }
@@ -17,33 +20,42 @@ fetchpatch()
 {
    PR=$1
    PATCH=$2
+   TARGET=$3
 
    if [ -z "${PATCH}" ]; then
       PATCH=1
    fi
 
-   fetch -qo ${TMPPATCH} "http://www.freebsd.org/cgi/query-pr.cgi?pr=${PR}&getpatch=${PATCH}" || exit 1
+   fetch -qo ${TARGET} "http://www.freebsd.org/cgi/query-pr.cgi?pr=${PR}&getpatch=${PATCH}" || exit 1
 
    return 0
 }
 
 detectpatchtype()
 {
-   if [ "`head -1 ${TMPPATCH}`" = "# This is a shell archive.  Save it in a file, remove anything before" ]; then
+   PATCHFILE=$1
+
+   if [ "`head -1 ${PATCHFILE}`" = "# This is a shell archive.  Save it in a file, remove anything before" ]; then
       echo "SH"
-   elif egrep "^\-\-\- " ${TMPPATCH} >/dev/null && egrep "^\+\+\+ " ${TMPPATCH} >/dev/null ; then
+      return 0
+   elif egrep "^\-\-\- " ${PATCHFILE} >/dev/null && egrep "^\+\+\+ " ${PATCHFILE} >/dev/null ; then
       echo "PATCH"
+      return 0
    else
       echo "UNKNOWN"
+      return 1
    fi
 }
 
 detectport()
 {
-   # Remove synopsis, strip tags in [...], trim, take first word until ":" or space
-   PORT=`grep -i ">Synopsis:" ${TMPPR} | cut -b11- | sed 's/\[.*\]//' | sed 's/^[[:space:]]*\(.*\)[[:space:]]*$/\1/' | sed 's/\([^[:space:]\:]*\).*/\1/'`
+   PRFILE=$1
+   PORTSTREE=$2
 
-   if [ ! -z "${PORT}" -a ! -z "${PORT%${PORT##*/}}" -a  -d "/usr/ports/${PORT%${PORT##*/}}" ]; then
+   # Remove synopsis, strip tags in [...], trim, take first word until ":" or space
+   PORT=`grep -i ">Synopsis:" ${PRFILE} | cut -b11- | sed 's/\[.*\]//' | sed 's/^[[:space:]]*\(.*\)[[:space:]]*$/\1/' | sed 's/\([^[:space:]\:]*\).*/\1/'`
+
+   if [ ! -z "${PORT}" -a ! -z "${PORT%${PORT##*/}}" -a  -d "${PORTSTREE}/${PORT%${PORT##*/}}" ]; then
       echo ${PORT}
       return 0
    fi
@@ -52,7 +64,7 @@ detectport()
    do
       PORT=`echo ${WORD} | cut -d':' -f1`
       
-      if [ ! -z "${PORT}" -a ! -z "${PORT%${PORT##*/}}" -a  -d "/usr/ports/${PORT%${PORT##*/}}" ]; then
+      if [ ! -z "${PORT}" -a ! -z "${PORT%${PORT##*/}}" -a  -d "${PORTSTREE}/${PORT%${PORT##*/}}" ]; then
          echo ${PORT}
          return 0
       fi
@@ -64,7 +76,8 @@ detectport()
 fixpaths()
 {
    PORT=$1
-   FILE=`egrep "^\+\+\+ " ${TMPPATCH} | cut -d' ' -f2 | cut -s -f1 | head -1`
+   PATCHFILE=$2
+   FILE=`egrep "^\+\+\+ " ${PATCHFILE} | cut -d' ' -f2 | cut -s -f1 | head -1`
 
    if [ -z "${FILE}" ]; then
       echo "Looks like an invalid patch!"
@@ -74,26 +87,26 @@ fixpaths()
    # /home/pcvs/ports/devel/py-thrift/Makefile
    if echo "${FILE}" | grep "${PORT}" - >/dev/null ; then
       SUBPATH=`echo "${FILE}" | sed "s%\(.*\)${PORT}\(.*\)%\1%"`
-      replacepath "${SUBPATH}" "" ${TMPPATCH}
+      replacepath "${SUBPATH}" "" ${PATCHFILE}
       return 0
    fi
 
    # Makefile
    if [ "${FILE}" = "Makefile" -o "${FILE}" = "distinfo" -o "${FILE}" = "pkg-plist" ]; then
-      replacepath "" "${PORT}/" ${TMPPATCH}
+      replacepath "" "${PORT}/" ${PATCHFILE}
       return 0
    fi
 
    # files/patch-something
    TMP=`echo ${FILE} | cut -d'/' -f1`
    if [ ! -z "${TMP}" -a "${TMP}" = "files" ]; then
-      replacepath "" "${PORT}/" ${TMPPATCH}
+      replacepath "" "${PORT}/" ${PATCHFILE}
       return 0
    fi
 
    # xfce4-wm/Makefile
    if [ "${FILE##*/}" = "Makefile" ]; then
-      replacepath `dirname "${FILE}"` "${PORT}" ${TMPPATCH}
+      replacepath `dirname "${FILE}"` "${PORT}" ${PATCHFILE}
       return 0
    fi
 
@@ -110,32 +123,95 @@ replacepath()
    sed -i.bak "s%^\+\+\+ ${SEARCH}%\+\+\+ ${REPLACE}%" ${FILE}
 }
 
-PR=${1}
-PATCH=${2}
-PORT=${3}
 
-fetchpr ${PR} || exit 1
-fetchpatch ${PR} ${PATCH} || exit 1
+SCRIPT=`basename $0`
+TMPPR=`mktemp /tmp/${SCRIPT}.pr.XXXXXX` || exit 1
+TMPPATCH=`mktemp /tmp/${SCRIPT}.patch.XXXXXX` || exit 1
 
-if [ -z "${PORT}" ]; then
-   PORT=`detectport`
+# Optional arguments
+AUTOMATIC=no
+PATCHNUM=1
+PORTNAME=
+PORTSTREE=/usr/ports
+
+# Options
+while getopts an:p:t: arg >/dev/null 2>&1
+do
+  case "$arg" in
+  a)   AUTOMATIC="yes";;
+  n)   PATCHNUM="$OPTARG";;
+  p)   PORTNAME="$OPTARG";;
+  t)   PORTSTREE="$OPTARG";;
+  [?]) echo "Unknown option -$OPTARG"
+       exit 1;;
+  esac
+done
+shift `expr $OPTIND - 1`
+
+if [ -z "$1" ]; then
+    echo "Usage ${0##*/} [-n patchnumber] [-p portname] [-t portstree] PR-Number [outfile]"
+    echo ""
+    echo "Options:"
+    echo "  -a             Output what was detected from the PR"
+    echo "  -n num         Number of patch within a PR"
+    echo "  -p portname    Portname in case autodetection does not work (format: category/port)"
+    echo "  -t path        Portstree for detecting a valid port (default /usr/ports)"
+    echo ""
+    exit 1
+fi
+
+PR=$1
+OUTFILE=$2
+
+if [ -z "$2" ]; then
+   OUTFILE=$1.diff
+fi
+
+fetchpr "${PR}" "${TMPPR}" || exit 1
+fetchpatch "${PR}" "${PATCHNUM}" "${TMPPATCH}" || exit 1
+
+if [ -z "${PORTNAME}" ]; then
+   PORTNAME=`detectport "${TMPPR}" "${PORTSTREE}"`
    if [ $? -ne 0 ]; then
-      echo "Portname not detected"
+      echo "Portname not detected. Use -p to set manually."
       exit 1
    fi
 fi
 
-TYPE=`detectpatchtype`
+TYPE=`detectpatchtype "${TMPPATCH}"`
 
 if [ "${TYPE}" = "PATCH" ]; then
-   fixpaths "${PORT}" || exit 1
-   cp -p ${TMPPATCH} ${PR}.diff
+   if [ ! -d "${PORTSTREE}/${PORTNAME}" ]; then
+      echo "Port ${PORTNAME} does not exist"
+      exit 1
+   fi
+
+   if [ -z "${OUTFILE}" ]; then
+      OUTFILE="${PR}.diff"
+   fi
+
+   fixpaths "${PORTNAME}" "${TMPPATCH}" || exit 1
+
+   mv ${TMPPATCH} ${OUTFILE}
 elif [ "${TYPE}" = "SH" ]; then
-   cp -p ${TMPPATCH} ${PR}.sh
+   if [ -z "${OUTFILE}" ]; then
+      OUTFILE="${PR}.sh"
+   fi
+
+   mv ${TMPPATCH} ${OUTFILE}
+else
+   echo "Invalid patch type"
+   exit 1
+fi
+
+if [ "${AUTOMATIC}" = "yes" ]; then
+   echo "PR: ${PR}"
+   echo "PORT: ${PORTNAME}"
+   echo "PATCHTYPE: ${TYPE}"
+   echo "PATCHFILE: ${OUTFILE}"
 fi
 
 rm -f ${TMPPR} ${TMPPATCH} ${TMPPATCH}.bak
 
-echo ${PORT}
 return 0
 
