@@ -1,5 +1,4 @@
 #!/bin/sh
-set -x
 
 #
 # Redports script to commit a patch from a GNATS PR to your repository
@@ -70,7 +69,7 @@ die()
 }
 
 # Options
-while getopts :h:m:p: arg >/dev/null 2>&1
+while getopts :cf:hm:n:p: arg >/dev/null 2>&1
 do
   case "$arg" in
   c)   CLEAN="yes";;
@@ -106,7 +105,7 @@ cd ${TMPDIR} || die 1
 
 rpfetchpr -a -n "${PATCHNUM}" -p "${PORT}" -t "${PORTSTREE}" "${PR}" "${PATCHFILE}" > ${TMPDIR}/env
 if [ $? -ne 0 ]; then
-   echo ${TMP}
+   cat ${TMPDIR}/env
    die 1
 else
    . ${TMPDIR}/env
