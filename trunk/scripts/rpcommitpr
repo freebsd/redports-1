@@ -1,64 +1,146 @@
 #!/bin/sh
+set -x
 
-SVNUSER=
-SVNPASS=
-SVNROOT=http://svn.beta.redports.org/${SVNUSER}
+#
+# Redports script to commit a patch from a GNATS PR to your repository
+#
+# $Id$
+#
+
+RPUSER=${USER}
+RPHOST=http://svn.redports.org/
+
+CLEAN=no
+FLAGS=
+MESSAGE=
+PATCHNUM=1
+PORT=
+PORTSTREE=/usr/ports
+HELP=no
+
+# Default configuration
+if [ -f ~/.redports.conf ]; then
+  . ~/.redports.conf
+fi
+
+# Late variables
+RPSVNROOT=${RPHOST}${RPUSER}
+SVNFLAGS="-q --non-interactive --username ${RPUSER} --password ${RPPASS}"
+TMPDIR=`mktemp -d /tmp/rpcommitpr.XXXXXX` || exit 1
+
+# Prepare Commit message file
+generateci()
+{
+   FILE=$1
+   MSG=$2
+   FLAGS=$3
+   PRNUM=$4
+
+   rm -f ${FILE} && touch ${FILE}
+   echo ${MSG} > ${FILE}
+
+   if [ ! -z "${PRNUM}" -o ! -z "${FLAGS}" ]; then
+      echo "" >> ${FILE}
+   fi
+
+   if [ ! -z "${PRNUM}" ]; then
+      echo "PR:         ${PRNUM}" >> ${FILE}
+   fi
+
+   if [ ! -z "${FLAGS}" ]; then
+      echo "Redports:   ${FLAGS}" >> ${FILE}
+   fi
+
+   return 0
+}
+
+# exit with cleanup
+die()
+{
+   RESULTCODE=$1
+   MESSAGE=$2
+
+   rm -Rf ${TMPDIR}
+
+   if [ ! -z "${MESSAGE}" ]; then
+      echo ${MESSAGE}
+   fi
+
+   exit $RESULTCODE
+}
+
+# Options
+while getopts :h:m:p: arg >/dev/null 2>&1
+do
+  case "$arg" in
+  c)   CLEAN="yes";;
+  f)   FLAGS="$OPTARG";;
+  h)   HEL="yes";;
+  m)   MESSAGE="$OPTARG";;
+  n)   PATCHNUM="$OPTARG";;
+  p)   PORT="$OPTARG";;
+  [?]) echo "Unknown option -$OPTARG"
+       die 1;;
+  esac
+done
+shift `expr $OPTIND - 1`
+
+if [ -z "$1" -o "${HELP}" = "yes" ]; then
+    echo "Usage ${0##*/} [-ch] [-f flags] [-m message] [-n num] [-p portname] PR-Number"
+    echo ""
+    echo "Options:"
+    echo "  -c          Clean repository first"
+    echo "  -h          Show this help message"
+    echo "  -f flag     Redports commit flags (Ignore|Urgent)"
+    echo "  -m message  Commit message"
+    echo "  -n num      Patch number within the PR"
+    echo "  -p portname Portname in case autodetection fails"
+    echo ""
+    die 1
+fi
 
 PR=$1
-PATCH=$2
-PORT=$3
-SUBJECT=$4
+PATCHFILE=${TMPDIR}/${PR}
 
-PORTSTREE=/usr/ports
-SCRIPTROOT=`pwd`
-SCRIPT=`basename $0`
-TMPDIR=`mktemp -d /tmp/${SCRIPT}.prbot.XXXXXX` || exit 1
+cd ${TMPDIR} || die 1
 
-cd ${TMPDIR} || exit 1
-
-if [ -z "${PATCH}" ]; then
-   PATCH=1
-fi
-
-PORT=`${SCRIPTROOT}/rpfetchpr ${PR} ${PATCH} ${PORT}`
+rpfetchpr -a -n "${PATCHNUM}" -p "${PORT}" -t "${PORTSTREE}" "${PR}" "${PATCHFILE}" > ${TMPDIR}/env
 if [ $? -ne 0 ]; then
-   echo ${PORT}
-   exit 1
+   echo ${TMP}
+   die 1
+else
+   . ${TMPDIR}/env
+   PORTCATEGORY=${PORT%${PORT##*/}}
 fi
 
-PORTCATEGORY=${PORT%${PORT##*/}}
 
-if [ -f "${TMPDIR}/${PR}.diff" ]; then
-   if [ ! -d "${PORTSTREE}/${PORT}" ]; then
-      echo "Port ${PORT} not found"
-      exit 1
-   fi
+# checkout repository
+svn co ${SVNFLAGS} ${RPSVNROOT} ${TMPDIR}/ports || die 1
 
-   # checkout repository
-   svn co -q --non-interactive ${SVNROOT} ${TMPDIR}/ports || exit 1
-
-   # cleanup repository
+# cleanup repository
+if [ "${CLEAN}" = "yes" ]; then
    if ls ${TMPDIR}/ports/* >/dev/null 2>&1 ; then
-      svn rm -q --non-interactive ${TMPDIR}/ports/* || exit 1
+      svn rm ${SVNFLAGS} ${TMPDIR}/ports/* || die 1
 
-      svn ci -q --non-interactive --username ${SVNUSER} --password ${SVNPASS} \
-             --message "Cleanup repository" ${TMPDIR}/ports || exit 1
+      generateci ${TMPDIR}/ci "Cleanup repository" "ignore"
+
+      svn ci ${SVNFLAGS} --file ${TMPDIR}/ci ${TMPDIR}/ports || die 1
    fi
+fi
 
+
+if [ "${PATCHTYPE}" = "PATCH" ]; then
    # copy port from porstree to our svn repo
    mkdir -p ${TMPDIR}/ports/${PORT}
    cp -pR ${PORTSTREE}/${PORT}/ ${TMPDIR}/ports/${PORT}
-   svn add -q --non-interactive ${TMPDIR}/ports/* || exit 1
+   svn add --force ${SVNFLAGS} ${TMPDIR}/ports/* || die 1
 
-   echo "Add ${PORT}" > ${TMPDIR}/ci
-   echo "" >> ${TMPDIR}/ci
-   echo "Redports: ignore" >> ${TMPDIR}/ci
+   generateci ${TMPDIR}/ci "Add ${PORT}" "ignore"
 
-   svn ci -q --non-interactive --username ${SVNUSER} --password ${SVNPASS} \
-          --file ${TMPDIR}/ci ${TMPDIR}/ports || exit 1
+   svn ci ${SVNFLAGS} --file ${TMPDIR}/ci ${TMPDIR}/ports || die 1
 
    # apply user patch to our svn repo
-   patch -d ${TMPDIR}/ports -t -p0 -us < ${TMPDIR}/${PR}.diff || exit 1
+   patch -d ${TMPDIR}/ports -t -p0 -us < ${PATCHFILE} || die 1
 
    # cleanup .orig files
    find ${TMPDIR}/ports -iname "*.orig" -exec rm {} \;
@@ -67,56 +149,40 @@ if [ -f "${TMPDIR}/${PR}.diff" ]; then
    find ${TMPDIR}/ports -size 0c -exec svn rm --force {} \;
    
    # commit our patched port
-   svn add -q --non-interactive --force ${TMPDIR}/ports/* || exit 1
+   svn add --force ${SVNFLAGS} ${TMPDIR}/ports/* || die 1
 
-   if [ -z "${SUBJECT}" ]; then
-      echo "${PORT}" > ${TMPDIR}/ci
+   if [ -z "${MESSAGE}" ]; then
+      CIMESSAGE="${PORT}: Buildtest ports/${PR}"
    else
-      echo "${PORT}:" > ${TMPDIR}/ci
-      echo "${SUBJECT}" >> ${TMPDIR}/ci
+      CIMESSAGE=${MESSAGE}
    fi
-   echo "" >> ${TMPDIR}/ci
-   echo "PR:	ports/${PR}" >> ${TMPDIR}/ci
+
+   generateci ${TMPDIR}/ci "${CIMESSAGE}" "${FLAGS}" "ports/${PR}"
    
-   svn ci -q --non-interactive --username ${SVNUSER} --password ${SVNPASS} \
-          --file ${TMPDIR}/ci ${TMPDIR}/ports || exit 1
+   svn ci ${SVNFLAGS} --file ${TMPDIR}/ci ${TMPDIR}/ports || die 1
 
-elif [ -f "${TMPDIR}/${PR}.sh" ]; then
-   # checkout repository
-   svn co -q --non-interactive ${SVNROOT} ${TMPDIR}/ports || exit 1
-
-   # cleanup repository
-   if ls ${TMPDIR}/ports/* >/dev/null 2>&1; then
-      svn rm -q --non-interactive ${TMPDIR}/ports/* || exit 1
-
-      svn ci -q --non-interactive --username ${SVNUSER} --password ${SVNPASS} \
-             --message "Cleanup repository" ${TMPDIR}/ports || exit 1
-   fi
-
+elif [ "${PATCHTYPE}" = "SH" ]; then
    # extract shar script
    mkdir -p ${TMPDIR}/ports/${PORTCATEGORY}
    cd ${TMPDIR}/ports/${PORTCATEGORY}
-   sh ${TMPDIR}/${PR}.sh || exit 1
+   sh ${PATCHFILE} || die 1
 
    # commit our patched port
-   svn add -q --non-interactive ${TMPDIR}/ports/${PORTCATEGORY} || exit 1
+   svn add --force ${SVNFLAGS} ${TMPDIR}/ports/${PORTCATEGORY} || die 1
 
-   if [ -z "${SUBJECT}" ]; then
-      echo "${PORT}" > ${TMPDIR}/ci
+   if [ -z "${MESSAGE}" ]; then
+      CIMESSAGE="${PORT}: Buildtest ports/${PR}"
    else
-      echo "${PORT}:" > ${TMPDIR}/ci
-      echo "${SUBJECT}" >> ${TMPDIR}/ci
+      CIMESSAGE=${MESSAGE}
    fi
-   echo "" >> ${TMPDIR}/ci
-   echo "PR:	ports/${PR}" >> ${TMPDIR}/ci
-   
-   svn ci -q --non-interactive --username ${SVNUSER} --password ${SVNPASS} \
-          --file ${TMPDIR}/ci ${TMPDIR}/ports || exit 1
 
-else
-   echo "PR does not have a patch"
+   generateci ${TMPDIR}/ci "${CIMESSAGE}" "${FLAGS}" "ports/${PR}"
+   
+   svn ci ${SVNFLAGS} --file ${TMPDIR}/ci ${TMPDIR}/ports || die 1
+
 fi
 
 rm -Rf ${TMPDIR}
 
-exit 0
+die 0
+
