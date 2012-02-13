@@ -205,10 +205,10 @@ else
 fi
 
 if [ "${AUTOMATIC}" = "yes" ]; then
-   echo "PR: ${PR}"
-   echo "PORT: ${PORTNAME}"
-   echo "PATCHTYPE: ${TYPE}"
-   echo "PATCHFILE: ${OUTFILE}"
+   echo "PR=${PR}"
+   echo "PORT=${PORTNAME}"
+   echo "PATCHTYPE=${TYPE}"
+   echo "PATCHFILE=${OUTFILE}"
 fi
 
 rm -f ${TMPPR} ${TMPPATCH} ${TMPPATCH}.bak
