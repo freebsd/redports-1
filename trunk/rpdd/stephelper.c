@@ -30,6 +30,7 @@
 
 #include "log.h"
 #include "database.h"
+#include "util.h"
 
 int updateBuildFailed(PGconn *conn, long buildId)
 {
@@ -63,6 +64,16 @@ int updateBackendbuildFailed(PGconn *conn, int backendBuildId)
 
     PQclear(result);
 
+    result= PQselect(conn, "SELECT backendbuilds.buildgroup, backends.host FROM backendbuilds, backends WHERE backendbuilds.backendid = backends.id AND backendbuilds.id = %ld", backendBuildId);
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
+        RETURN_FAIL(conn);
+
+    setenv("RPBUILDGROUP", PQgetvalue(result, 0, 0), 1);
+    setenv("RPBACKENDHOST", PQgetvalue(result, 0, 1), 1);
+    callHook("BACKENDBUILD_FAILED");
+
+    PQclear(result);
+
     return 0;
 }
 
@@ -85,6 +96,15 @@ int updateBackendFailed(PGconn *conn, int backendId)
 
     if(!PQupdate(conn, "UPDATE backends SET status = 2 WHERE id = %ld", backendId))
         RETURN_FAIL(conn);
+
+    PQclear(result);
+
+    result = PQselect(conn, "SELECT host FROM backends WHERE id = %ld", backendId);
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
+        RETURN_FAIL(conn);
+
+    setenv("RPBACKENDHOST", PQgetvalue(result, 0, 0), 1);
+    callHook("BACKEND_FAILED");
 
     PQclear(result);
 
