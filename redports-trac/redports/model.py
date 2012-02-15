@@ -273,10 +273,12 @@ class Build(object):
 
         if row[1] == 'svn':
              reponame, repo, fullrepopath = RepositoryManager(self.env).get_repository_by_path(row[2])
-             if not repo.has_node(fullrepopath[len(repo.get_path_url('/', repo.get_youngest_rev())):]):
-                 raise TracError('No permissions to schedule builds for this repository')
-             if self.revision > repo.get_youngest_rev():
+             if not self.revision:
+                 self.revision = repo.get_youngest_rev()
+             if self.revision < 0 or self.revision > repo.get_youngest_rev():
                  raise TracError('Invalid Revision number')
+             if not repo.has_node(fullrepopath[len(repo.get_path_url('/', self.revision)):], self.revision):
+                 raise TracError('No permissions to schedule builds for this repository')
              
         if isinstance(groups, basestring):
             grouplist = list()
