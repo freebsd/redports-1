@@ -260,7 +260,7 @@ int cleanolddir(char *directory)
     return 0;
 }
 
-int callHook(int status)
+int callHook(char *action)
 {
     char *hook;
 
@@ -274,6 +274,7 @@ int callHook(int status)
     switch (fork())
     {
         case 0:
+            setenv("RPACTION", action, 1);
             setenv("RPWWWURL", configget("wwwurl"), 1);
 
             if(execl(hook, hook, (char *) 0) == -1)
