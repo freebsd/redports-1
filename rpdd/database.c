@@ -25,6 +25,7 @@
  */
 
 #include <stdarg.h>
+#include <stdlib.h>
 
 #include "database.h"
 #include "log.h"
@@ -86,6 +87,9 @@ int PQupdate(PGconn *conn, char *queryfmt, ...)
 
     if(PQresultStatus(res) != PGRES_COMMAND_OK)
         return 0;
+
+    if(atol(PQcmdTuples(res)) < 1)
+        logwarn("Update query did not affect any rows! (Query: %s)", query);
 
     return 1;
 }
