@@ -30,6 +30,14 @@
 #include "log.h"
 #include "util.h"
 
+void logNoticeProcessor(void *arg, char *message);
+
+void logNoticeProcessor(void *arg, char *message)
+{
+    if(strlen(message) > 0)
+        logerror(message);
+}
+
 PGconn* PQautoconnect(void)
 {
     char conninfo[255];
@@ -46,6 +54,8 @@ PGconn* PQautoconnect(void)
         logsql(conn);
         return NULL;
     }
+
+    PQsetNoticeProcessor(conn, logNoticeProcessor, NULL);
 
     res = PQexec(conn, "BEGIN");
     if(PQresultStatus(res) != PGRES_COMMAND_OK)
