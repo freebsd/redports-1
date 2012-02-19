@@ -1,0 +1,187 @@
+#!/bin/sh
+
+#
+# Redports script to commit a patch from a GNATS PR to your repository
+#
+# $Id$
+#
+
+RPUSER=${USER}
+RPHOST=http://svn.redports.org/
+
+CLEAN=no
+FLAGS=
+MESSAGE=
+PATCHNUM=1
+PORT=
+PORTSTREE=/usr/ports
+HELP=no
+
+# Default configuration
+if [ -f ~/.redports.conf ]; then
+  . ~/.redports.conf
+fi
+
+# Late variables
+RPSVNROOT=${RPHOST}${RPUSER}
+SVNFLAGS="-q --non-interactive --username ${RPUSER} --password ${RPPASS}"
+TMPDIR=`mktemp -d /tmp/rpcommitpr.XXXXXX` || exit 1
+
+# Prepare Commit message file
+generateci()
+{
+   FILE=$1
+   MSG=$2
+   FLAGS=$3
+   PRNUM=$4
+
+   rm -f ${FILE} && touch ${FILE}
+   echo ${MSG} > ${FILE}
+
+   if [ ! -z "${PRNUM}" -o ! -z "${FLAGS}" ]; then
+      echo "" >> ${FILE}
+   fi
+
+   if [ ! -z "${PRNUM}" ]; then
+      echo "PR:         ${PRNUM}" >> ${FILE}
+   fi
+
+   if [ ! -z "${FLAGS}" ]; then
+      echo "Redports:   ${FLAGS}" >> ${FILE}
+   fi
+
+   return 0
+}
+
+# exit with cleanup
+die()
+{
+   RESULTCODE=$1
+   MESSAGE=$2
+
+   rm -Rf ${TMPDIR}
+
+   if [ ! -z "${MESSAGE}" ]; then
+      echo ${MESSAGE}
+   fi
+
+   exit $RESULTCODE
+}
+
+# Options
+while getopts :cf:hm:n:p: arg >/dev/null 2>&1
+do
+  case "$arg" in
+  c)   CLEAN="yes";;
+  f)   FLAGS="$OPTARG";;
+  h)   HEL="yes";;
+  m)   MESSAGE="$OPTARG";;
+  n)   PATCHNUM="$OPTARG";;
+  p)   PORT="$OPTARG";;
+  [?]) echo "Unknown option -$OPTARG"
+       die 1;;
+  esac
+done
+shift `expr $OPTIND - 1`
+
+if [ -z "$1" -o "${HELP}" = "yes" ]; then
+    echo "Usage ${0##*/} [-ch] [-f flags] [-m message] [-n num] [-p portname] PR-Number"
+    echo ""
+    echo "Options:"
+    echo "  -c          Clean repository first"
+    echo "  -h          Show this help message"
+    echo "  -f flag     Redports commit flags (Ignore|Urgent)"
+    echo "  -m message  Commit message"
+    echo "  -n num      Patch number within the PR"
+    echo "  -p portname Portname in case autodetection fails"
+    echo ""
+    die 1
+fi
+
+PR=$1
+PATCHFILE=${TMPDIR}/${PR}
+
+cd ${TMPDIR} || die 1
+
+rpfetchpr -a -n "${PATCHNUM}" -p "${PORT}" -t "${PORTSTREE}" "${PR}" "${PATCHFILE}" > ${TMPDIR}/env
+if [ $? -ne 0 ]; then
+   cat ${TMPDIR}/env
+   die 1
+else
+   . ${TMPDIR}/env
+   PORTCATEGORY=${PORT%${PORT##*/}}
+fi
+
+
+# checkout repository
+svn co ${SVNFLAGS} ${RPSVNROOT} ${TMPDIR}/ports || die 1
+
+# cleanup repository
+if [ "${CLEAN}" = "yes" ]; then
+   if ls ${TMPDIR}/ports/* >/dev/null 2>&1 ; then
+      svn rm ${SVNFLAGS} ${TMPDIR}/ports/* || die 1
+
+      generateci ${TMPDIR}/ci "Cleanup repository" "ignore"
+
+      svn ci ${SVNFLAGS} --file ${TMPDIR}/ci ${TMPDIR}/ports || die 1
+   fi
+fi
+
+
+if [ "${PATCHTYPE}" = "PATCH" ]; then
+   # copy port from porstree to our svn repo
+   mkdir -p ${TMPDIR}/ports/${PORT}
+   cp -pR ${PORTSTREE}/${PORT}/ ${TMPDIR}/ports/${PORT}
+   svn add --force ${SVNFLAGS} ${TMPDIR}/ports/* || die 1
+
+   generateci ${TMPDIR}/ci "Add ${PORT}" "ignore"
+
+   svn ci ${SVNFLAGS} --file ${TMPDIR}/ci ${TMPDIR}/ports || die 1
+
+   # apply user patch to our svn repo
+   patch -d ${TMPDIR}/ports -t -p0 -us < ${PATCHFILE} || die 1
+
+   # cleanup .orig files
+   find ${TMPDIR}/ports -iname "*.orig" -exec rm {} \;
+
+   # remove empty files
+   find ${TMPDIR}/ports -size 0c -exec svn rm --force {} \;
+   
+   # commit our patched port
+   svn add --force ${SVNFLAGS} ${TMPDIR}/ports/* || die 1
+
+   if [ -z "${MESSAGE}" ]; then
+      CIMESSAGE="${PORT}: Buildtest ports/${PR}"
+   else
+      CIMESSAGE=${MESSAGE}
+   fi
+
+   generateci ${TMPDIR}/ci "${CIMESSAGE}" "${FLAGS}" "ports/${PR}"
+   
+   svn ci ${SVNFLAGS} --file ${TMPDIR}/ci ${TMPDIR}/ports || die 1
+
+elif [ "${PATCHTYPE}" = "SH" ]; then
+   # extract shar script
+   mkdir -p ${TMPDIR}/ports/${PORTCATEGORY}
+   cd ${TMPDIR}/ports/${PORTCATEGORY}
+   sh ${PATCHFILE} || die 1
+
+   # commit our patched port
+   svn add --force ${SVNFLAGS} ${TMPDIR}/ports/${PORTCATEGORY} || die 1
+
+   if [ -z "${MESSAGE}" ]; then
+      CIMESSAGE="${PORT}: Buildtest ports/${PR}"
+   else
+      CIMESSAGE=${MESSAGE}
+   fi
+
+   generateci ${TMPDIR}/ci "${CIMESSAGE}" "${FLAGS}" "ports/${PR}"
+   
+   svn ci ${SVNFLAGS} --file ${TMPDIR}/ci ${TMPDIR}/ports || die 1
+
+fi
+
+rm -Rf ${TMPDIR}
+
+die 0
+

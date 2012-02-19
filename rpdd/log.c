@@ -99,6 +99,9 @@ int logwrite(int loglvl, char *logfmt, ...)
     va_start(args, logfmt);
     vsprintf(logmsg, logfmt, args);
 
+    if(logmsg[strlen(logmsg)-1] == '\n')
+        logmsg[strlen(logmsg)-1] = '\0';
+
     if(fprintf(logfile, "[%s] %s - %s\n", timeinfo, loglevelnames[loglvl], logmsg) < 0)
     {
         va_end(args);

@@ -3,6 +3,7 @@
 # redports dispatcher hook script
 
 # Environment variables:
+#   RPACTION
 #   RPOWNER
 #   RPSTATUS
 #   RPBUILDID
@@ -13,18 +14,27 @@
 #   RPBUILDSTATUS
 #   RPBUILDREASON
 #   RPBUILDLOG
+#   RPBACKENDHOST
 
 MSG=""
 
-if [ "${RPSTATUS}" = "31" ]; then
+if [ "${RPACTION}" = "BUILD_STARTED" ]; then
     MSG="[${RPBUILDGROUP}] (${RPOWNER}) - ${RPBUILDQUEUEID}-${RPBUILDID} - ${RPPORTNAME} - start"
 fi
 
-if [ "${RPSTATUS}" = "71" ]; then
+if [ "${RPACTION}" = "BUILD_FINISHED" ]; then
     MSG="[${RPBUILDGROUP}] (${RPOWNER}) - ${RPBUILDQUEUEID}-${RPBUILDID} - ${RPPORTNAME} ${RPPKGVERSION} - ${RPBUILDSTATUS} ${RPBUILDREASON}"
     if [ ! -z "${RPBUILDLOG}" -a ! -z "${BUILDREASON}" ] ; then
         MSG="${MSG} - ${RPWWWURL}/~${RPOWNER}/${RPBUILDQUEUEID}-${RPBUILDID}/${RPBUILDLOG}"
     fi
+fi
+
+if [ "${RPACTION}" = "BACKENDBUILD_FAILED" ]; then
+    MSG="[ERROR] Buildgroup ${RPBUILDGROUP} on ${RPBACKENDHOST} marked as failed!"
+fi
+
+if [ "${RPACTION}" = "BACKEND_FAILED" ]; then
+    MSG="[ERROR] Backend ${RPBACKENDHOST} marked as failed!"
 fi
 
 if [ ! -z "${MSG}" ]; then

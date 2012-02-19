@@ -575,7 +575,7 @@ int handleStep71(void)
         setenv("RPBUILDLOG", "", 1);
         if(getenv("BUILDLOG") != NULL)
             setenv("RPBUILDLOG", basename(getenv("BUILDLOG")), 1);
-        callHook(71);
+        callHook("BUILD_FINISHED");
 
         PQclear(result3);
         PQclear(result2);
@@ -757,7 +757,7 @@ int handleStep31(void)
         setenv("RPBUILDSTATUS", "", 1);
         setenv("RPBUILDREASON", "", 1);
         setenv("RPBUILDLOG", "", 1);
-        callHook(31);
+        callHook("BUILD_STARTED");
 
         sprintf(url, "%s://%s%sbuild?port=%s&build=%s&priority=%s&finishurl=%s/backend/finished/%s",
         		PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1), PQgetvalue(result2, 0, 2),

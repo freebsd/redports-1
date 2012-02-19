@@ -25,10 +25,19 @@
  */
 
 #include <stdarg.h>
+#include <stdlib.h>
 
 #include "database.h"
 #include "log.h"
 #include "util.h"
+
+void logNoticeProcessor(void *arg, char *message);
+
+void logNoticeProcessor(void *arg, char *message)
+{
+    if(strlen(message) > 0)
+        logerror(message);
+}
 
 PGconn* PQautoconnect(void)
 {
@@ -46,6 +55,8 @@ PGconn* PQautoconnect(void)
         logsql(conn);
         return NULL;
     }
+
+    PQsetNoticeProcessor(conn, logNoticeProcessor, NULL);
 
     res = PQexec(conn, "BEGIN");
     if(PQresultStatus(res) != PGRES_COMMAND_OK)
@@ -76,6 +87,9 @@ int PQupdate(PGconn *conn, char *queryfmt, ...)
 
     if(PQresultStatus(res) != PGRES_COMMAND_OK)
         return 0;
+
+    if(atol(PQcmdTuples(res)) < 1)
+        logwarn("Update query did not affect any rows! (Query: %s)", query);
 
     return 1;
 }

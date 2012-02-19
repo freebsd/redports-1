@@ -1,0 +1,69 @@
+#!/bin/sh
+
+#
+# Watch GNATS PR database for ports patches
+#
+# $Id$
+#
+
+LOGDIR=/tmp/rpwatchpr
+PRDIR=${LOGDIR}/PR
+THISPR=${LOGDIR}/prlist.log
+LASTPR=${LOGDIR}/prlist.log.bak
+TMPPR=`mktemp /tmp/rpwatchpr.fetch.XXXXXX` || exit 1
+
+if [ "$1" = "update" ]; then
+   if [ ! -d "${LOGDIR}" ]; then
+      mkdir -p ${LOGDIR}
+   fi
+
+   if [ ! -d "${PRDIR}" ]; then
+      mkdir -p ${PRDIR}
+   fi
+      
+   fetch -qo ${TMPPR} "http://www.freebsd.org/cgi/query-pr-summary.cgi?category=ports" || exit 1
+
+   if [ ! -f "${LASTPR}" ]; then
+      touch ${LASTPR}
+   fi
+
+   if [ -f "${THISPR}" ]; then
+      mv ${THISPR} ${LASTPR}
+   fi
+
+   fgrep "<td><a href='/cgi/query-pr.cgi?pr=" ${TMPPR} > ${THISPR}
+   rm -f ${TMPPR}
+fi
+
+diff ${LASTPR} ${THISPR} | grep "^>" | while read LINE
+do
+   PR=`echo ${LINE} | cut -d'/' -f8 | cut -d"'" -f1`
+   DATE=`echo ${LINE} | cut -d'>' -f6 | cut -d'<' -f1`
+   SUBJECT=`echo ${LINE} | cut -d'>' -f14 | cut -d'<' -f1`
+
+   echo "-----------------------------------"
+   echo `date`
+   echo "PR:      ${PR}"
+   echo "DATE:    ${DATE}"
+   echo "SUBJECT: ${SUBJECT}"
+   echo ""
+
+   if fgrep " ${PR} " ${LOGDIR}/success.log >/dev/null 2>&1 ; then
+      echo "PR already successfully scheduled. skipping"
+   elif [ `echo ${DATE} | cut -d'/' -f1` != "2012" ]; then
+      echo "PR too old. skipping"
+   else
+      rpcommitpr -c -m "${SUBJECT}" ${PR}
+
+      if [ $? -eq 0 ]; then
+         echo "success."
+         echo `date` ${DATE} ${PR} ${SUBJECT} >> ${LOGDIR}/success.log
+      else
+         echo "failed."
+         echo `date` ${DATE} ${PR} ${SUBJECT} >> ${LOGDIR}/failed.log
+      fi
+   fi
+done
+
+exit 0
+
