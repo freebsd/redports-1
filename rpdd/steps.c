@@ -693,25 +693,36 @@ int handleStep51(void)
 int handleStep50(void)
 {
     PGconn *conn;
-    unsigned long long limit;
+    PGresult *result;
+    unsigned long long limit1;
+    unsigned long long limit2;
+    unsigned long long limit3;
+    int i;
 
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
     /* 0-15min buildtime = check every 30 seconds */
-    limit = microtime()-(30*1000000L);
-    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND checkdate-startdate < 900000000 AND checkdate < %lli", limit))
-        RETURN_ROLLBACK(conn);
+    limit1 = microtime()-(30*1000000L);
 
     /* 15-60min buildtime = check every 60 seconds */
-    limit = microtime()-(60*1000000L);
-    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND checkdate-startdate < 3600000000 AND checkdate < %lli", limit))
-        RETURN_ROLLBACK(conn);
+    limit2 = microtime()-(60*1000000L);
 
     /* > 60min buildtime = check every 2 minutes */
-    limit = microtime()-(120*1000000L);
-    if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE status = 50 AND checkdate < %lli", limit))
+    limit3 = microtime()-(120*1000000L);
+
+    result = PQselect(conn, "SELECT id FROM builds WHERE status = 50 AND (checkdate-startdate < 900000000 AND checkdate < %lli) OR (checkdate-startdate < 3600000000 AND checkdate < %lli) OR (checkdate < %lli) FOR UPDATE NOWAIT", limit1, limit2, limit3);
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
+
+    for(i=0; i < PQntuples(result); i++)
+    {
+        loginfo("Updating build %ld to 51", PQgetvalue(result, i, 0));
+        if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
+            RETURN_ROLLBACK(conn);
+    }
+
+    PQclear(result);
 
     RETURN_COMMIT(conn);
 }
