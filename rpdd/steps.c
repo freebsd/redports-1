@@ -711,7 +711,7 @@ int handleStep50(void)
     /* > 60min buildtime = check every 2 minutes */
     limit3 = microtime()-(120*1000000L);
 
-    result = PQselect(conn, "SELECT id, backendid FROM builds WHERE status = 50 AND (checkdate-startdate < 900000000 AND checkdate < %lli) OR (checkdate-startdate < 3600000000 AND checkdate < %lli) OR (checkdate < %lli) FOR UPDATE NOWAIT", limit1, limit2, limit3);
+    result = PQselect(conn, "SELECT id, backendid FROM builds WHERE status = 50 AND ((checkdate-startdate < 900000000 AND checkdate < %lli) OR (checkdate-startdate < 3600000000 AND checkdate < %lli) OR (checkdate < %lli)) FOR UPDATE NOWAIT", limit1, limit2, limit3);
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
