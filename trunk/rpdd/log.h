@@ -52,6 +52,6 @@ enum loglevels
 extern int logopen(char *filename);
 extern int logclose(void);
 extern int logsetlevel(int loglvl);
-extern int logwrite(int loglvl, char *logfmt, ...);
+extern int logwrite(int loglvl, const char *logfmt, ...);
 
 #endif /* _LOG_H_ */
