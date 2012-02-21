@@ -4,7 +4,7 @@
 
 LOCALBASE?=/usr/local
 
-CPPFLAGS=-I${LOCALBASE}/include -g
+CPPFLAGS=-I${LOCALBASE}/include -g -Wall
 LDFLAGS=-L${LOCALBASE}/lib
 
 SRC =	database.c log.c remote.c rpdd.c steps.c stephelper.c steputil.c util.c
