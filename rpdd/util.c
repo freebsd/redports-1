@@ -78,10 +78,10 @@ int configparse(char *filename)
         if((value = strstr(line, " ")) != NULL || (value = strstr(line, "\t")) != NULL)
         {
             *value = '\0';
-            (*value)++;
+            *(value++);
 
             while(*value == ' ' || *value == '\t')
-                (*value)++;
+                *(value++);
 
             if(strlen(line) == 0 || strlen(value) == 0)
                  continue;
