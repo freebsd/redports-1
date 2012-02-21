@@ -34,10 +34,25 @@
 
 int updateBuildFailed(PGconn *conn, long buildId)
 {
+    PGresult *result;
+    int i;
+
+    result = PQselect(conn, "SELECT id FROM builds WHERE id = %ld FOR UPDATE NOWAIT", buildId);
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
+        RETURN_FAIL(conn);
+
+    if(PQntuples(result) != 1)
+    {
+        logerror("Invalid buildid %ld cannot be restarted", buildId);
+        return -1;
+    }
+
     logwarn("Restarting build %ld", buildId);
 
     if(!PQupdate(conn, "UPDATE builds SET status = 20, backendid = 0 WHERE id = %ld", buildId))
         RETURN_FAIL(conn);
+
+    PQclear(result);
 
     return 0;
 }
@@ -81,8 +96,14 @@ int updateBackendFailed(PGconn *conn, int backendId)
 {
     PGresult *result;
     int i;
- 
-    result = PQselect(conn, "SELECT id FROM builds WHERE backendid = %ld AND status >= 30 AND status < 90 FOR UPDATE NOWAIT", backendId);
+
+    result = PQselect(conn, "SELECT id FROM backends WHERE id = %d FOR UPDATE NOWAIT", backendId);
+    if (PQresultStatus(result) != PGRES_TUPLES_OK || PQntuples(result) != 1)
+        RETURN_FAIL(conn);
+
+    PQclear(result);
+
+    result = PQselect(conn, "SELECT id FROM builds WHERE backendid = %d AND status >= 30 AND status < 90 FOR UPDATE NOWAIT", backendId);
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_FAIL(conn);
 
@@ -94,12 +115,12 @@ int updateBackendFailed(PGconn *conn, int backendId)
 
     logwarn("Setting backend %d to error status", backendId);
 
-    if(!PQupdate(conn, "UPDATE backends SET status = 2 WHERE id = %ld", backendId))
+    if(!PQupdate(conn, "UPDATE backends SET status = 2 WHERE id = %d", backendId))
         RETURN_FAIL(conn);
 
     PQclear(result);
 
-    result = PQselect(conn, "SELECT host FROM backends WHERE id = %ld", backendId);
+    result = PQselect(conn, "SELECT host FROM backends WHERE id = %d", backendId);
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_FAIL(conn);
 
