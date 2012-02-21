@@ -35,7 +35,6 @@
 int updateBuildFailed(PGconn *conn, long buildId)
 {
     PGresult *result;
-    int i;
 
     result = PQselect(conn, "SELECT id FROM builds WHERE id = %ld FOR UPDATE NOWAIT", buildId);
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
