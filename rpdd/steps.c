@@ -711,13 +711,19 @@ int handleStep50(void)
     /* > 60min buildtime = check every 2 minutes */
     limit3 = microtime()-(120*1000000L);
 
-    result = PQselect(conn, "SELECT id FROM builds WHERE status = 50 AND (checkdate-startdate < 900000000 AND checkdate < %lli) OR (checkdate-startdate < 3600000000 AND checkdate < %lli) OR (checkdate < %lli) FOR UPDATE NOWAIT", limit1, limit2, limit3);
+    result = PQselect(conn, "SELECT id, backendid FROM builds WHERE status = 50 AND (checkdate-startdate < 900000000 AND checkdate < %lli) OR (checkdate-startdate < 3600000000 AND checkdate < %lli) OR (checkdate < %lli) FOR UPDATE NOWAIT", limit1, limit2, limit3);
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
     for(i=0; i < PQntuples(result); i++)
     {
-        loginfo("Updating build %ld to 51", PQgetvalue(result, i, 0));
+        if(atoi(PQgetvalue(result, i, 1)) == 0)
+        {
+            logwarn("Build %s has backendid=0. Ignoring!", PQgetvalue(result, i, 0));
+            continue;
+        }
+
+        loginfo("Updating build %s to 51", PQgetvalue(result, i, 0));
         if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
             RETURN_ROLLBACK(conn);
     }
