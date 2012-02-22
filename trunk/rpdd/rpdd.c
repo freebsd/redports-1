@@ -43,13 +43,7 @@
 #include "log.h"
 #include "steputil.h"
 #include "util.h"
-
-#define RPD_VERSION "1.0.91"
-#define DAEMON_NAME "rpdd"
-#define CONF_FILE "rpdd.conf"
-#define PID_FILE "/var/run/rpdd.pid"
-
-#define MAXCHILDS 5
+#include "rpdd.h"
 
 void usage(void);
 void version(void);

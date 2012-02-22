@@ -32,6 +32,7 @@
 #include <limits.h>
 
 #include "log.h"
+#include "rpdd.h"
 
 char *loglevelnames[] = { "ERROR", "WARN ", "INFO ", "DEBUG" };
 
@@ -49,6 +50,9 @@ int logopen(char *filename)
         printf("Error %s: Could not open logfile %s\n", strerror(errno), filename);
         return 1;
     }
+
+    logwrite(LOG_INFO, "-------------------------------");
+    logwrite(LOG_INFO, "%s/%s started", DAEMON_NAME, RPD_VERSION);
 
     return 0;
 }
