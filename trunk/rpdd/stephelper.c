@@ -36,7 +36,7 @@ int updateBuildFailed(PGconn *conn, long buildId)
 {
     PGresult *result;
 
-    result = PQselect(conn, "SELECT id FROM builds WHERE id = %ld FOR UPDATE NOWAIT", buildId);
+    result = PQselect(conn, "SELECT id, status FROM builds WHERE id = %ld FOR UPDATE NOWAIT", buildId);
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_FAIL(conn);
 
@@ -46,7 +46,7 @@ int updateBuildFailed(PGconn *conn, long buildId)
         return -1;
     }
 
-    logwarn("Restarting build %ld", buildId);
+    logwarn("Restarting build %ld from status %s", buildId, PQgetvalue(result, 0, 1));
 
     if(!PQupdate(conn, "UPDATE builds SET status = 20, backendid = 0 WHERE id = %ld", buildId))
         RETURN_FAIL(conn);
