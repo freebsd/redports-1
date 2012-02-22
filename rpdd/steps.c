@@ -392,7 +392,7 @@ int handleStep80(void)
     for(i=0; i < PQntuples(result); i++)
     {
         result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s'", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
-        if (PQresultStatus(result) != PGRES_TUPLES_OK)
+        if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
            RETURN_ROLLBACK(conn);
 
         loginfo("Cleaning build %s on backend %s", PQgetvalue(result2, 0, 4), PQgetvalue(result2, 0, 1));
@@ -411,7 +411,7 @@ int handleStep80(void)
            RETURN_ROLLBACK(conn);
 
         result3 = PQselect(conn, "SELECT (enddate-startdate)/1000000, buildstatus FROM builds WHERE id = %ld", atol(PQgetvalue(result, i, 0)));
-        if (PQresultStatus(result3) != PGRES_TUPLES_OK)
+        if (PQresultStatus(result3) != PGRES_TUPLES_OK || PQntuples(result3) != 1)
            RETURN_ROLLBACK(conn);
 
         priority = atol(PQgetvalue(result, i, 4));
@@ -484,7 +484,7 @@ int handleStep71(void)
     for(i=0; i < PQntuples(result); i++)
     {
         result4 = PQselect(conn, "SELECT id FROM builds WHERE id = %ld AND status = 71 FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 0)));
-        if (PQresultStatus(result4) != PGRES_TUPLES_OK)
+        if (PQresultStatus(result4) != PGRES_TUPLES_OK || PQntuples(result4) != 1)
         {
            logwarn("Could not lock build %ld. Download already in progress.", atol(PQgetvalue(result, i, 0)));
 
@@ -500,11 +500,11 @@ int handleStep71(void)
         }
 
     	result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s'", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
-        if (PQresultStatus(result2) != PGRES_TUPLES_OK)
+        if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
            RETURN_ROLLBACK(conn);
 
         result3 = PQselect(conn, "SELECT owner, queueid FROM buildqueue, builds WHERE builds.queueid = buildqueue.id AND builds.id = %ld", atol(PQgetvalue(result, i, 0)));
-        if (PQresultStatus(result3) != PGRES_TUPLES_OK)
+        if (PQresultStatus(result3) != PGRES_TUPLES_OK || PQntuples(result3) != 1)
            RETURN_ROLLBACK(conn);
 
         sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
@@ -650,7 +650,7 @@ int handleStep51(void)
         loginfo("Checking backend for status of build %s", PQgetvalue(result, i, 0));
 
         result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s'", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
-        if (PQresultStatus(result2) != PGRES_TUPLES_OK)
+        if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
            RETURN_ROLLBACK(conn);
 
         sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
@@ -756,11 +756,11 @@ int handleStep31(void)
         loginfo("Start building for build %s", PQgetvalue(result, i, 0));
 
         result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
-    	if (PQresultStatus(result2) != PGRES_TUPLES_OK)
+    	if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
             RETURN_ROLLBACK(conn);
 
         result3 = PQselect(conn, "SELECT owner FROM buildqueue WHERE id = '%s'", PQgetvalue(result, i, 4));
-    	if (PQresultStatus(result3) != PGRES_TUPLES_OK)
+    	if (PQresultStatus(result3) != PGRES_TUPLES_OK || PQntuples(result3) != 1)
             RETURN_ROLLBACK(conn);
         
 
@@ -831,7 +831,7 @@ int handleStep30(void)
         loginfo("Trying to lock backend %s for buildgroup %s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2));
 
         result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
-        if (PQresultStatus(result2) != PGRES_TUPLES_OK)
+        if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
            RETURN_ROLLBACK(conn);
 
         sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
@@ -849,7 +849,7 @@ int handleStep30(void)
         }
 
         result3 = PQselect(conn, "SELECT type, replace(replace(replace(replace(url, '%%OWNER%%', owner), '%%PORTNAME%%', portname), '%%QUEUEID%%', buildqueue.id::text), '%%BUILDID%%', builds.id::text) FROM portrepositories, buildqueue, builds WHERE portrepositories.id = repository AND buildqueue.id = queueid AND builds.id = %ld", atol(PQgetvalue(result, i, 0)));
-        if (PQresultStatus(result3) != PGRES_TUPLES_OK)
+        if (PQresultStatus(result3) != PGRES_TUPLES_OK || PQntuples(result3) != 1)
            RETURN_ROLLBACK(conn);
 
         loginfo("Start checkout for build %s", PQgetvalue(result, i, 0));
@@ -908,7 +908,7 @@ int handleStep20(void)
     for(i=0; i < PQntuples(result) && done < 1; i++)
     {
         reslock = PQselect(conn, "SELECT id FROM buildqueue WHERE id = '%s' FOR UPDATE NOWAIT", PQgetvalue(result, i, 2));
-        if (PQresultStatus(reslock) != PGRES_TUPLES_OK)
+        if (PQresultStatus(reslock) != PGRES_TUPLES_OK || PQntuples(reslock) != 1)
         {
             if (strcmp(PQgetErrorCode(reslock), PQERROR_LOCK_NOT_AVAILABLE) == 0)
             {
