@@ -184,6 +184,11 @@ int main(int argc, char *argv[])
     if(logopen(configget("logFile")) != 0)
         exit(EXIT_FAILURE);
 
+    printf("opening logfile in %jd\n", getpid());
+
+    logwrite(LOG_INFO, "-------------------------------");
+    logwrite(LOG_INFO, "%s/%s started", DAEMON_NAME, RPD_VERSION);
+
     if(daemonize)
     {
         pfh = pidfile_open(PID_FILE, 0600, &otherpid);
