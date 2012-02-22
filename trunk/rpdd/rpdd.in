@@ -29,7 +29,9 @@ rpdd_start()
 {
 	echo -n "Starting ${name}"
 	/usr/bin/install -o ${rpdd_user} -g wheel -m 644 /dev/null ${pidfile}
-	/usr/bin/install -o ${rpdd_user} -g wheel -m 644 /dev/null ${logfile}
+	if [ ! -f "${logfile}" ]; then
+		/usr/bin/install -o ${rpdd_user} -g wheel -m 644 /dev/null ${logfile}
+	fi
 	/usr/sbin/daemon -u ${rpdd_user} ${command} ${rpdd_flags}
 	echo '.'
 }
