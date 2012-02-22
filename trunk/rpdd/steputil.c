@@ -24,6 +24,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -40,6 +41,7 @@
 
 /* internal functions */
 extern int nextstepindex(void);
+extern void segvhandler(int sig);
 
 /* internal data structs */
 struct StepHandler
@@ -70,6 +72,8 @@ struct StepHandler stepreg[] = {
     { "101", handleStep101, 1, 7200, 0 },
     { "102", handleStep102, 1, 600, 0 },
 };
+
+static int currstep;
 
 
 int nextstepindex(void)
@@ -128,6 +132,10 @@ int handlestep(int step)
     if(step < 0 || step >= (sizeof(stepreg)/sizeof(struct StepHandler)))
         return -1;
 
+    currstep = step;
+
+    signal(SIGSEGV, segvhandler);
+
     logdebug("Step %s -------------------------", stepreg[step].name);
 
     rv = stepreg[step].handler();
@@ -137,6 +145,11 @@ int handlestep(int step)
     return rv;
 }
 
+void segvhandler(int sig)
+{
+    logerror("SIGSEGV received in Step %s", stepreg[currstep].name);
+    exit(-1);
+}
 
 int setlastrun(int step)
 {
