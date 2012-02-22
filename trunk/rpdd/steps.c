@@ -157,7 +157,7 @@ int handleStep100(void)
     if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    result = PQexec(conn, "SELECT id, protocol, host, uri, credentials FROM backends WHERE status > 0 FOR UPDATE NOWAIT");
+    result = PQexec(conn, "SELECT id, protocol, host, uri, credentials FROM backends WHERE status = 1 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
