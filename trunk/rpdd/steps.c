@@ -932,6 +932,12 @@ int handleStep20(void)
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
             RETURN_ROLLBACK(conn);
 
+        if(PQntuples(result2) != 1)
+        {
+            logdebug("No backend available for buildgroup %s", PQgetvalue(result, i, 1));
+            continue;
+        }
+
         for(j=0; j < PQntuples(result2); j++)
         {
             result3 = PQselect(conn, "SELECT count(*) FROM builds WHERE backendid = %ld AND status < 70", atol(PQgetvalue(result2, j, 0)));
