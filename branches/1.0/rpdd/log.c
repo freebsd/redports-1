@@ -80,7 +80,7 @@ int logsetlevel(int loglvl)
     return 1;
 }
 
-int logwrite(int loglvl, char *logfmt, ...)
+int logwrite(int loglvl, const char *logfmt, ...)
 {
     char logmsg[4096];
     va_list args;
@@ -109,6 +109,8 @@ int logwrite(int loglvl, char *logfmt, ...)
     }
 
     va_end(args);
+
+    fflush(logfile);
     return 0;
 }
 
