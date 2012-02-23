@@ -24,34 +24,14 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _LOG_H_
-#define _LOG_H_
+#ifndef _RPDD_H_
+#define _RPDD_H_
 
-enum loglevels
-{
-    LOG_ERROR = 0,
-    LOG_WARN,
-    LOG_INFO,
-    LOG_DEBUG
-};
-
-#define logdebug(format, args...) logwrite(LOG_DEBUG, format, ##args)
-#define loginfo(format, args...) logwrite(LOG_INFO, format, ##args)
-#define logwarn(format, args...) logwrite(LOG_WARN, format, ##args)
-#define logerror(format, args...) logwrite(LOG_ERROR, format, ##args)
-#define logcgi(url, error) \
-{ \
-    logwrite(LOG_ERROR, "CGI Error in %s#%d, %s: %s", __FILE__, __LINE__, url, error); \
-}
-#define logsql(con) \
-{ \
-    logwrite(LOG_ERROR, "SQL Error in %s#%d: %s", \
-        __FILE__, __LINE__, PQerrorMessage(con)); \
-}
-
-extern int logopen(char *filename);
-extern int logclose(void);
-extern int logsetlevel(int loglvl);
-extern int logwrite(int loglvl, const char *logfmt, ...);
-
-#endif /* _LOG_H_ */
+#define RPD_VERSION "0.9.93"
+#define DAEMON_NAME "rpdd"
+#define CONF_FILE "rpdd.conf"
+#define PID_FILE "/var/run/rpdd.pid"
+ 
+#define MAXCHILDS 5
+ 
+#endif /* _RPDD_H_ */

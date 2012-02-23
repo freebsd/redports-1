@@ -43,13 +43,7 @@
 #include "log.h"
 #include "steputil.h"
 #include "util.h"
-
-#define RPD_VERSION "0.9.93"
-#define DAEMON_NAME "rpdd"
-#define CONF_FILE "rpdd.conf"
-#define PID_FILE "/var/run/rpdd.pid"
-
-#define MAXCHILDS 5
+#include "rpdd.h"
 
 void usage(void);
 void version(void);
@@ -189,6 +183,9 @@ int main(int argc, char *argv[])
 
     if(logopen(configget("logFile")) != 0)
         exit(EXIT_FAILURE);
+
+    logwrite(LOG_INFO, "-------------------------------");
+    logwrite(LOG_INFO, "%s/%s started", DAEMON_NAME, RPD_VERSION);
 
     if(daemonize)
     {
