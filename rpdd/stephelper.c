@@ -146,10 +146,6 @@ int recalcBuildPriority(PGconn *conn, long buildId)
     if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
         RETURN_FAIL(conn);
 
-    result3 = PQselect(conn, "SELECT count(*) FROM builds WHERE owner = '%s' AND status < 90", PQgetvalue(result2, 0, 1));
-    if (PQresultStatus(result3) != PGRES_TUPLES_OK)
-        RETURN_FAIL(conn);
-   
     priority = atol(PQgetvalue(result2, 0, 0));
 
     if(priority > 1 && priority < 9)
@@ -173,7 +169,7 @@ int recalcBuildPriority(PGconn *conn, long buildId)
     if(!PQupdate(conn, "UPDATE buildqueue SET priority = %ld WHERE id = '%s'", priority, PQgetvalue(result, 0, 2)))
         RETURN_FAIL(conn);
 
-    result3 = PQselect(conn, "SELECT count(*) FROM builds WHERE owner = '%s' AND status < 90", PQgetvalue(result2, 0, 1));
+    result3 = PQselect(conn, "SELECT count(*) FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.owner = '%s' AND builds.status < 90", PQgetvalue(result2, 0, 1));
     if (PQresultStatus(result3) != PGRES_TUPLES_OK)
         RETURN_FAIL(conn);
 
