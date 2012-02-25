@@ -127,6 +127,10 @@ clean()
     BUILD=$1
     LOCK=${WRKBASE}/${BUILD}/.lock
 
+    if [ ! -d "${WRKBASE}/${BUILD}" ]; then
+        return 0
+    fi
+
     if [ ! -f "${LOCK}" ]; then
         echo "No lock for build ${BUILD}"
         return 1
