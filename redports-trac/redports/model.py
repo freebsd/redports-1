@@ -405,16 +405,10 @@ class Port(object):
         else:
             raise TracError('Invalid Priority')
 
-    def updateStatus(self, status, key):
+    def buildFinished(self, key):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
-        cursor.execute("SELECT count(*) FROM builds WHERE backendkey = %s", (key,) )
-        row = cursor.fetchone()
-        if not row:
-            raise TracError('SQL Error for key ' % key)
-        if row[0] != 1:
-            raise TracError('Invalid key')
-        cursor.execute("UPDATE builds SET status = %s WHERE backendkey = %s AND status < %s", ( status, key, status ))
+        cursor.execute("UPDATE builds SET status = 51 WHERE backendkey = %s AND status = 50", ( key, ))
         db.commit()
 
     def delete(self, req=None):

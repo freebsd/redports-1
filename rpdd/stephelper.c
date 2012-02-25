@@ -131,3 +131,63 @@ int updateBackendFailed(PGconn *conn, int backendId)
     return 0;
 }
 
+int recalcBuildPriority(PGconn *conn, long buildId)
+{
+    int priority;
+    PGresult *result;
+    PGresult *result2;
+    PGresult *result3;
+
+    result = PQselect(conn, "SELECT (enddate-startdate)/1000000, buildstatus, queueid FROM builds WHERE id = %ld", buildId);
+    if (PQresultStatus(result) != PGRES_TUPLES_OK || PQntuples(result) != 1)
+        RETURN_FAIL(conn);
+
+    result2 = PQselect(conn, "SELECT priority, owner FROM buildqueue WHERE id = '%s' FOR UPDATE NOWAIT", PQgetvalue(result, 0, 2));
+    if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
+        RETURN_FAIL(conn);
+
+    result3 = PQselect(conn, "SELECT count(*) FROM builds WHERE owner = '%s' AND status < 90", PQgetvalue(result2, 0, 1));
+    if (PQresultStatus(result3) != PGRES_TUPLES_OK)
+        RETURN_FAIL(conn);
+   
+    priority = atol(PQgetvalue(result2, 0, 0));
+
+    if(priority > 1 && priority < 9)
+    {
+        if(strcmp(PQgetvalue(result, 0, 1), "SUCCESS") == 0)
+            priority -= 1;
+        else
+            priority += 1;
+    
+        if(atol(PQgetvalue(result, 0, 0)) < 300)
+            priority -= 1;
+        else if(atol(PQgetvalue(result, 0, 0)) > 3000)
+            priority += 2;
+    }
+
+    if(priority < 1)
+        priority = 1;
+    if(priority > 9)
+        priority = 9;
+
+    if(!PQupdate(conn, "UPDATE buildqueue SET priority = %ld WHERE id = '%s'", priority, PQgetvalue(result, 0, 2)))
+        RETURN_FAIL(conn);
+
+    result3 = PQselect(conn, "SELECT count(*) FROM builds WHERE owner = '%s' AND status < 90", PQgetvalue(result2, 0, 1));
+    if (PQresultStatus(result3) != PGRES_TUPLES_OK)
+        RETURN_FAIL(conn);
+
+    /* Hard limit where we downgrade all jobs of this user */
+    if(atoi(PQgetvalue(result3, 0, 0)) > 49)
+    {
+        if(!PQupdate(conn, "UPDATE buildqueue SET priority = 9 WHERE owner = '%s' AND status < 90 AND priority > 1", PQgetvalue(result2, 0, 1)))
+            RETURN_FAIL(conn);
+    }
+
+    PQclear(result3);
+    PQclear(result2);
+    PQclear(result);
+
+    return 0;
+}
+

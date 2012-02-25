@@ -30,5 +30,6 @@
 extern int updateBackendFailed(PGconn *conn, int backendId);
 extern int updateBackendbuildFailed(PGconn *conn, int backendBuildId);
 extern int updateBuildFailed(PGconn *conn, long buildId);
+extern int recalcBuildPriority(PGconn *conn, long buildId);
 
 #endif /* _STEPHELPER_H */

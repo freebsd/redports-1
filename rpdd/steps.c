@@ -379,13 +379,12 @@ int handleStep80(void)
     PGresult *result2;
     PGresult *result3;
     char url[250];
-    long priority;
     int i;
 
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT builds.id, backendid, buildgroup, buildqueue.id, buildqueue.priority FROM builds, buildqueue WHERE buildqueue.id = builds.queueid AND builds.status = 80 FOR UPDATE NOWAIT");
+    result = PQexec(conn, "SELECT builds.id, backendid, buildgroup, buildqueue.id FROM builds, buildqueue WHERE buildqueue.id = builds.queueid AND builds.status = 80 FOR UPDATE NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
@@ -407,37 +406,11 @@ int handleStep80(void)
                 RETURN_ROLLBACK(conn);
         }
 
+        if(recalcBuildPriority(conn, atol(PQgetvalue(result, i, 0))) != 0)
+           RETURN_ROLLBACK(conn);
+
         if(!PQupdate(conn, "UPDATE builds SET status = 90 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
-
-        result3 = PQselect(conn, "SELECT (enddate-startdate)/1000000, buildstatus FROM builds WHERE id = %ld", atol(PQgetvalue(result, i, 0)));
-        if (PQresultStatus(result3) != PGRES_TUPLES_OK || PQntuples(result3) != 1)
-           RETURN_ROLLBACK(conn);
-
-        priority = atol(PQgetvalue(result, i, 4));
-
-        if(priority > 1 && priority < 9)
-        {
-           if(strcmp(PQgetvalue(result3, 0, 1), "SUCCESS") == 0)
-              priority -= 1;
-           else
-              priority += 1;
-
-           if(atol(PQgetvalue(result3, 0, 0)) < 300)
-              priority -= 1;
-           else if(atol(PQgetvalue(result3, 0, 0)) > 3000)
-              priority += 2;
-        }
-
-        if(priority < 1)
-           priority = 1;
-        if(priority > 9)
-           priority = 9;
-
-        if(!PQupdate(conn, "UPDATE buildqueue SET priority = %ld WHERE id = '%s'", priority, PQgetvalue(result, i, 3)))
-           RETURN_ROLLBACK(conn);
-
-        PQclear(result3);
 
         result3 = PQselect(conn, "SELECT count(*) FROM builds WHERE queueid = '%s' AND status < 90", PQgetvalue(result, i, 3));
         if (PQresultStatus(result3) != PGRES_TUPLES_OK)
