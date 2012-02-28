@@ -480,6 +480,9 @@ def GlobalBuildqueueIterator(env, req):
         if buildstatus and not buildreason:
             buildreason = buildstatus.lower()
 
+        if owner == req.authname or status != 20:
+            port.highlight = True
+
         port.setStatus(status, buildreason)
 
         if lastport != portname:

@@ -89,7 +89,7 @@
           </thead>
           <tbody>
             <py:for each="port in buildqueue">
-              <tr class="${port.owner == authname and 'headfull' or None}">
+              <tr class="${port.highlight and 'headfull' or None}">
                 <td>
                   <a href="http://www.freshports.org/$port.portname">
                     $port.portname <py:if test="port.pkgversion">$port.pkgversion</py:if>
