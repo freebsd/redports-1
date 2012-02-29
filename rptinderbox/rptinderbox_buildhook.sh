@@ -26,6 +26,19 @@ compress_wrkdir () {
     return 0
 }
 
+collect_ignorereason() {
+    IGNORE=`chroot ${CHROOT} make -C /a/ports/${PORTDIR} -V IGNORE`
+    FORBIDDEN=`chroot ${CHROOT} make -C /a/ports/${PORTDIR} -V FORBIDDEN`
+
+    REASON=""
+    if [ ! -z "${FORBIDDEN}" ]; then
+        REASON="forbidden: ${FORBIDDEN}"
+    elif [ ! -z "${IGNORE}" ]; then
+        REASON="ignored: ${IGNORE}"
+    fi
+    echo "${REASON}"
+}
+
 if [ -f "${LOCK}" ]; then
     . ${LOCK}
 
@@ -34,6 +47,10 @@ if [ -f "${LOCK}" ]; then
 
         echo "BUILDSTATUS=\"${STATUS}\"" >> ${FINISHED}
         echo "PACKAGE_NAME=\"${PACKAGE_NAME}\"" >> ${FINISHED}
+
+        if [ "${STATUS}" = "DUD" ]; then
+            FAIL_REASON=`collect_ignorereason`
+        fi
 
         if [ "${PORTDIR}" = "${PORT}" ]; then
             echo "FAIL_REASON=\"${FAIL_REASON}\"" >> ${FINISHED}
