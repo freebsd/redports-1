@@ -441,6 +441,9 @@ int handleStep71(void)
     PGresult *result3;
     PGresult *result4;
     PGresult *restmp;
+    char *localfilesql;
+    char *buildstatus;
+    char *failreason;
     char url[250];
     char remotefile[255];
     char localfile[PATH_MAX];
@@ -503,8 +506,12 @@ int handleStep71(void)
               RETURN_ROLLBACK(conn);
            }
 
-           if(!PQupdate(conn, "UPDATE builds SET buildlog = '%s' WHERE id = %ld", basename(localfile), atol(PQgetvalue(result, i, 0))))
+           localfilesql = PQescapeLiteral(conn, basename(localfile), 50);
+
+           if(!PQupdate(conn, "UPDATE builds SET buildlog = %s WHERE id = %ld", localfilesql, atol(PQgetvalue(result, i, 0))))
               RETURN_ROLLBACK(conn);
+
+           PQfreemem(localfilesql);
         }
 
         if(getenv("WRKDIR") != NULL)
@@ -523,17 +530,29 @@ int handleStep71(void)
                  RETURN_ROLLBACK(conn);
               }
 
-              if(!PQupdate(conn, "UPDATE builds SET wrkdir = '%s' WHERE id = %ld", basename(localfile), atol(PQgetvalue(result, i, 0))))
+              localfilesql = PQescapeLiteral(conn, basename(localfile), 50);
+
+              if(!PQupdate(conn, "UPDATE builds SET wrkdir = %s WHERE id = %ld", localfilesql, atol(PQgetvalue(result, i, 0))))
                  RETURN_ROLLBACK(conn);
+
+              PQfreemem(localfilesql);
            }
 
            PQclear(restmp);
         }
 
+        if(getenv("BUILDSTATUS") != NULL)
+           buildstatus = PQescapeLiteral(conn, getenv("BUILDSTATUS"), 25);
+        else
+           buildstatus = PQescapeLiteral(conn, "", 0);
+
+        if(getenv("FAIL_REASON") != NULL)
+           failreason = PQescapeLiteral(conn, getenv("FAIL_REASON"), 100);
+        else
+           failreason = PQescapeLiteral(conn, "", 0);
+
         loginfo("Updating build status for build %ld", atol(PQgetvalue(result, i, 0)));
-        if(!PQupdate(conn, "UPDATE builds SET buildstatus = '%s', buildreason = '%s', enddate = %lli, status = 80 WHERE id = %ld",
-        		getenv("BUILDSTATUS") != NULL ? getenv("BUILDSTATUS") : "",
-        		getenv("FAIL_REASON") != NULL ? getenv("FAIL_REASON") : "", microtime(), atol(PQgetvalue(result, i, 0))))
+        if(!PQupdate(conn, "UPDATE builds SET buildstatus = %s, buildreason = %s, enddate = %lli, status = 80 WHERE id = %ld", buildstatus, failreason, microtime(), atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
 
         setenv("RPSTATUS", "71", 1);
@@ -550,6 +569,8 @@ int handleStep71(void)
             setenv("RPBUILDLOG", basename(getenv("BUILDLOG")), 1);
         callHook("BUILD_FINISHED");
 
+        PQfreemem(failreason);
+        PQfreemem(buildstatus);
         PQclear(result3);
         PQclear(result2);
         PQclear(result4);
@@ -714,6 +735,7 @@ int handleStep31(void)
     PGresult *result;
     PGresult *result2;
     PGresult *result3;
+    char *pkgversion;
     char url[500];
     int i;
 
@@ -768,8 +790,12 @@ int handleStep31(void)
 
         if(getenv("PKGVERSION") != NULL)
         {
-            if(!PQupdate(conn, "UPDATE builds SET pkgversion = '%s' WHERE id = %ld OR (queueid = '%s' AND portname = '%s' AND pkgversion IS NULL)", getenv("PKGVERSION"), atol(PQgetvalue(result, i, 0)), PQgetvalue(result, i, 4), PQgetvalue(result, i, 5)))
+            pkgversion = PQescapeLiteral(conn, getenv("PKGVERSION"), 25);
+
+            if(!PQupdate(conn, "UPDATE builds SET pkgversion = %s WHERE id = %ld OR (queueid = '%s' AND portname = '%s' AND pkgversion IS NULL)", pkgversion, atol(PQgetvalue(result, i, 0)), PQgetvalue(result, i, 4), PQgetvalue(result, i, 5)))
                 RETURN_ROLLBACK(conn);
+
+            PQfreemem(pkgversion);
         }
 
         PQclear(result3);
