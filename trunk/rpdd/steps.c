@@ -652,6 +652,7 @@ int handleStep51(void)
         if(!getpage(url, PQgetvalue(result2, 0, 3)))
         {
            logcgi(url, getenv("ERROR"));
+           PQclear(result2);
            continue;
         }
 
@@ -665,8 +666,16 @@ int handleStep51(void)
            if(!PQupdate(conn, "UPDATE builds SET status = 50 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
                RETURN_ROLLBACK(conn);
         }
+        else if(getenv("STATUS") == NULL)
+        {
+           logwarn("Backendbuild %s has no status", PQgetvalue(result2, 0, 4));
+           PQclear(result2);
+           continue;
+        }
         else
         {
+           logwarn("Backendbuild %s has invalid status %s", PQgetvalue(result2, 0, 4), getenv("STATUS") != NULL ? getenv("STATUS") : "UNKNOWN");
+
            if(updateBackendbuildFailed(conn, atoi(PQgetvalue(result2, 0, 5))) != 0)
                RETURN_ROLLBACK(conn);
         }
