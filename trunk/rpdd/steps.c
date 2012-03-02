@@ -547,7 +547,7 @@ int handleStep71(void)
            buildstatus = PQescapeLiteral(conn, "", 0);
 
         if(getenv("FAIL_REASON") != NULL)
-           failreason = PQescapeLiteral(conn, getenv("FAIL_REASON"), 100);
+           failreason = PQescapeLiteral(conn, getenv("FAIL_REASON"), 255);
         else
            failreason = PQescapeLiteral(conn, "", 0);
 

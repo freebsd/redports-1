@@ -27,7 +27,7 @@ class RedportsEnvironment(Component):
                 Column('pkgversion', type='varchar(25)', size=25),
                 Column('status', type='int'),
                 Column('buildstatus', type='varchar(25)', size=25),
-                Column('buildreason', type='varchar(100)', size=100),
+                Column('buildreason', type='varchar(255)', size=255),
                 Column('buildlog', type='varchar(50)', size=50),
                 Column('wrkdir', type='varchar(50)', size=50),
                 Column('backendid', type='int'),
