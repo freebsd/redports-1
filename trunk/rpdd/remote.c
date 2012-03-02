@@ -64,6 +64,7 @@ int getpage(char *url, char *credentials)
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &readpage);
+    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 90);
 
     if(credentials != NULL)
         curl_easy_setopt(curl, CURLOPT_USERPWD, credentials);
