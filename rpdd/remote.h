@@ -27,7 +27,11 @@
 #ifndef _REMOTE_H_
 #define _REMOTE_H_
 
+#define REMOTE_SHORTTIMEOUT	15
+#define REMOTE_TIMEOUT		60
+#define REMOTE_NOTIMEOUT	(-1)
+
 extern int downloadfile(char *url, char *credentials, char *filename);
-extern int getpage(char *url, char *credentials);
+extern int getpage(char *url, char *credentials, int timeout);
 
 #endif /* _REMOTE_H */
