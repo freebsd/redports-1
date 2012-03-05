@@ -67,14 +67,17 @@ int handleStep103(void)
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
            RETURN_ROLLBACK(conn);
 
-        if(atoi(PQgetvalue(result, i, 1)) != 1)
+        if(atoi(PQgetvalue(result2, 0, 1)) != 1)
+        {
+            loginfo("Backend %s is disabled. Cannot update portstree.", PQgetvalue(result, i, 2));
             continue;
+        }
 
         loginfo("Checking build %s on backend %s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2));
 
-        sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, i, 2), PQgetvalue(result2, i, 3),
-        		PQgetvalue(result2, i, 4), PQgetvalue(result2, i, 6));
-        if(!getpage(url, PQgetvalue(result2, i, 5), REMOTE_SHORTTIMEOUT))
+        sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 3),
+        		PQgetvalue(result2, 0, 4), PQgetvalue(result, i, 1));
+        if(!getpage(url, PQgetvalue(result2, 0, 5), REMOTE_SHORTTIMEOUT))
         {
            logcgi(url, getenv("ERROR"));
            continue;
@@ -85,9 +88,9 @@ int handleStep103(void)
 
         loginfo("Updating portstree for build %s on backend %s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2));
 
-        sprintf(url, "%s://%s%supdate?build=%s", PQgetvalue(result2, i, 2), PQgetvalue(result2, i, 3),
-        		PQgetvalue(result2, i, 4), PQgetvalue(result2, i, 6));
-        if(!getpage(url, PQgetvalue(result2, i, 5), REMOTE_NOTIMEOUT))
+        sprintf(url, "%s://%s%supdate?build=%s", PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 3),
+        		PQgetvalue(result2, 0, 4), PQgetvalue(result, i, 1));
+        if(!getpage(url, PQgetvalue(result2, 0, 5), REMOTE_NOTIMEOUT))
         {
            logcgi(url, getenv("ERROR"));
            continue;
@@ -97,6 +100,9 @@ int handleStep103(void)
 
         if(!PQupdate(conn, "UPDATE backendbuilds SET status = 1 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
+
+
+        PQclear(result2);
 
         /* only 1 at a time */
         break;
