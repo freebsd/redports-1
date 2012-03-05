@@ -143,8 +143,12 @@ class Backendbuild(object):
             self.disabled = True
             self.failed = True
             self.statusname = 'fail'
+        elif self.status == 3:
+            self.disabled = False
+            self.failed = False
+            self.statusname = 'dud'
         else:
-            raise TracError('Invalid backend status')
+            raise TracError('Invalid backendbuild status')
 
     def updateStatus(self, status):
         self.setStatus(status)
@@ -480,6 +484,9 @@ def GlobalBuildqueueIterator(env, req):
         if buildstatus and not buildreason:
             buildreason = buildstatus.lower()
 
+        if owner == req.authname or status != 20:
+            port.highlight = True
+
         port.setStatus(status, buildreason)
 
         if lastport != portname:
@@ -617,7 +624,7 @@ class Buildgroup(object):
 def BuildgroupsIterator(env, req):
    cursor = env.get_db_cnx().cursor()
    cursor2 = env.get_db_cnx().cursor()
-   cursor.execute("SELECT name, version, arch, type, description, (SELECT count(*) FROM backendbuilds, backends WHERE buildgroup = name AND backendbuilds.status = 1 AND backendbuilds.backendid = backends.id AND backends.status = 1) FROM buildgroups WHERE 1=1 ORDER BY version DESC, name")
+   cursor.execute("SELECT name, version, arch, type, description, (SELECT count(*) FROM backendbuilds, backends WHERE buildgroup = name AND backendbuilds.status IN(1, 3) AND backendbuilds.backendid = backends.id AND backends.status = 1) FROM buildgroups WHERE 1=1 ORDER BY version DESC, name")
 
    for name, version, arch, type, description, available in cursor:
         buildgroup = Buildgroup(env, name)
