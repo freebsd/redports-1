@@ -50,7 +50,7 @@ int parse(char *page);
 int readpage(void *ptr, size_t size, size_t nmemb, FILE *stream);
 
 
-int getpage(char *url, char *credentials)
+int getpage(char *url, char *credentials, int timeout)
 {
     CURL *curl;
     CURLcode res;
@@ -64,7 +64,9 @@ int getpage(char *url, char *credentials)
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &readpage);
-    curl_easy_setopt(curl, CURLOPT_TIMEOUT, 90);
+
+    if(timeout > 0)
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, timeout);
 
     if(credentials != NULL)
         curl_easy_setopt(curl, CURLOPT_USERPWD, credentials);
