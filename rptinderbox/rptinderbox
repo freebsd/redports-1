@@ -14,7 +14,7 @@
 # /usr/local/tinderbox/portstrees/<portstree>/ports/   Tinderbox portstree
 # 
 
-RPTB_VERSION="0.9.93"
+RPTB_VERSION="0.9.94"
 
 ZFSROOT="zroot/tinderbox/%s/portstree"
 ZFSREPOROOT="zroot/tinderbox"
