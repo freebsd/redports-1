@@ -143,8 +143,12 @@ class Backendbuild(object):
             self.disabled = True
             self.failed = True
             self.statusname = 'fail'
+        elif self.status == 3:
+            self.disabled = False
+            self.failed = False
+            self.statusname = 'dud'
         else:
-            raise TracError('Invalid backend status')
+            raise TracError('Invalid backendbuild status')
 
     def updateStatus(self, status):
         self.setStatus(status)
