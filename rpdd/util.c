@@ -131,7 +131,7 @@ int configset(char *key, char *value)
 
 unsigned long long microtime(void)
 {
-    struct timeval time;
+    struct timeval time = { 0 };
     unsigned long long microtime;
 
     gettimeofday(&time, NULL);
@@ -145,7 +145,7 @@ unsigned long long microtime(void)
 
 int mkdirrec(char *dir)
 {
-    struct stat sb;
+    struct stat sb = { 0 };
     char directory[PATH_MAX];
 
     strncpy(directory, dir, sizeof(directory)-1);
@@ -164,7 +164,7 @@ int rmdirrec(char *directory)
 {
     DIR *dp;
     struct dirent *ep;
-    struct stat sp;
+    struct stat sp = { 0 };
     char tmp[PATH_MAX];
 
     dp = opendir(directory);
@@ -202,7 +202,7 @@ int rmdirrec(char *directory)
 
 int checkdir(char *directory)
 {
-    struct tm tm;
+    struct tm tm = { 0 };
     char *file;
     int cleandays = atoi(configget("cleandays"));
 
@@ -227,7 +227,7 @@ int cleanolddir(char *directory)
 {
     DIR *dp;
     struct dirent *ep;
-    struct stat sp;
+    struct stat sp = { 0 };
     char tmp[PATH_MAX];
 
     dp = opendir(directory);
