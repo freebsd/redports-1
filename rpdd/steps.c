@@ -813,12 +813,6 @@ int handleStep50(void)
 
     for(i=0; i < PQntuples(result); i++)
     {
-        if(atoi(PQgetvalue(result, i, 1)) == 0)
-        {
-            logwarn("Build %s has backendid=0. Ignoring!", PQgetvalue(result, i, 0));
-            continue;
-        }
-
         loginfo("Updating build %s to 51", PQgetvalue(result, i, 0));
         if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
             RETURN_ROLLBACK(conn);
