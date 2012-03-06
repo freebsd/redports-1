@@ -15,4 +15,6 @@ release: clean
 	cp -pR ${MODULES} out/redports-${VERSION}/
 	chown -R root:wheel out/redports-${VERSION}/
 	cd out/ && tar -cjf redports-${VERSION}.tar.bz2 redports-${VERSION}
+	cd out/ && md5 redports-${VERSION}.tar.bz2 > redports-${VERSION}.tar.bz2.md5
+	cd out/ && sha256 redports-${VERSION}.tar.bz2 > redports-${VERSION}.tar.bz2.sha256
 
