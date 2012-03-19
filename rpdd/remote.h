@@ -27,6 +27,8 @@
 #ifndef _REMOTE_H_
 #define _REMOTE_H_
 
+#include <curl/curl.h>
+
 #define REMOTE_SHORTTIMEOUT	30
 #define REMOTE_TIMEOUT		90
 #define REMOTE_NOTIMEOUT	(-1)
