@@ -60,7 +60,10 @@ int getpage(char *url, char *credentials, int timeout)
 
     curl = curl_easy_init();
     if(!curl)
-        return 1;
+    {
+        setenv("ERROR", curl_easy_strerror(res), 1);
+        return CURLE_FAILED_INIT;
+    }
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &readpage);
@@ -73,6 +76,12 @@ int getpage(char *url, char *credentials, int timeout)
 
     res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
+
+    if(res != CURLE_OK)
+    {
+        setenv("ERROR", curl_easy_strerror(res), 1);
+        return res;
+    }
 
     return parse(pagebuffer);
 }
@@ -87,7 +96,10 @@ int downloadfile(char *url, char *credentials, char *filename)
 
     curl = curl_easy_init();
     if(!curl)
-        return 1;
+    {
+        setenv("ERROR", curl_easy_strerror(res), 1);
+        return CURLE_FAILED_INIT;
+    }
 
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, outfile);
@@ -100,7 +112,10 @@ int downloadfile(char *url, char *credentials, char *filename)
 
     fclose(outfile);
 
-    return 0;
+    if(res != CURLE_OK)
+        setenv("ERROR", curl_easy_strerror(res), 1);
+
+    return res;
 }
 
 int readpage(void *ptr, size_t size, size_t nmemb, FILE *stream)
@@ -156,11 +171,11 @@ int parse(char *page)
         }
         else if(strcmp(linep, "ERROR") == 0)
         {
-            status = 0;
+            status = CURLE_RECV_ERROR;
         }
         else if(strcmp(linep, "OK") == 0)
         {
-            status = 1;
+            status = CURLE_OK;
         }
         else
         {
