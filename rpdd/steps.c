@@ -871,7 +871,7 @@ int handleStep31(void)
         		PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1), PQgetvalue(result2, 0, 2),
         		PQgetvalue(result, i, 5), PQgetvalue(result2, 0, 4), "5", configget("wwwurl"),
         		PQgetvalue(result, i, 3));
-        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_TIMEOUT) != CURLE_OK)
+        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_TIMEOUT) == CURLE_OK)
         {
             if(!PQupdate(conn, "UPDATE builds SET status = 50, checkdate = %lli WHERE id = %ld", microtime(), atol(PQgetvalue(result, i, 0))))
                RETURN_ROLLBACK(conn);
