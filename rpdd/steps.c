@@ -77,7 +77,7 @@ int handleStep103(void)
 
         sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 3),
         		PQgetvalue(result2, 0, 4), PQgetvalue(result, i, 1));
-        if(!getpage(url, PQgetvalue(result2, 0, 5), REMOTE_SHORTTIMEOUT))
+        if(getpage(url, PQgetvalue(result2, 0, 5), REMOTE_SHORTTIMEOUT) != CURLE_OK)
         {
            logcgi(url, getenv("ERROR"));
            continue;
@@ -90,7 +90,7 @@ int handleStep103(void)
 
         sprintf(url, "%s://%s%supdate?build=%s", PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 3),
         		PQgetvalue(result2, 0, 4), PQgetvalue(result, i, 1));
-        if(!getpage(url, PQgetvalue(result2, 0, 5), REMOTE_NOTIMEOUT))
+        if(getpage(url, PQgetvalue(result2, 0, 5), REMOTE_NOTIMEOUT) != CURLE_OK)
         {
            logcgi(url, getenv("ERROR"));
            continue;
@@ -166,7 +166,7 @@ int handleStep102(void)
 
         sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2),
                         PQgetvalue(result, i, 3), PQgetvalue(result, i, 5));
-        if(!getpage(url, PQgetvalue(result, i, 4), REMOTE_SHORTTIMEOUT))
+        if(getpage(url, PQgetvalue(result, i, 4), REMOTE_SHORTTIMEOUT) != CURLE_OK)
         {
            logcgi(url, getenv("ERROR"));
            break;
@@ -221,7 +221,7 @@ int handleStep101(void)
 
         sprintf(url, "%s://%s%sselftest?build=%s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2),
         		PQgetvalue(result, i, 3), PQgetvalue(result, i, 5));
-        if(getpage(url, PQgetvalue(result, i, 4), REMOTE_SHORTTIMEOUT) == -1)
+        if(getpage(url, PQgetvalue(result, i, 4), REMOTE_SHORTTIMEOUT) != CURLE_OK)
         {
            logwarn("%s is not available", PQgetvalue(result, i, 5));
 
@@ -259,7 +259,7 @@ int handleStep100(void)
         logdebug("Checking backend %s", PQgetvalue(result, i, 2));
 
         sprintf(url, "%s://%s%sping", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2), PQgetvalue(result, i, 3));
-        if(getpage(url, PQgetvalue(result, i, 4), REMOTE_SHORTTIMEOUT) == -1)
+        if(getpage(url, PQgetvalue(result, i, 4), REMOTE_SHORTTIMEOUT) != CURLE_OK)
         {
            status = 2; /* Status failure */
            logwarn("Backend %s failed", PQgetvalue(result, i, 2));
@@ -452,7 +452,7 @@ int handleStep90(void)
         loginfo("Sending notifications for build %s", PQgetvalue(result, i, 0));
 
         sprintf(url, "%s/backend/notify/%s", configget("wwwurl"), PQgetvalue(result, i, 0));
-        if(!getpage(url, NULL, REMOTE_TIMEOUT))
+        if(getpage(url, NULL, REMOTE_TIMEOUT) != CURLE_OK)
             logcgi(url, getenv("ERROR"));
 
         if(!PQupdate(conn, "UPDATE buildqueue SET status = 91 WHERE id = '%s'", PQgetvalue(result, i, 0)))
@@ -491,7 +491,7 @@ int handleStep80(void)
 
         sprintf(url, "%s://%s%sclean?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
         		PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 4));
-        if(!getpage(url, PQgetvalue(result2, 0, 3), REMOTE_TIMEOUT))
+        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_TIMEOUT) != CURLE_OK)
         {
             logcgi(url, getenv("ERROR"));
 
@@ -578,7 +578,7 @@ int handleStep71(void)
 
         sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
         		PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 4));
-        if(!getpage(url, PQgetvalue(result2, 0, 3), REMOTE_SHORTTIMEOUT))
+        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_SHORTTIMEOUT) != CURLE_OK)
         {
            logcgi(url, getenv("ERROR"));
            RETURN_ROLLBACK(conn);
@@ -594,7 +594,7 @@ int handleStep71(void)
            sprintf(localfile, "%s/%s", localdir, basename(getenv("BUILDLOG")));
            sprintf(remotefile, "%s://%s%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1), getenv("BUILDLOG"));
            loginfo("Downloading Log %s to %s", remotefile, localfile);
-           if(downloadfile(remotefile, PQgetvalue(result2, 0, 3), localfile) != 0){
+           if(downloadfile(remotefile, PQgetvalue(result2, 0, 3), localfile) != CURLE_OK){
               logerror("Download of %s failed", remotefile);
               RETURN_ROLLBACK(conn);
            }
@@ -618,7 +618,7 @@ int handleStep71(void)
               sprintf(localfile, "%s/%s", localdir, basename(getenv("WRKDIR")));
               sprintf(remotefile, "%s://%s%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1), getenv("WRKDIR"));
               loginfo("Downloading Wrkdir %s to %s", remotefile, localfile);
-              if(downloadfile(remotefile, PQgetvalue(result2, 0, 3), localfile) != 0){
+              if(downloadfile(remotefile, PQgetvalue(result2, 0, 3), localfile) != CURLE_OK){
                  logerror("Download of %s failed", remotefile);
                  RETURN_ROLLBACK(conn);
               }
@@ -742,7 +742,7 @@ int handleStep51(void)
 
         sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
         		PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 4));
-        if(!getpage(url, PQgetvalue(result2, 0, 3), REMOTE_SHORTTIMEOUT))
+        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_SHORTTIMEOUT) != CURLE_OK)
         {
            logcgi(url, getenv("ERROR"));
            PQclear(result2);
@@ -813,12 +813,6 @@ int handleStep50(void)
 
     for(i=0; i < PQntuples(result); i++)
     {
-        if(atoi(PQgetvalue(result, i, 1)) == 0)
-        {
-            logwarn("Build %s has backendid=0. Ignoring!", PQgetvalue(result, i, 0));
-            continue;
-        }
-
         loginfo("Updating build %s to 51", PQgetvalue(result, i, 0));
         if(!PQupdate(conn, "UPDATE builds SET status = 51 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
             RETURN_ROLLBACK(conn);
@@ -877,7 +871,7 @@ int handleStep31(void)
         		PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1), PQgetvalue(result2, 0, 2),
         		PQgetvalue(result, i, 5), PQgetvalue(result2, 0, 4), "5", configget("wwwurl"),
         		PQgetvalue(result, i, 3));
-        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_TIMEOUT))
+        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_TIMEOUT) == CURLE_OK)
         {
             if(!PQupdate(conn, "UPDATE builds SET status = 50, checkdate = %lli WHERE id = %ld", microtime(), atol(PQgetvalue(result, i, 0))))
                RETURN_ROLLBACK(conn);
@@ -949,7 +943,7 @@ int handleStep30(void)
 
         sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
         		PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 4));
-        if(!getpage(url, PQgetvalue(result2, 0, 3), REMOTE_SHORTTIMEOUT) || (getenv("STATUS") != NULL && strcmp(getenv("STATUS"), "idle") != 0))
+        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_SHORTTIMEOUT) != CURLE_OK || (getenv("STATUS") != NULL && strcmp(getenv("STATUS"), "idle") != 0))
         {
            if(getenv("ERROR") != NULL)
               logcgi(url, getenv("ERROR"));
@@ -970,7 +964,7 @@ int handleStep30(void)
         sprintf(url, "%s://%s%scheckout?type=%s&repository=%s&revision=%s&build=%s", PQgetvalue(result2, 0, 0),
         		PQgetvalue(result2, 0, 1), PQgetvalue(result2, 0, 2), PQgetvalue(result3, 0, 0),
                         PQgetvalue(result3, 0, 1), PQgetvalue(result, i, 3), PQgetvalue(result2, 0, 4));
-        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_TIMEOUT))
+        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_TIMEOUT) == CURLE_OK)
         {
            if(!PQupdate(conn, "UPDATE builds SET status = 31 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
               RETURN_ROLLBACK(conn);

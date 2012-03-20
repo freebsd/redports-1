@@ -27,8 +27,10 @@
 #ifndef _REMOTE_H_
 #define _REMOTE_H_
 
-#define REMOTE_SHORTTIMEOUT	15
-#define REMOTE_TIMEOUT		60
+#include <curl/curl.h>
+
+#define REMOTE_SHORTTIMEOUT	30
+#define REMOTE_TIMEOUT		90
 #define REMOTE_NOTIMEOUT	(-1)
 
 extern int downloadfile(char *url, char *credentials, char *filename);
