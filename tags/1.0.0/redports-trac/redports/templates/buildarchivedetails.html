@@ -1,0 +1,89 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="layout.html" />
+  <xi:include href="macros.html" />
+  <head>
+    <title>Build Details</title>
+  </head>
+
+  <body>
+    <div id="content">
+      <h1>Build Details $builds.queueid</h1>
+
+      <py:for each="build in builds">
+
+        <fieldset style="max-width: 33%">
+          <legend>Build Details</legend>
+          <table>
+            <tr class="field">
+                <th><strong>ID:</strong></th>
+                <td>$build.queueid</td>
+            </tr>
+            <tr class="field">
+                <th><strong>Job Owner:</strong></th>
+                <td><a href="${abs_href.wiki('Users')}/${build.owner}">${build.owner}</a></td>
+            </tr>
+            <tr class="field">
+                <th><strong>Buildtime:</strong></th>
+                <td>$build.runtime</td>
+            </tr>
+            <tr class="field">
+                <th><strong>Endtime:</strong></th>
+                <td>${dateinfo(build.enddate)} ago</td>
+            </tr>
+            <py:if test="build.revision">
+              <tr class="field">
+                <th><strong>Source:</strong></th>
+                <td><a href="$build.repository">r$build.revision</a></td>
+              </tr>
+            </py:if>
+            <tr class="field">
+                <th style="vertical-align: top"><strong>Description:</strong></th>
+                <td>
+                  <py:for each="i, line in enumerate(build.description.split('\n'))">
+                    <py:choose>
+                      <py:when test="i == 0"><strong>${line}</strong></py:when>
+                      <py:otherwise>${line}</py:otherwise><br />
+                    </py:choose>
+                  </py:for>
+                </td>
+            </tr>
+          </table>
+        </fieldset>
+ 
+        <table class="listing" id="build_list">
+          <thead>
+            <tr>
+              <th>&nbsp;</th><th>Buildgroup</th><th>Status</th><th>Buildtime</th><th>Links</th>
+            </tr>
+          </thead>
+          <tbody>
+            <py:for each="port in build.ports">
+              <tr py:if="port.head" class="head">
+                <td colspan="5">
+                  <a href="http://www.freshports.org/$port.portname">
+                    <strong>$port.portname <py:if test="port.pkgversion">$port.pkgversion</py:if></strong>
+                  </a>
+                </td>
+              </tr>
+              <tr>
+                <td></td>
+                <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
+                <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
+                <td>$port.runtime</td>
+                <td>
+                  <py:if test="port.buildlog"><a href="$port.directory/$port.buildlog"><img src="${href.chrome('/redports/details.png')}" alt="Buildlog" title="Buildlog" /></a></py:if>
+                </td>
+              </tr>
+            </py:for>
+          </tbody>
+        </table>
+
+      </py:for>
+    </div>
+  </body>
+</html>

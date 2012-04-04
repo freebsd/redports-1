@@ -1,0 +1,117 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="layout.html" />
+  <xi:include href="macros.html" />
+  <head>
+    <title>Redports Buildgroups</title>
+  </head>
+
+  <body>
+      <div id="content">
+        <h1>Buildgroups</h1>
+
+        <form py:if="authenticated" class="addnew" method="post" action="">
+        <fieldset>
+          <legend>Join Buildgroup:</legend>
+          <table>
+            <tr class="field">
+              <th><label for="group">Buildgroup:</label></th>
+              <td>
+                <select id="group" name="group">
+                  <option py:for="groups in availablegroups">$groups.name</option>
+                </select>
+              </td>
+            </tr>
+            <tr class="field">
+              <th><label for="priority">Priority:</label></th>
+              <td>
+                <select id="priority" name="priority">
+                  <option value="1">highest</option>
+                  <option value="3">high</option>
+                  <option value="5" selected="selected">normal</option>
+                  <option value="7">low</option>
+                  <option value="9">lowest</option>
+                </select>
+              </td>
+            </tr>
+          </table>
+          <p class="help">
+            Join a buildgroup to automatically build all changed ports after
+            a commit to the repository.
+          </p>
+          <div class="buttons">
+            <input type="submit" name="join" value="Join" />
+          </div>
+        </fieldset>
+        </form>
+
+
+        <table class="listing" id="build_list">
+          <thead>
+            <tr><th py:if="authenticated">Status</th><th py:if="authenticated">Priority</th><th>Name</th><th>Backends</th><th>Queued</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr py:for="group in buildgroups">
+              <td py:if="authenticated">
+                <form py:if="group.joined" method="post" action="">
+                  <input type="hidden" name="group" value="$group.name" />
+                  <input type="submit" name="leave" value="leave" />
+                </form>
+              </td>
+              <td py:if="authenticated">$group.priorityname</td>
+              <td><a href="#id-$group.name" id="id-$group.name">$group.name</a></td>
+              <td class="status-$group.status">$group.available</td>
+              <td>$group.queued</td>
+              <td>$group.description</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <br style="clear: right" />
+
+        <h2>Buildqueue</h2>
+
+        <table class="listing" style="width: 80%">
+          <thead>
+            <tr>
+              <th>Port</th>
+              <th>Buildgroup</th>
+              <th>Status</th>
+              <th>Buildtime</th>
+              <th>Priority</th>
+              <th>User</th>
+              <th>Links</th>
+            </tr>
+          </thead>
+          <tbody>
+            <py:for each="port in buildqueue">
+              <tr class="${port.highlight and 'headfull' or None}">
+                <td>
+                  <a href="http://www.freshports.org/$port.portname">
+                    $port.portname <py:if test="port.pkgversion">$port.pkgversion</py:if>
+                  </a>
+                </td>
+                <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
+                <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
+                <td>$port.runtime</td>
+                <td>$port.priorityname</td>
+                <td><a href="${abs_href.wiki('Users')}/${port.owner}">${port.owner}</a></td>
+                <td>
+                  <a href="/buildarchive/$port.queueid/">
+                    <img src="${href.chrome('/redports/details.png')}"
+                    alt="Build details" title="Build details" />
+                  </a>
+                </td>
+              </tr>
+            </py:for>
+          </tbody>
+        </table>
+
+      </div>
+
+  </body>
+</html>

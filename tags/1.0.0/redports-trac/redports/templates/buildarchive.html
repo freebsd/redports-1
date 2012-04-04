@@ -1,0 +1,74 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="layout.html" />
+  <xi:include href="macros.html" />
+  <head>
+    <title>Archive</title>
+  </head>
+
+  <body>
+    <div id="content">
+        <h1>Archive</h1>
+
+        <h2 class="builds-result" py:if="paginator.has_more_pages">
+            Results <span class="numresults">(${paginator.displayed_items()})</span>
+        </h2>
+
+        <table class="listing" id="archive_list">
+            <thead>
+                <tr>
+                    <th>Job Description</th>
+                    <th>Source</th>
+                    <th>Buildtime</th>
+                    <th>Endtime</th>
+                    <th>Owner</th>
+                    <th>Links</th>
+                </tr>
+                <tr>
+                    <th colspan="6">Ports</th>
+                </tr>
+            </thead>
+            <tbody>
+              <py:for each="build in builds">
+                <tr class="headfull">
+                  <td>
+                    <py:for each="i, line in enumerate(build.description.split('\n'))">
+                      <py:choose>
+		        <py:when test="i == 0"><a href="/buildarchive/$build.queueid/"><strong>${line}</strong></a></py:when>
+		        <py:otherwise>${line}</py:otherwise><br />
+	              </py:choose>
+	            </py:for>
+                  </td>
+                  <td>
+                    <py:if test="build.revision">
+                      <a href="$build.repository">r$build.revision</a>
+                    </py:if>
+                  </td>
+                  <td>$build.runtime</td>
+                  <td>${dateinfo(build.enddate)} ago</td>
+                  <td><a href="${abs_href.wiki('Users')}/${build.owner}">${build.owner}</a></td>
+                  <td><a href="/buildarchive/$build.queueid/">
+                         <img src="${href.chrome('/redports/details.png')}"
+                         alt="Build details" title="Build details" />
+                      </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td colspan="6">
+                    <py:for each="i, port in enumerate(build.ports)">
+                      ${i is not 0 and ',' or ''} <a href="/buildarchive/$build.queueid/">$port.portname<py:if test="port.pkgversion"> $port.pkgversion</py:if></a>
+                    </py:for>
+                  </td>
+                </tr>
+              </py:for>
+            </tbody>
+        </table>
+
+        <xi:include py:if="paginator.show_index" href="page_index.html" />
+    </div>
+  </body>
+</html>

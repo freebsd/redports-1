@@ -1,0 +1,31 @@
+# Redports dispatcher daemon
+#
+# rpdd.conf
+
+# Database credentials
+dbHost     127.0.0.1
+dbUsername trac
+dbPassword 
+dbDatabase trac
+
+# Logfile
+logFile    /var/log/rpdd.log
+
+# Www frontend URL
+wwwurl     http://YOUR_HOST/
+
+# Www user root directory
+wwwroot    /usr/local/www/redports/users
+
+# Maximum age for builds before they are archived (days)
+archivedays 16
+
+# Maximum age for archived database entries and logfiles (days)
+cleandays  62
+
+# Maximum age for portstrees on tinderbox backends (hours)
+tbPortsTreeMaxAge 48
+
+# Hook script
+#hookCmd    /usr/local/share/rpdd/hook.sh
+

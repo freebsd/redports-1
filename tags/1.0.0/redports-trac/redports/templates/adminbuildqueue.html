@@ -1,0 +1,61 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/" 
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="admin.html" />
+  <head>
+    <title>Buildgroups</title>
+  </head>
+
+  <body>
+    <div style="overflow: auto; padding: 0 1px;" >
+      <h2>Manage Buildqueue</h2>
+
+      <table class="listing">
+        <thead>
+          <tr>
+            <th>Port</th>
+            <th>Buildgroup</th>
+            <th>Status</th>
+            <th>Buildtime</th>
+            <th>Priority</th>
+            <th>User</th>
+            <th>Links</th>
+            <th>Options</th>
+          </tr>
+        </thead>
+        <tbody>
+          <py:for each="port in buildqueue">
+            <tr class="${port.owner == authname and 'headfull' or None}">
+              <td>
+                <a href="http://www.freshports.org/$port.portname">
+                  $port.portname <py:if test="port.pkgversion">$port.pkgversion</py:if>
+                </a>
+              </td>
+              <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
+              <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
+              <td>$port.runtime</td>
+              <td>$port.priorityname</td>
+              <td><a href="${abs_href.wiki('Users')}/${port.owner}">${port.owner}</a></td>
+              <td>
+                <a href="/buildarchive/$port.queueid/">
+                  <img src="${href.chrome('/redports/details.png')}"
+                  alt="Build details" title="Build details" />
+                </a>
+              </td>
+              <td>
+                <form method="post" action="" py:if="port.deletable">
+                  <input type="hidden" name="buildid" value="${port.id}" />
+                  <input type="submit" name="delete" value="delete" />
+                </form>
+              </td>
+            </tr>
+          </py:for>
+        </tbody>
+      </table>
+
+    </div>
+  </body>
+</html>

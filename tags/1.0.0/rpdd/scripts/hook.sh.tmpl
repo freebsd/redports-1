@@ -1,0 +1,46 @@
+#!/bin/sh
+
+# redports dispatcher hook script
+
+# Environment variables:
+#   RPACTION
+#   RPOWNER
+#   RPSTATUS
+#   RPBUILDID
+#   RPBUILDQUEUEID
+#   RPBUILDGROUP
+#   RPPORTNAME
+#   RPPKGVERSION
+#   RPBUILDSTATUS
+#   RPBUILDREASON
+#   RPBUILDLOG
+#   RPBACKENDHOST
+
+MSG=""
+
+if [ "${RPACTION}" = "BUILD_STARTED" ]; then
+    MSG="[${RPBUILDGROUP}] (${RPOWNER}) - ${RPBUILDQUEUEID}-${RPBUILDID} - ${RPPORTNAME} - start"
+fi
+
+if [ "${RPACTION}" = "BUILD_FINISHED" ]; then
+    MSG="[${RPBUILDGROUP}] (${RPOWNER}) - ${RPBUILDQUEUEID}-${RPBUILDID} - ${RPPORTNAME} ${RPPKGVERSION} - ${RPBUILDSTATUS} ${RPBUILDREASON}"
+    if [ ! -z "${RPBUILDLOG}" -a ! -z "${BUILDREASON}" ] ; then
+        MSG="${MSG} - ${RPWWWURL}/~${RPOWNER}/${RPBUILDQUEUEID}-${RPBUILDID}/${RPBUILDLOG}"
+    fi
+fi
+
+if [ "${RPACTION}" = "BACKENDBUILD_FAILED" ]; then
+    MSG="[ERROR] Buildgroup ${RPBUILDGROUP} on ${RPBACKENDHOST} marked as failed!"
+fi
+
+if [ "${RPACTION}" = "BACKEND_FAILED" ]; then
+    MSG="[ERROR] Backend ${RPBACKENDHOST} marked as failed!"
+fi
+
+if [ ! -z "${MSG}" ]; then
+    echo ${MSG} >> /var/log/rpdd-hook.log
+    echo "#redports-buildlog ${MSG}" | nc localhost 9999
+fi
+
+exit 0
+
