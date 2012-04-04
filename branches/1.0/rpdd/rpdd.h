@@ -27,7 +27,7 @@
 #ifndef _RPDD_H_
 #define _RPDD_H_
 
-#define RPD_VERSION "0.9.94"
+#define RPD_VERSION "1.0.0"
 #define DAEMON_NAME "rpdd"
 #define CONF_FILE "rpdd.conf"
 #define PID_FILE "/var/run/rpdd.pid"
