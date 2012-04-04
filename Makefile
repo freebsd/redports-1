@@ -1,6 +1,6 @@
 # redports release Makefile
 
-VERSION=1.0.90
+VERSION=1.0.0
 MODULES=LICENSE README redports-trac rpdd rptinderbox scripts
 
 all:	clean
