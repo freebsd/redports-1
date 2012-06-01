@@ -1,0 +1,109 @@
+#!/bin/sh
+
+#
+# RedPorts QAT script
+#
+# $Id$
+#
+# Requires: textproc/xmlstarlet databases/postgresql??-client devel/subversion
+#
+
+PATH=${PATH}:/usr/local/bin
+
+REVISIONSTORE=/tmp/rpqat.idx
+REPOSITORY=http://svn.chruetertee.ch/ports/head
+
+USER=qatbot
+PRIORITY=5
+DBNAME=trac
+DBUSER=trac
+
+START=`date +"%s"`000000
+
+if [ -f "${REVISIONSTORE}" ]; then
+    LASTREVISION=`cat ${REVISIONSTORE}`
+else
+    echo 1 > ${REVISIONSTORE}
+    LASTREVISION=1
+fi
+
+SQL=`printf "SELECT id FROM portrepositories WHERE type = 'svn' AND username = '%s';" "${USER}"`
+
+REPOSITORYID=`echo "${SQL}" | psql -qtA ${DBNAME} ${DBUSER}`
+
+if [ -z "${REPOSITORYID}" ]; then
+    echo "Could not determine RepositoryID"
+    exit 1
+fi
+
+
+for REVISION in `svn log -l 20 --xml ${REPOSITORY} | xml sel -t -m "/log/logentry" -v "@revision" -n | sort`
+do
+    if [ -z "${REVISION}" -o ${REVISION} -le ${LASTREVISION} ]; then
+        continue;
+    fi
+
+    SVNLOGINFO=`svn log -v -r ${REVISION} --xml ${REPOSITORY}`
+    AUTHOR=`echo ${SVNLOGINFO} | xml sel -t -m "/log/logentry" -v "author"`
+    LOGMSG=`echo ${SVNLOGINFO} | xml sel -t -m "/log/logentry" -v "msg"`
+
+    BUILDDATE=`date "+%Y%m%d%H%M%S"`
+    RAND=`hexdump -n2 -e\"%u\" /dev/random`
+    BUILDID=${BUILDDATE}-${RAND}
+
+    SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, '%s');" "${BUILDID}" "${USER}" ${REPOSITORYID} ${REVISION} 10 ${PRIORITY} ${START} 0 "${AUTHOR} | ${LOGMSG}"`
+    SQLBUILDS=""
+
+
+    for PORT in `echo ${SVNLOGINFO} | xml sel -t -m "/log/logentry/paths/path[@action!='D']" -v "node()" -n | cut -d'/' -f3-4 | uniq`
+    do
+        CATEGORY=`echo "${PORT}" | cut -d'/' -f1`
+        PORTNAME=`echo "${PORT}" | cut -d'/' -f2`
+
+        # skip commits to Mk
+        if [ "${CATEGORY}" = "Mk" ]; then
+            echo "Skipping commits to Mk"
+            continue;
+        fi
+
+        # skip if it doesn't look like "category/portname"
+        if ! echo "${PORT}" | grep -Eq '^[a-z0-9-]+/[a-zA-Z0-9_+.-]+$' ; then
+            echo "Skipping invalid port ${PORT}"
+            continue;
+        fi
+
+        # skip ports named as the usual portfiles
+        if [ "${PORTNAME}" = "Makefile" -o "${PORTNAME}" = "distinfo" -o "${PORTNAME}" = "pkg-descr" -o "${PORTNAME}" = "pkg-plist" -o "${PORTNAME}" = "files" ]; then
+           echo "Skipping bogus port ${PORT}"
+           continue;
+        fi
+
+
+        SQL=""
+        for GROUP in `echo "SELECT buildgroup FROM automaticbuildgroups WHERE username = '${USER}' ORDER BY priority" | psql -A -t -q ${DBNAME} ${DBUSER}`
+        do
+            SQL=`printf "INSERT INTO builds (queueid, backendkey, buildgroup, portname, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate, checkdate) VALUES ('%s', SUBSTRING(MD5(RANDOM()::text), 1, 25), '%s', '%s', %d, null, null, null, null, 0, 0, 0, 0);" "${BUILDID}" "${GROUP}" "${PORT}" 20`
+
+            SQLBUILDS="${SQLBUILDS} ${SQL}"
+        done
+
+        if [ ! -z "${SQL}" ]; then
+            echo "Schedule build of ${PORT} with r${REVISION}"
+        fi
+
+    done
+
+    if [ -z "${SQLBUILDS}" ]; then
+        echo "Nothing to schedule"
+    else
+        echo "BEGIN; ${SQLBUILDQUEUE} ${SQLBUILDS} COMMIT;" | psql -q ${DBNAME} ${DBUSER}
+        if [ $? != 0 ]; then
+            echo "ERROR: commit failed!"
+            exit 1
+        fi
+        echo ${REVISION} > ${REVISIONSTORE} || exit 1
+    fi
+done
+
+exit 0
+
