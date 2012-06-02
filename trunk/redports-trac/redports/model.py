@@ -207,32 +207,6 @@ class Build(object):
     def setStatus(self, status):
         self.status = status
 
-    def notifyEnabled(self):
-        cursor = self.env.get_db_cnx().cursor()
-
-        cursor.execute("SELECT status, owner FROM buildqueue WHERE id = %s", (self.queueid,))
-        if cursor.rowcount != 1:
-            return False
-
-        row = cursor.fetchone()
-
-        if row[0] != 90:
-            return False
-
-        session = DetachedSession(self.env, row[1])
-
-        if not session:
-            return False
-
-        # email not verified or no email set
-        if not session.get('email') or session.get('email_verification_token'):
-            return False
-
-        if not session.get('build_notifications'):
-            return False
-
-        return True
-
     def addBuild(self, groups, ports, req):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
