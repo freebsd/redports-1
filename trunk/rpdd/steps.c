@@ -964,7 +964,7 @@ int handleStep30(void)
         sprintf(url, "%s://%s%scheckout?type=%s&repository=%s&revision=%s&build=%s", PQgetvalue(result2, 0, 0),
         		PQgetvalue(result2, 0, 1), PQgetvalue(result2, 0, 2), PQgetvalue(result3, 0, 0),
                         PQgetvalue(result3, 0, 1), PQgetvalue(result, i, 3), PQgetvalue(result2, 0, 4));
-        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_TIMEOUT) == CURLE_OK)
+        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_NOTIMEOUT) == CURLE_OK)
         {
            if(!PQupdate(conn, "UPDATE builds SET status = 31 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
               RETURN_ROLLBACK(conn);
