@@ -7,7 +7,7 @@
 #
 
 TINDERBOX=/usr/local/tinderbox
-ZFSROOT=freebsd-zfs
+ZFSROOT=zroot
 
 CLEANDATABASE=no
 CLEANJAIL=no
