@@ -626,10 +626,24 @@ def BuildgroupsIterator(env, req):
 
 def AvailableBuildgroupsIterator(env, req):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT name FROM buildgroups WHERE name NOT IN (SELECT buildgroup FROM automaticbuildgroups WHERE username = %s) ORDER BY version DESC, name", (req.authname,) )
+    cursor.execute("SELECT name FROM buildgroups WHERE version != '000' AND name NOT IN (SELECT buildgroup FROM automaticbuildgroups WHERE username = %s) ORDER BY version DESC, name", (req.authname,) )
 
     for name in cursor:
         buildgroup = Buildgroup(env, name)
+
+        yield buildgroup
+
+
+def UserBuildgroupsIterator(env):
+    cursor = env.get_db_cnx().cursor()
+    cursor.execute("SELECT name, version, arch, type, description FROM buildgroups WHERE version != '000' ORDER BY version DESC, name")
+
+    for name, version, arch, type, description in cursor:
+        buildgroup = Buildgroup(env, name)
+        buildgroup.version = version
+        buildgroup.arch = arch
+        buildgroup.type = type
+        buildgroup.description = description
 
         yield buildgroup
 
