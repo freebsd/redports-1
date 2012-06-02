@@ -44,18 +44,18 @@ do
     fi
 
     SVNLOGINFO=`svn log -v -r ${REVISION} --xml ${REPOSITORY}`
-    AUTHOR=`echo ${SVNLOGINFO} | xml sel -t -m "/log/logentry" -v "author"`
-    LOGMSG=`echo ${SVNLOGINFO} | xml sel -t -m "/log/logentry" -v "msg"`
+    AUTHOR=`echo "${SVNLOGINFO}" | xml sel -t -m "/log/logentry" -v "author"`
+    LOGMSG=`echo "${SVNLOGINFO}" | xml sel -t -m "/log/logentry" -v "msg" | xml unesc`
 
     BUILDDATE=`date "+%Y%m%d%H%M%S"`
     RAND=`hexdump -n2 -e\"%u\" /dev/random`
     BUILDID=${BUILDDATE}-${RAND}
 
-    SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, '%s');" "${BUILDID}" "${USER}" ${REPOSITORYID} ${REVISION} 10 ${PRIORITY} ${START} 0 "${AUTHOR} | ${LOGMSG}"`
+    SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, '%s');" "${BUILDID}" "${AUTHOR}@FreeBSD.org" ${REPOSITORYID} ${REVISION} 10 ${PRIORITY} ${START} 0 "${LOGMSG}"`
     SQLBUILDS=""
 
 
-    for PORT in `echo ${SVNLOGINFO} | xml sel -t -m "/log/logentry/paths/path[@action!='D']" -v "node()" -n | cut -d'/' -f3-4 | uniq`
+    for PORT in `echo "${SVNLOGINFO}" | xml sel -t -m "/log/logentry/paths/path[@action!='D']" -v "node()" -n | cut -d'/' -f3-4 | uniq`
     do
         CATEGORY=`echo "${PORT}" | cut -d'/' -f1`
         PORTNAME=`echo "${PORT}" | cut -d'/' -f2`
@@ -70,6 +70,12 @@ do
         if ! echo "${PORT}" | grep -Eq '^[a-z0-9-]+/[a-zA-Z0-9_+.-]+$' ; then
             echo "Skipping invalid port ${PORT}"
             continue;
+        fi
+
+        # skip invalid categories
+        if [ "${CATEGORY}" = "hooks" -o "${CATEGORY}" = "conf" ]; then
+           echo "Skipping bogus category ${CATEGORY}"
+           continue;
         fi
 
         # skip ports named as the usual portfiles
