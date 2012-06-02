@@ -27,7 +27,7 @@ else
     LASTREVISION=1
 fi
 
-SQL=`printf "SELECT id FROM portrepositories WHERE type = 'svn' AND username = '%s';" "${USER}"`
+SQL=`printf "SELECT id FROM portrepositories WHERE type = 'svn-full' AND username = '%s';" "${USER}"`
 
 REPOSITORYID=`echo "${SQL}" | psql -qtA ${DBNAME} ${DBUSER}`
 
