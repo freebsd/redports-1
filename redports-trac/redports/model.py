@@ -2,7 +2,6 @@ from trac.core import *
 from trac.util.datefmt import from_utimestamp, pretty_timedelta
 from trac.versioncontrol import RepositoryManager
 from trac.util.translation import _
-from trac.web.session import DetachedSession
 from datetime import datetime
 from time import time
 import math
