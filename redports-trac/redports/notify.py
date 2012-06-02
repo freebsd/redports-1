@@ -13,13 +13,6 @@ class BuildNotify(Component):
         session = self.getSession(queueid)
         email = BuildNotifyEmail(self.env)
 
-        # email not verified or no email set
-        if not session.get('email') or session.get('email_verification_token'):
-            return False
-
-        if not session.get('build_notifications'):
-            return False
-
         email.load(queueid)
 
         if email.notifyEnabled(session):
@@ -57,6 +50,7 @@ class BuildNotifyEmail(NotifyEmail):
 
     def __init__(self, env):
         NotifyEmail.__init__(self, env)
+        self.cc = None
         # Override the template type to always use NewTextTemplate
         if not isinstance(self.template, NewTextTemplate):
             self.template = Chrome(env).templates.load(
@@ -75,7 +69,7 @@ class BuildNotifyEmail(NotifyEmail):
 
     def get_recipients(self, resid):
         to = [self.build.owner]
-        cc = []
+        cc = [self.cc]
         return (to, cc)
 
     def send(self, torcpts, ccrcpts):
@@ -115,6 +109,16 @@ class BuildNotifyEmail(NotifyEmail):
         }
 
     def notifyEnabled(self, session):
+        if not session:
+            if find(self.build.owner, '@'):
+                return True
+            else:
+                return False
+
+        # email not verified or no email set
+        if not session.get('email') or session.get('email_verification_token'):
+            return False
+
         if session.get('build_notifications_failed'):
             for port in self.build.ports:
                 if port.statusname == 'fail':
