@@ -9,9 +9,21 @@ from model import BuildarchiveIterator
 class BuildNotify(Component):
     implements(ITemplateProvider)
 
-    def notify(self, queueid=None):
-         email = BuildNotifyEmail(self.env)
-         email.notify(queueid)
+    def notify(self, queueid):
+        session = self.getSession(queueid)
+        email = BuildNotifyEmail(self.env)
+
+        # email not verified or no email set
+        if not session.get('email') or session.get('email_verification_token'):
+            return False
+
+        if not session.get('build_notifications'):
+            return False
+
+        email.load(queueid)
+
+        if email.notifyEnabled(session):
+            email.notify()
 
     # ITemplateProvider methods
     def get_templates_dirs(self):
@@ -19,6 +31,25 @@ class BuildNotify(Component):
 
     def get_htdocs_dirs(self):
         return []
+
+    def getSession(self, queueid):
+        cursor = self.env.get_db_cnx().cursor()
+
+        cursor.execute("SELECT status, owner FROM buildqueue WHERE id = %s", (queueid,))
+        if cursor.rowcount != 1:
+            return False
+
+        row = cursor.fetchone()
+
+        if row[0] != 90:
+            return False
+
+        session = DetachedSession(self.env, row[1])
+
+        if not session:
+            return None
+
+        return session
 
 
 class BuildNotifyEmail(NotifyEmail):
@@ -31,11 +62,16 @@ class BuildNotifyEmail(NotifyEmail):
             self.template = Chrome(env).templates.load(
                                 self.template.filepath, cls=NewTextTemplate)
 
-    def notify(self, queueid):
+    def load(self, queueid):
         self.queueid = queueid
         self.data.update(self.template_data())
-        subject = '[%s] Build %s completed: %s' % (self.env.project_name, self.queueid, self.status)
-        NotifyEmail.notify(self, self.queueid, subject)
+        self.subject = '[%s] Build %s completed: %s' % (self.env.project_name, self.queueid, self.status)
+
+    def notify(self):
+        if not self.queueid or not self.build:
+            return False
+
+        NotifyEmail.notify(self, self.queueid, self.subject)
 
     def get_recipients(self, resid):
         to = [self.build.owner]
@@ -77,3 +113,13 @@ class BuildNotifyEmail(NotifyEmail):
             'buildurl': self.build_link(),
             'status': self.status,
         }
+
+    def notifyEnabled(self, session):
+        if session.get('build_notifications_failed'):
+            for port in self.build.ports:
+                if port.statusname == 'fail':
+                    return True
+        elif session.get('build_notifications_success'):
+            return True
+        else:
+            return False
