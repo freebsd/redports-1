@@ -1,9 +1,11 @@
 from genshi.template.text import NewTextTemplate
 from trac.core import Component, implements
 from trac.web.chrome import ITemplateProvider, Chrome
+from trac.web.session import DetachedSession
 from trac.config import BoolOption
 from trac.notification import NotifyEmail
 from pkg_resources import resource_filename
+from string import find
 from model import BuildarchiveIterator
 
 class BuildNotify(Component):
