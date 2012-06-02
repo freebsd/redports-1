@@ -94,9 +94,16 @@ checkout()
         echo "ZFSVOLUME=\"${ZFSVOLUME}@work\"" >> ${LOCK}
 
         zfs snapshot ${ZFSVOLUME}@work || return 3
-        zfs set mountpoint=${WRKBASE}/${BUILD} ${ZFSVOLUME}/${BUILD} || return 3
+        ln -s ${TINDERBOX}/portstrees/${PORTSTREE}/ports ${WRKBASE}/${BUILD}/ports || return 3
 
-        svn switch ${PARAMS} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports >/dev/null || return 2
+        BASEREPO=`svn info ${TINDERBOX}/portstrees/${PORTSTREE}/ports | grep "URL:" | cut -d' ' -f2-`
+
+        if [ "${REPOSITORY}" != "${BASEREPO}" ] ; then
+            echo "Repository does not match! ${BASEREPO} != ${REPOSITORY}"
+            return 2
+        fi
+
+        svn update ${PARAMS} ${TINDERBOX}/portstrees/${PORTSTREE}/ports >/dev/null || return 2
     fi
 
     if [ -z "${REVISION}" ]; then
