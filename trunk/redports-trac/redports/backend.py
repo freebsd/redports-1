@@ -8,7 +8,7 @@ from genshi.builder import tag
 
 import re
 from string import hexdigits
-from model import Port, Build
+from model import Port
 from notify import BuildNotify
 
 class BackendConnector(Component):
@@ -44,11 +44,6 @@ class BackendConnector(Component):
         # https://redports.org/backend/notify/20120105095150-2805
         if req.path_info.startswith("/backend/notify/"):
             queueid = req.path_info[16:]
-
-            build = Build(self.env, queueid)
-            if not build.notifyEnabled():
-               req.send("OK", "text/plain", 200)
-               return ""
 
             notifier = BuildNotify(self.env)
             notifier.notify(queueid)

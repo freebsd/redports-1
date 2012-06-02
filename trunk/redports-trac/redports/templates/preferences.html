@@ -18,10 +18,17 @@
       </p>
     </label>
     <label>
-      <input type="checkbox" name="notifications" checked="${options.notifications or None}" />
-      EMail notification when finished
+      <input type="checkbox" name="notifications_success" checked="${options.notifications_success or None}" />
+      EMail notification for successfull jobs
       <p class="hint">
-        Sends an EMail for each job with a summary once all builds for the job have finished.
+        Sends an EMail for each successfull job with a summary once all builds for the job have finished.
+      </p>
+    </label>
+    <label>
+      <input type="checkbox" name="notifications_failed" checked="${options.notifications_failed or None}" />
+      EMail notification for failed jobs
+      <p class="hint">
+        Sends an EMail only for failed jobs with a summary once all builds for the job have finished.
       </p>
     </label>
   </body>
