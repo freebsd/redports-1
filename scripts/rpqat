@@ -51,11 +51,24 @@ do
     RAND=`hexdump -n2 -e\"%u\" /dev/random`
     BUILDID=${BUILDDATE}-${RAND}
 
-    SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, '%s');" "${BUILDID}" "${AUTHOR}@FreeBSD.org" ${REPOSITORYID} ${REVISION} 10 ${PRIORITY} ${START} 0 "${LOGMSG}"`
+    if echo "${LOGMSG}" | grep -i "^security:" >/dev/null ; then
+        PRIO=1
+    else
+        PRIO=${PRIORITY}
+    fi
+
+    SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, '%s');" "${BUILDID}" "${AUTHOR}@FreeBSD.org" ${REPOSITORYID} ${REVISION} 10 ${PRIO} ${START} 0 "${LOGMSG}"`
     SQLBUILDS=""
 
+    PORTS=`echo "${SVNLOGINFO}" | xml sel -t -m "/log/logentry/paths/path[@action!='D']" -v "node()" -n | cut -d'/' -f3-4 | uniq`
+    PORTNUM=`echo "${PORTS}" | wc -l`
 
-    for PORT in `echo "${SVNLOGINFO}" | xml sel -t -m "/log/logentry/paths/path[@action!='D']" -v "node()" -n | cut -d'/' -f3-4 | uniq`
+    if [ ${PORTNUM} -gt 20 ]; then
+        echo "Ignoring commit because it affects ${PORTNUM} ports"
+        continue;
+    fi
+
+    for PORT in "${PORTS}"
     do
         CATEGORY=`echo "${PORT}" | cut -d'/' -f1`
         PORTNAME=`echo "${PORT}" | cut -d'/' -f2`
