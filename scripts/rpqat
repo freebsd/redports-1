@@ -73,7 +73,7 @@ do
         fi
 
         # skip invalid categories
-        if [ "${CATEGORY}" = "hooks" -o "${CATEGORY}" = "conf" ]; then
+        if [ "${CATEGORY}" = "conf" -o "${CATEGORY}" = "hooks" -o "${CATEGORY}" = "tools" ]; then
            echo "Skipping bogus category ${CATEGORY}"
            continue;
         fi
