@@ -13,6 +13,10 @@ class BuildNotify(Component):
 
     def notify(self, queueid):
         session = self.getSession(queueid)
+
+        if not session:
+            return False
+
         email = BuildNotifyEmail(self.env)
 
         email.load(queueid)
@@ -39,12 +43,7 @@ class BuildNotify(Component):
         if row[0] != 90:
             return False
 
-        session = DetachedSession(self.env, row[1])
-
-        if not session:
-            return None
-
-        return session
+        return DetachedSession(self.env, row[1])
 
 
 class BuildNotifyEmail(NotifyEmail):
@@ -111,17 +110,16 @@ class BuildNotifyEmail(NotifyEmail):
         }
 
     def notifyEnabled(self, session):
-        if not session:
-            if find(self.build.owner, '@'):
-                return True
-            else:
-                return False
+        if find(self.build.owner, '@'):
+            user_is_email = True
+        else:
+            user_is_email = False
 
         # email not verified or no email set
-        if not session.get('email') or session.get('email_verification_token'):
+        if (not session.get('email') or session.get('email_verification_token')) and not user_is_email:
             return False
 
-        if session.get('build_notifications_failed'):
+        if session.get('build_notifications_failed') or user_is_email:
             for port in self.build.ports:
                 if port.statusname == 'fail':
                     return True
