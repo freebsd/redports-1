@@ -252,9 +252,11 @@ build()
     echo "LASTPACKAGEDATE=\"${LASTPACKAGEDATE}\"" >> ${LOCK}
 
     if [ -f "${TINDERBOX}/portstrees/${PORTSTREE}/ports/${PORT}/Makefile" ]; then
-        PKGVERSION=`cd ${TINDERBOX}/portstrees/${PORTSTREE}/ports/${PORT} && make -V PKGVERSION`
-        echo "PKGVERSION=\"${PKGVERSION}\"" >> ${LOCK}
-        echo "PKGVERSION=${PKGVERSION}"
+        if cd ${TINDERBOX}/portstrees/${PORTSTREE}/ports/${PORT} && make -V PKGVERSION >/dev/null 2>/dev/null ; then
+            PKGVERSION=`cd ${TINDERBOX}/portstrees/${PORTSTREE}/ports/${PORT} && make -V PKGVERSION`
+            echo "PKGVERSION=\"${PKGVERSION}\"" >> ${LOCK}
+            echo "PKGVERSION=${PKGVERSION}"
+        fi
 
         ${TINDERBOX}/scripts/tc addBuildPortsQueueEntry -b ${BUILD} -d ${PORT} -p ${PRIORITY} 2>/dev/null || return 1
     else
