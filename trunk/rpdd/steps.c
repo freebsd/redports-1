@@ -262,6 +262,7 @@ int handleStep100(void)
         if(getpage(url, PQgetvalue(result, i, 4), REMOTE_SHORTTIMEOUT) != CURLE_OK)
         {
            status = 2; /* Status failure */
+           logcgi(url, getenv("ERROR"));
            logwarn("Backend %s failed", PQgetvalue(result, i, 2));
 
            if(updateBackendFailed(conn, atoi(PQgetvalue(result, i, 0))) != 0)
@@ -491,7 +492,7 @@ int handleStep80(void)
 
         sprintf(url, "%s://%s%sclean?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
         		PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 4));
-        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_TIMEOUT) != CURLE_OK)
+        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_NOTIMEOUT) != CURLE_OK)
         {
             logcgi(url, getenv("ERROR"));
 
@@ -1040,7 +1041,7 @@ int handleStep20(void)
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
             RETURN_ROLLBACK(conn);
 
-        if(PQntuples(result2) != 1)
+        if(PQntuples(result2) < 1)
         {
             logdebug("No backend available for buildgroup %s", PQgetvalue(result, i, 1));
             continue;
