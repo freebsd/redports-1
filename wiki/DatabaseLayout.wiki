@@ -1,0 +1,97 @@
+= Database Layout =
+
+
+== Table "buildqueue" ==
+
+|| *Column* || *Datatype* || *Description* ||
+|| id || varchar(25) || Unique buildqueue id (YYYYMMDDHHMMSS-12345) ||
+|| owner || varchar(50) || Trac username ||
+|| repository || int || Foreign key to portrepository ||
+|| revision || int || Repository Revision to build ||
+|| status || int || Status ||
+|| priority || int || Priority: 1=high, 9=low ||
+|| startdate || longint || Startdate UNIXTIME ||
+|| enddate || longint || Enddate UNIXTIME ||
+|| description || varchar(255) || Job description for the user ||
+
+
+== Table "builds" ==
+
+|| *Column* || *Datatype* || *Description* ||
+|| id || int || Unique builds id ||
+|| queueid || varchar(25) || Foreign key to buildqueue entry ||
+|| backendkey || varchar(25) || Random token for the communication with the backend ||
+|| buildgroup || varchar(50) || Foreign key to buildgroups ||
+|| portname || varchar(50) || Portname to build (category/portname) ||
+|| pkgversion || varchar(25) || Portversion of the port being build ||
+|| status || int || Status of the build ||
+|| buildstatus || varchar(25) || Buildstatus: unknown, success, dud, fail, leftovers ||
+|| buildreason || varchar(255) || Failure reason: depends, fetch, missing_header ... ||
+|| buildlog || varchar(50) || Build logfile ||
+|| wrkdir || varchar(50) || Compressed work directory from build (if any) ||
+|| backendid || int || Foreign key to backends on which is build ||
+|| startdate || longint || Startdate UNIXTIME ||
+|| enddate || longint || Enddate UNIXTIME ||
+|| checkdate || longint || Last status check as UNIXTIME ||
+
+=== Status ===
+
+  * 1X	Created
+  * 2X	Waiting
+  * 3X	Starting
+  * 5X	Building
+  * 7X	Transferring
+  * 9X	Finished
+
+
+== Table "backends" ==
+
+|| *Column* || *Datatype* || *Description* ||
+|| id || int || Unique id for backends ||
+|| host || varchar(50) || Hostname ||
+|| protocol || varchar(10) || Protocol (http, https) ||
+|| uri || varchar(25) || URI to redports backend scripts ||
+|| credentials || varchar(50) || Credentials for HTTP Basic Authentication (username:password) ||
+|| maxparallel || int || Number of maximum parallel builds per backend ||
+|| status || int || Backend status (0=disabled, 1=enabled, 2=failure) ||
+|| type || varchar(25) || Backend type (tinderbox, sanity) ||
+
+
+== Table "backendbuilds" ==
+
+|| *Column* || *Datatype* || *Description* ||
+|| id || int || Unique id for backendbuilds ||
+|| buildgroup || varchar(25) || Foreign key for buildgroups.name ||
+|| backendid || int || Foreign key for backends.id ||
+|| priority || int || Backend Priority: 1=high, 9=low ||
+|| status || int || Backend status for this build: 0=disabled, 1=enabled, 2=failure, 3=portupdate ||
+|| buildname || varchar(30) || Tinderbox buildname ||
+
+
+== Table "buildgroups" ==
+
+|| *Column* || *Datatype* || *Description* ||
+|| name || varchar(50) || Unique groupname ||
+|| version || varchar(25) || FreeBSD version: 7.3, 7-STABLE, 9-CURRENT ||
+|| arch || varchar(10) || FreeBSD architecture: i386, amd64, all ||
+|| type || varchar(25) || Backend type: tinderbox, sanity ||
+|| description || varchar(255) || Backend description ||
+
+
+== Table "automaticbuildgroups" ==
+
+|| *Column* || *Datatype* || *Description* ||
+|| username || varchar(50) || Trac username ||
+|| buildgroup || varchar(25) || Buildgroup name ||
+|| priority || int || Priority: 1=high, 9=low ||
+
+
+== Table "portrepositories" ==
+
+|| *Column* || *Datatype* || *Description* ||
+|| id || int || Unique id for repository ||
+|| name || varchar(255) || Repository Name (variables: %OWNER%) ||
+|| type || varchar(25) || Repository type: svn, git, patch, ... ||
+|| url || varchar(255) || Repository URL (variables: %OWNER%, %PORTNAME%, %QUEUEID%, %BUILDID%) ||
+|| browseurl || varchar(255) || Browsing URL (variables: %OWNER%) ||
+|| username || varchar(50) || Trac username; null means repository is vailable for all users ||
