@@ -7,6 +7,7 @@
 #
 
 TINDERBOX=/usr/local/tinderbox
+ZFSROOT=zroot
 
 CLEANDATABASE=no
 CLEANJAIL=no
@@ -131,7 +132,7 @@ if [ "${CLEANQUEUE}" = "yes" ]; then
 fi
 
 if [ "${CLEANTEMP}" = "yes" ]; then
-    zfs destroy zroot/tinderbox/${BUILD}/portstree@work 2>/dev/null
+    zfs destroy ${ZFSROOT}/tinderbox/${BUILD}/portstree@work 2>/dev/null
 
     echo "Removing redports temporary directory for build ${BUILD}"
     rm -rf /tmp/rptinderbox/${BUILD}
@@ -157,9 +158,9 @@ if [ "${CLEANJAILREMOVE}" = "yes" ]; then
     mv ${TINDERBOX}/scripts/etc/env/build.${BUILD} ${TINDERBOX}/scripts/etc/env/build.${BUILD}.bak
 
     echo "Removing ZFS filesystems"
-    zfs destroy zroot/tinderbox/${BUILD}/portstree
-    zfs destroy zroot/tinderbox/${BUILD}/jail
-    zfs destroy zroot/tinderbox/${BUILD}
+    zfs destroy ${ZFSROOT}/tinderbox/${BUILD}/portstree
+    zfs destroy ${ZFSROOT}/tinderbox/${BUILD}/jail
+    zfs destroy ${ZFSROOT}/tinderbox/${BUILD}
 
     rm -rf ${TINDERBOX}/jails/${BUILD} 2>/dev/null
     rm -rf ${TINDERBOX}/portstrees/${BUILD} 2>/dev/null

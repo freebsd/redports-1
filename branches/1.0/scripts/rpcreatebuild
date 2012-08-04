@@ -12,6 +12,7 @@
 #   zfs
 
 FTP=ftp2.freebsd.org
+ZFSROOT=zroot
 
 VERSION=$1
 ARCH=$2
@@ -44,19 +45,19 @@ else
     OPTIONS="-t ${VERSION}-RELEASE -u LFTP -H ${FTP}"
 fi
 
-if ! zfs list zroot/tinderbox >/dev/null ; then
-    zfs create -o compression=lzjb -o setuid=off zroot/tinderbox
-    zfs set mountpoint=legacy zroot/tinderbox
+if ! zfs list ${ZFSROOT}/tinderbox >/dev/null ; then
+    zfs create -o compression=lzjb -o setuid=off ${ZFSROOT}/tinderbox
+    zfs set mountpoint=legacy ${ZFSROOT}/tinderbox
 fi
 
-if ! zfs list zroot/tinderbox/${BUILD} >/dev/null ; then
-    zfs create -o compression=lzjb -o setuid=on zroot/tinderbox/${BUILD}
-    zfs create -o compression=lzjb -o setuid=off zroot/tinderbox/${BUILD}/portstree
-    zfs create -o compression=lzjb -o setuid=off zroot/tinderbox/${BUILD}/jail
+if ! zfs list ${ZFSROOT}/tinderbox/${BUILD} >/dev/null ; then
+    zfs create -o compression=lzjb -o setuid=on ${ZFSROOT}/tinderbox/${BUILD}
+    zfs create -o compression=lzjb -o setuid=off ${ZFSROOT}/tinderbox/${BUILD}/portstree
+    zfs create -o compression=lzjb -o setuid=off ${ZFSROOT}/tinderbox/${BUILD}/jail
 
-    zfs set mountpoint=legacy zroot/tinderbox/${BUILD}
-    zfs set mountpoint=${TINDERBOX}/portstrees/${BUILD} zroot/tinderbox/${BUILD}/portstree
-    zfs set mountpoint=${TINDERBOX}/jails/${BUILD} zroot/tinderbox/${BUILD}/jail
+    zfs set mountpoint=legacy ${ZFSROOT}/tinderbox/${BUILD}
+    zfs set mountpoint=${TINDERBOX}/portstrees/${BUILD} ${ZFSROOT}/tinderbox/${BUILD}/portstree
+    zfs set mountpoint=${TINDERBOX}/jails/${BUILD} ${ZFSROOT}/tinderbox/${BUILD}/jail
 fi
 
 if [ `uname -m` != "${ARCH}" ]; then
@@ -66,7 +67,12 @@ if [ `uname -m` != "${ARCH}" ]; then
     echo "export UNAME_p=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
 fi
 
-${TINDERBOX}/scripts/tc createPortsTree -p ${BUILD} -u CSUP -d "FreeBSD Portstree" || exit 1
+if [ "${SUFFIX}" = "-QAT" -o "${SUFFIX}" = "-QAT2" ]; then
+    ${TINDERBOX}/scripts/tc createPortsTree -p ${BUILD} -u SVN -H svn.freebsd.org -P http -D ports/head -d "FreeBSD Portstree" || exit 1
+else
+    ${TINDERBOX}/scripts/tc createPortsTree -p ${BUILD} -u CSUP -d "FreeBSD Portstree" || exit 1
+fi
+
 ${TINDERBOX}/scripts/tc createJail -j ${BUILD} ${OPTIONS} -d "FreeBSD ${VERSION}/${ARCH}" -a ${ARCH} || exit 1
 ${TINDERBOX}/scripts/tc createBuild -b ${BUILD} -j ${BUILD} -p ${BUILD} -d "FreeBSD ${VERSION}/${ARCH} for redports" || exit 1
 

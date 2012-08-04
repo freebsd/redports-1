@@ -1,0 +1,114 @@
+#!/bin/sh
+
+#
+# RedPorts Team creation script
+#
+# $Id$
+#
+
+HTPASSWD=/var/db/trac/redports/conf/htpasswd
+SVNACCESS=/var/db/trac/redports/conf/svnaccess
+TMP=/tmp/redportsrepo
+
+TEAM=$1
+USER=$2
+REPOSITORY=file:///var/subversion/redports
+SVNUSER=redports
+
+REPOHOST=svn.redports.org
+BROWSEURL=https://redports.org/changeset/%REVISION%
+
+DBNAME=trac
+DBUSER=trac
+
+if [ -z "$TEAM" ]; then
+    echo "Usage: rpcreateteam <teamname> <username>"
+    exit 1
+fi
+
+if [ ! -z "$USER" ]; then
+    if ! egrep "^${USER}:" ${HTPASSWD} >/dev/null ; then
+        echo "User ${USER} does not exist"
+        exit 1
+    fi
+fi
+
+# create svn folder for the team
+rm -rf ${TMP}
+svn checkout --username ${SVNUSER} --non-interactive --non-recursive ${REPOSITORY} ${TMP} >/dev/null && \
+svn update --non-interactive ${TMP}/${TEAM} >/dev/null
+
+if [ $? != 0 ]; then
+    echo "Repository checkout failed"
+    exit 1
+fi
+
+if [ ! -d "${TMP}/${TEAM}" ]; then
+    mkdir ${TMP}/${TEAM} && \
+    svn add ${TMP}/${TEAM} >/dev/null && \
+    svn commit --username ${SVNUSER} --non-interactive --message "Welcome Team ${TEAM}!" ${TMP}/${TEAM} >/dev/null
+
+    if [ $? != 0 ]; then
+        echo "Failed creating SVN directory"
+        exit 1
+    fi
+else
+    echo "SVN directory already exists"
+fi
+
+rm -rf ${TMP}
+
+# add team group if not created yet
+if ! egrep "^@team-${TEAM}" ${SVNACCESS} >/dev/null ; then
+    grep -B 10000 "\[groups\]" ${SVNACCESS} > ${SVNACCESS}.tmp
+    echo "team-${TEAM} = ${USER}" >> ${SVNACCESS}.tmp
+    grep -A 10000 "\[groups\]" ${SVNACCESS} | tail +2 >> ${SVNACCESS}.tmp
+
+    mv ${SVNACCESS}.tmp ${SVNACCESS}
+else
+    echo "Team Group already exists"
+fi
+
+# add user to group
+if [ ! -z "${USER}" ]; then
+    TEAMGROUP=`egrep "^team-${TEAM} =" ${SVNACCESS}`
+
+    if ! echo ${TEAMGROUP} | grep ${USER} >/dev/null ; then
+        egrep -B 10000 "^team-${TEAM} =" ${SVNACCESS} | tail -r | tail +2 | tail -r > ${SVNACCESS}.tmp
+        echo "${TEAMGROUP},${USER}" >> ${SVNACCESS}.tmp
+        egrep -A 10000 "^team-${TEAM} =" ${SVNACCESS} | tail +2 >> ${SVNACCESS}.tmp
+
+        mv ${SVNACCESS}.tmp ${SVNACCESS}
+    else
+        echo "User already part of Team"
+    fi
+fi
+
+# add team permissions
+if ! egrep "^\[/${TEAM}\]" ${SVNACCESS} >/dev/null ; then
+    egrep -B 10000 "^# teams" ${SVNACCESS} > ${SVNACCESS}.tmp
+    echo "[/${TEAM}]" >> ${SVNACCESS}.tmp
+    echo "@team-${TEAM} = rw" >> ${SVNACCESS}.tmp
+    echo "" >> ${SVNACCESS}.tmp
+    egrep -A 10000 "^# teams" ${SVNACCESS} | tail +2 >> ${SVNACCESS}.tmp
+
+    mv ${SVNACCESS}.tmp ${SVNACCESS}
+else
+    echo "SVN permissions already granted"
+fi
+
+
+# Add portrepositories entry
+SQL=`printf "SELECT COUNT(*) FROM portrepositories WHERE username = '%s' and name = '%s';" "${USER}" "${REPOHOST}/${TEAM}"`
+
+COUNT=`echo "${SQL}" | psql -qtA ${DBNAME} ${DBUSER}`
+
+if [ ${COUNT} -eq 0 ]; then
+   SQL=`printf "INSERT INTO portrepositories VALUES ('svn', '%s', '%s', '%s', '%s', NULL);" "https://${REPOHOST}/${TEAM}" "${USER}" "${REPOHOST}/${TEAM}" "${BROWSEURL}"`
+
+   echo "${SQL}" | psql -qtA ${DBNAME} ${DBUSER}
+else
+   echo "Portrepositories entry already exists"
+fi
+
+exit 0

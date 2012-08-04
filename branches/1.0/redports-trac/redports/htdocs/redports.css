@@ -1,5 +1,5 @@
 /* Buildqueue / Buildgroups */
-#build_list { max-width: 64%; clear: none; }
+#build_list { min-width: 600px; width: auto; clear: none; }
 
 /* Listings */
 table.listing tbody td { vertical-align: middle; height: 2.5em; }
@@ -11,7 +11,7 @@ table.listing tbody tr.head { background: #F7F7F0; }
     clear: right;
     float: right;
     margin: -2em 0 2em 2em;
-    width: 33%;
+    width: 350px;
     padding: 0;
 }
 

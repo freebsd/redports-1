@@ -9,7 +9,7 @@ from genshi.builder import tag
 from pkg_resources import resource_filename
 import re
 
-from model import Build, Port, BuildqueueIterator, AllBuildgroupsIterator, RepositoryIterator
+from model import Build, Port, BuildqueueIterator, UserBuildgroupsIterator, RepositoryIterator
 
 class BuildqueuePanel(Component):
     implements(INavigationContributor, ITemplateProvider, IRequestHandler, IPermissionRequestor)
@@ -66,7 +66,7 @@ class BuildqueuePanel(Component):
 
         return ('buildqueue.html', 
             {   'buildqueue': BuildqueueIterator(self.env, req),
-                'allbuildgroups': AllBuildgroupsIterator(self.env),
+                'allbuildgroups': UserBuildgroupsIterator(self.env),
                 'repository': RepositoryIterator(self.env, req),
                 'authname': req.authname
             }, None)

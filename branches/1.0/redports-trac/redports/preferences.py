@@ -1,6 +1,7 @@
 from trac.core import *
 from trac.prefs import IPreferencePanelProvider
 from trac.web.chrome import add_notice, add_warning
+from tools import *
 
 class RedportsPreferencePanel(Component):
 
@@ -12,11 +13,27 @@ class RedportsPreferencePanel(Component):
 
     def render_preference_panel(self, req, panel):
         if req.method == 'POST':
-            if req.args.get('notifications'):
-                req.session['build_notifications'] = True
+            if not req.session.get('build_notifications'):
+                notifications = 2
             else:
-                if req.session.get('build_notifications'):
-                    del req.session['build_notifications']
+                notifications = int(req.session['build_notifications'])
+
+            if req.args.get('notifications_success'):
+                notifications = setBit(notifications, 0)
+            else:
+                notifications = clearBit(notifications, 0)
+
+            if req.args.get('notifications_failed'):
+                notifications = setBit(notifications, 1)
+            else:
+                notifications = clearBit(notifications, 1)
+
+            if req.args.get('notifications_leftovers'):
+                notifications = setBit(notifications, 2)
+            else:
+                notifications = clearBit(notifications, 2)
+
+            req.session['build_notifications'] = notifications
 
             if req.args.get('wrkdir'):
                 req.session['build_wrkdirdownload'] = True
@@ -24,17 +41,32 @@ class RedportsPreferencePanel(Component):
                 if req.session.get('build_wrkdirdownload'):
                     del req.session['build_wrkdirdownload']
 
-            if req.session.get('build_notifications') and ( not req.session.get('email') or req.session.get('email_verification_token')):
+            if ( req.session.get('build_notifications_success') or req.session.get('build_notifications_failed') ) and ( not req.session.get('email') or req.session.get('email_verification_token')):
                 add_warning(req, 'You need to verify your EMail to get notifications.')
 
             add_notice(req, 'Your preferences have been saved.')
             req.redirect(req.href.prefs(panel or None))
 
         options = {}
-        if req.session.get('build_notifications'):
-            options['notifications'] = True
+        if not req.session.get('build_notifications'):
+            notifications = 2
         else:
-            options['notifications'] = False
+            notifications = int(req.session['build_notifications'])
+
+        if testBit(notifications, 0):
+            options['notifications_success'] = True
+        else:
+            options['notifications_success'] = False
+
+        if testBit(notifications, 1):
+            options['notifications_failed'] = True
+        else:
+            options['notifications_failed'] = False
+
+        if testBit(notifications, 2):
+            options['notifications_leftovers'] = True
+        else:
+            options['notifications_leftovers'] = False
 
         if req.session.get('build_wrkdirdownload'):
             options['wrkdir'] = True
@@ -44,3 +76,4 @@ class RedportsPreferencePanel(Component):
         return 'preferences.html', {
             'options': options
         }
+
