@@ -11,10 +11,10 @@
 PATH=${PATH}:/usr/local/bin
 
 REVISIONSTORE=/tmp/rpqat.idx
-REPOSITORY=http://svn.chruetertee.ch/ports/head
+REPOSITORY=http://svn.freebsd.org/ports/head
 
 USER=qatbot
-PRIORITY=5
+PRIORITY=1
 DBNAME=trac
 DBUSER=trac
 
@@ -45,7 +45,7 @@ do
 
     SVNLOGINFO=`svn log -v -r ${REVISION} --xml ${REPOSITORY}`
     AUTHOR=`echo "${SVNLOGINFO}" | xml sel -t -m "/log/logentry" -v "author"`
-    LOGMSG=`echo "${SVNLOGINFO}" | xml sel -t -m "/log/logentry" -v "msg" | xml unesc`
+    LOGMSG=`echo "${SVNLOGINFO}" | xml sel -t -m "/log/logentry" -v "msg" | xml unesc | sed -e "s/\'/\'\'/g"`
 
     BUILDDATE=`date "+%Y%m%d%H%M%S"`
     RAND=`hexdump -n2 -e\"%u\" /dev/random`
@@ -57,10 +57,10 @@ do
         PRIO=${PRIORITY}
     fi
 
-    SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, '%s');" "${BUILDID}" "${AUTHOR}@FreeBSD.org" ${REPOSITORYID} ${REVISION} 10 ${PRIO} ${START} 0 "${LOGMSG}"`
+    SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, left('%s', 255));" "${BUILDID}" "${AUTHOR}@FreeBSD.org" ${REPOSITORYID} ${REVISION} 10 ${PRIO} ${START} 0 "${LOGMSG}"`
     SQLBUILDS=""
 
-    PORTS=`echo "${SVNLOGINFO}" | xml sel -t -m "/log/logentry/paths/path[@action!='D']" -v "node()" -n | cut -d'/' -f3-4 | uniq`
+    PORTS=`echo "${SVNLOGINFO}" | xml sel -t -m "/log/logentry/paths/path[@action!='D']" -v "node()" -n | cut -d'/' -f3-4 | sort | uniq | grep -v '^$'`
     PORTNUM=`echo "${PORTS}" | wc -l`
 
     if [ ${PORTNUM} -gt 20 ]; then
@@ -68,7 +68,7 @@ do
         continue;
     fi
 
-    for PORT in "${PORTS}"
+    for PORT in ${PORTS}
     do
         CATEGORY=`echo "${PORT}" | cut -d'/' -f1`
         PORTNAME=`echo "${PORT}" | cut -d'/' -f2`
