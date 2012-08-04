@@ -28,6 +28,7 @@ setup(
             'redports.buildgroups = redports.buildgroups',
             'redports.buildqueue = redports.buildqueue',
             'redports.preferences = redports.preferences',
+            'redports.tools = redports.tools',
             'redports.notify = redports.notify',
         ]
     })
