@@ -1,0 +1,15 @@
+= Redports Architecture =
+
+https://redports.org/raw-attachment/wiki/Architecture/redports-arch.jpg
+
+==Repository==
+  [http://subversion.apache.org/ Subversion Repository] for users
+
+===Frontend==
+  [http://trac.edgewall.org/ Trac] Frontend with [http://code.google.com/p/redports/source/browse/#svn%2Ftrunk%2Fredports-trac Redports plugin]
+
+===Dispatcher===
+  [http://code.google.com/p/redports/source/browse/#svn%2Ftrunk%2Frpdd rpdd] distributes build jobs to multiple backends
+
+===Backend===
+  [http://tinderbox.marcuscom.com/ FreeBSD Ports Tinderbox] and [http://code.google.com/p/redports/source/browse/#svn%2Ftrunk%2Frptinderbox rptinderbox scripts]
