@@ -1,0 +1,162 @@
+== !HowTo Setup a Redports Tinderbox Backend ==
+
+A Redports Tinderbox Backend is not much more then a normal Tinderbox but
+with a carefully thought out configuration and a few shell scripts.
+
+
+=== Requirements ===
+
+  * FreeBSD >= 9.0 and ZFS
+  * ports-mgmt/tinderbox-devel (>= 3.4)
+  * ftp/curl
+  * ftp/lftp
+  * www/nginx
+  * www/spawn-fcgi
+  * www/fcgiwrap
+  * security/sudo
+  * devel/subversion
+  * security/ca_root_nss
+
+
+=== System Setup ===
+
+For the system we need [http://wiki.freebsd.org/ZFS ZFS] because of the snapshot feature to always have a clean portstree. So you should use at least FreeBSD 9.0 or newer. For a Tinderbox CURRENT is recommended but latest STABLE is usually also working fine.
+
+You also need to install all the required ports listed above.
+
+__SSL Certificate Validation:__
+For subversion to be able to validate the SSL certificate of svn.redports.org you need to trust the root certificate of StartSSL. That can easily be done by installing ca_root_nss and symlinking the place where OpenSSL looks to the ca-root-nss certs. 
+
+{{{
+ln -s /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem
+}}}
+
+__Hardware considerations (minimum):__
+  * CPU: 4 cores or more
+  * RAM: 8GB or more
+  * 2 harddisks in ZFS RAID1
+  * 1 static IP Address
+
+
+=== Tinderbox Setup ===
+
+Install your tinderbox as you always do.
+
+{{{
+cd /usr/local/tinderbox/scripts
+./tc Setup
+./tc configDistfile -c /usr/ports/distfiles
+./tc configOptions -e -o /options
+./tc configTinderd -t 20
+}}}
+
+
+=== Redports Setup ===
+
+The redports tinderbox backend consists of a few shell scripts and a tinderbox buildhook. To install the buildhook download rptinderbox and install the buildhook:
+
+{{{
+cd /usr/local/tinderbox/scripts
+./tc updateHookCmd -h postPortBuild -c /usr/local/tinderbox/hooks/rptinderbox_buildhook.sh
+}}}
+
+
+Now we need to setup the CGI part of rptinderbox. If you want to use Apache for that this is also fine but I will concentrate on nginx + fcgiwrap in this guide. Nginx is only a webserver and does itself not execute anything. Therefor we need fcgiwrap and spawn-fcgi to run as a FastCGI daemon that executes the shellscripts and delivers the output to nginx.
+
+*/etc/rc.conf*:
+{{{
+spawn_fcgi_enable=\"YES\"
+spawn_fcgi_app=\"/usr/local/sbin/fcgiwrap\"
+spawn_fcgi_app_args=\"-c 2\"
+spawn_fcgi_bindport=\"9001\"
+}}}
+
+Download rptinderbox and copy everything to /usr/local/www/rptinderbox.
+
+Now we need to setup nginx to protect our cgi scripts because we don't want to let other people control our tinderbox.
+
+*/usr/local/etc/nginx/nginx.conf*:
+{{{
+http {
+    include       mime.types;
+    default_type  text/plain;
+    # don't forget to add \"log\" to text/plain in mime.types
+
+    sendfile        on;
+    keepalive_timeout  10;
+
+    gzip on;
+    gzip_types text/plain;
+    gzip_comp_level 4;
+
+    server {
+        listen       188.20.160.67;
+        server_name  tb3.bluelife.at;
+
+        location / {
+            root /usr/local/www/nginx;
+        }
+
+        location /rptinderbox/ {
+            auth_basic    \"Redports Backend\";
+            auth_basic_user_file htpasswd;
+            fastcgi_pass  127.0.0.1:9001;
+            fastcgi_param SCRIPT_FILENAME /usr/local/www$fastcgi_script_name;
+            fastcgi_read_timeout 900;
+            include       fastcgi_params;
+        }
+
+        location /logs/ {
+            alias  /usr/local/tinderbox/logs/;
+            autoindex on;
+        }
+        location /errors/ {
+            alias  /usr/local/tinderbox/errors/;
+            autoindex on;
+        }
+
+        location /packages/ {
+            alias  /usr/local/tinderbox/packages/;
+            autoindex on;
+        }
+
+        location /wrkdirs/ {
+            alias /usr/local/tinderbox/wrkdirs/;
+            autoindex on;
+        }
+    }
+}
+}}}
+
+
+*/usr/local/etc/sudoers*:
+{{{
+%www ALL=(ALL) NOPASSWD: ALL
+}}}
+
+
+=== Tinderbox builds ===
+
+The last thing we have to do is create a few Tinderbox builds which consists of a tinderbox jail and portstree. To get this done right also with the ZFS volumes I have created a script that does this for you. So create a few builds like this:
+
+{{{
+# FreeBSD 7.4
+./rpcreatebuild 7.4 amd64
+./rpcreatebuild 7.4 i386
+
+# FreeBSD 8.2
+./rpcreatebuild 8.2 amd64
+./rpcreatebuild 8.2 i386
+
+# FreeBSD 9.0
+./rpcreatebuild 9.0 amd64
+./rpcreatebuild 9.0 i386
+
+# FreeBSD 10-CURRENT
+./rpcreatebuild 10 amd64
+./rpcreatebuild 10 i386
+
+# CLANG
+./rpcreatebuild 9-STABLE amd64 CLANG
+./rpcreatebuild 9-STABLE i386 CLANG
+}}}
