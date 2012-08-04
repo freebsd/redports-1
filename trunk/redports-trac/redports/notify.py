@@ -1,5 +1,5 @@
 from genshi.template.text import NewTextTemplate
-from trac.core import Component, implements
+from trac.core import Component, implements, TracError
 from trac.web.chrome import ITemplateProvider, Chrome
 from trac.web.session import DetachedSession
 from trac.config import BoolOption
@@ -7,6 +7,7 @@ from trac.notification import NotifyEmail
 from pkg_resources import resource_filename
 from string import find
 from model import BuildarchiveIterator
+from tools import *
 
 class BuildNotify(Component):
     implements(ITemplateProvider)
@@ -22,7 +23,9 @@ class BuildNotify(Component):
         email.load(queueid)
 
         if email.notifyEnabled(session):
-            email.notify()
+            return email.notify()
+
+        return True
 
     # ITemplateProvider methods
     def get_templates_dirs(self):
@@ -43,6 +46,9 @@ class BuildNotify(Component):
         if row[0] != 90:
             return False
 
+        if find(row[1], '@'):
+            return DetachedSession(self.env, "qatbot")
+
         return DetachedSession(self.env, row[1])
 
 
@@ -51,7 +57,6 @@ class BuildNotifyEmail(NotifyEmail):
 
     def __init__(self, env):
         NotifyEmail.__init__(self, env)
-        self.cc = None
         # Override the template type to always use NewTextTemplate
         if not isinstance(self.template, NewTextTemplate):
             self.template = Chrome(env).templates.load(
@@ -60,17 +65,26 @@ class BuildNotifyEmail(NotifyEmail):
     def load(self, queueid):
         self.queueid = queueid
         self.data.update(self.template_data())
-        self.subject = '[%s] Build %s completed: %s' % (self.env.project_name, self.queueid, self.status)
+
+        if find(self.build.owner, '@'):
+            self.subject = '[QAT] r%s: %s' % (self.build.revision, self.status)
+        else:
+            self.subject = '[%s] Build %s completed: %s' % (self.env.project_name, self.queueid, self.status)
 
     def notify(self):
         if not self.queueid or not self.build:
             return False
 
         NotifyEmail.notify(self, self.queueid, self.subject)
+        return True
 
     def get_recipients(self, resid):
         to = [self.build.owner]
-        cc = [self.cc]
+        cc = None
+
+        if find(self.build.owner, '@'):
+            cc = ['decke@FreeBSD.org', 'beat@FreeBSD.org', 'linimon@FreeBSD.org']
+
         return (to, cc)
 
     def send(self, torcpts, ccrcpts):
@@ -110,20 +124,25 @@ class BuildNotifyEmail(NotifyEmail):
         }
 
     def notifyEnabled(self, session):
-        if find(self.build.owner, '@'):
-            user_is_email = True
-        else:
-            user_is_email = False
+        # default notifications: send mail for failed builds
+        notifications = 2
+
+        if session.get('build_notifications'):
+            notifications = int(session.get('build_notifications'))
 
         # email not verified or no email set
-        if (not session.get('email') or session.get('email_verification_token')) and not user_is_email:
+        if not session.get('email') or session.get('email_verification_token'):
             return False
 
-        if session.get('build_notifications_failed') or user_is_email:
-            for port in self.build.ports:
-                if port.statusname == 'fail':
-                    return True
-        elif session.get('build_notifications_success'):
+        for port in self.build.ports:
+            if port.statusname == 'fail' and testBit(notifications, 1):
+                return True
+            if port.statusname == 'leftovers' and testBit(notifications, 2):
+                return True
+
+        # also send for successfull builds?
+        if testBit(notifications, 0):
             return True
         else:
             return False
+

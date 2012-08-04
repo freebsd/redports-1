@@ -1,6 +1,7 @@
 from trac.core import *
 from trac.prefs import IPreferencePanelProvider
 from trac.web.chrome import add_notice, add_warning
+from tools import *
 
 class RedportsPreferencePanel(Component):
 
@@ -12,17 +13,27 @@ class RedportsPreferencePanel(Component):
 
     def render_preference_panel(self, req, panel):
         if req.method == 'POST':
-            if req.args.get('notifications_success'):
-                req.session['build_notifications_success'] = True
+            if not req.session.get('build_notifications'):
+                notifications = 2
             else:
-                if req.session.get('build_notifications_success'):
-                    del req.session['build_notifications_success']
+                notifications = int(req.session['build_notifications'])
+
+            if req.args.get('notifications_success'):
+                notifications = setBit(notifications, 0)
+            else:
+                notifications = clearBit(notifications, 0)
 
             if req.args.get('notifications_failed'):
-                req.session['build_notifications_failed'] = True
+                notifications = setBit(notifications, 1)
             else:
-                if req.session.get('build_notifications_failed'):
-                    del req.session['build_notifications_failed']
+                notifications = clearBit(notifications, 1)
+
+            if req.args.get('notifications_leftovers'):
+                notifications = setBit(notifications, 2)
+            else:
+                notifications = clearBit(notifications, 2)
+
+            req.session['build_notifications'] = notifications
 
             if req.args.get('wrkdir'):
                 req.session['build_wrkdirdownload'] = True
@@ -37,15 +48,25 @@ class RedportsPreferencePanel(Component):
             req.redirect(req.href.prefs(panel or None))
 
         options = {}
-        if req.session.get('build_notifications_success'):
+        if not req.session.get('build_notifications'):
+            notifications = 2
+        else:
+            notifications = int(req.session['build_notifications'])
+
+        if testBit(notifications, 0):
             options['notifications_success'] = True
         else:
             options['notifications_success'] = False
 
-        if req.session.get('build_notifications_failed'):
+        if testBit(notifications, 1):
             options['notifications_failed'] = True
         else:
             options['notifications_failed'] = False
+
+        if testBit(notifications, 2):
+            options['notifications_leftovers'] = True
+        else:
+            options['notifications_leftovers'] = False
 
         if req.session.get('build_wrkdirdownload'):
             options['wrkdir'] = True
@@ -55,3 +76,4 @@ class RedportsPreferencePanel(Component):
         return 'preferences.html', {
             'options': options
         }
+

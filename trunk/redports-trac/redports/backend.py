@@ -46,9 +46,10 @@ class BackendConnector(Component):
             queueid = req.path_info[16:]
 
             notifier = BuildNotify(self.env)
-            notifier.notify(queueid)
-
-            req.send("OK", "text/plain", 200)
+            if not notifier.notify(queueid):
+                req.send("ERROR", "text/plain", 500)
+            else:
+                req.send("OK", "text/plain", 200)
             return ""
 
         req.send("ERROR", "text/plain", 500)
