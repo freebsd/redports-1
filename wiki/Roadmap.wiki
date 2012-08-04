@@ -1,0 +1,44 @@
+= Roadmap =
+
+== 1.1.0 (Q2 2012) ==
+  * poudriere based backend
+  * Patch building support
+  * Package building support
+  * QAT support
+  * Stop running builds
+
+
+== Future ==
+  * Sanity backend (portlint)
+  * Port Options (make.conf) support
+  * rpclient script support (submit, status)
+  * Generate and send patch PRs (new backend type, Email as notifications)
+
+
+----
+
+
+= Past Releases =
+
+== 1.0.0 (4. April 2012) ==
+  * Security hardening (no root scripts and processes)
+  * Improved frontend for Teams
+  * Archived logfiles with longer lifetime
+  * Public buildqueue and past builds
+  * Bulk building functionality
+  * Migrating builds to other backend on error
+  * Priority based scheduling for buildqueue
+  * Multi Repository support
+  * Email notifications
+  * Archive RSS feed
+  * Administration interfaces
+  * Hook scripts in rpdd (IRC buildbot)
+  * PR patch building support
+
+== 0.9.0 (18. November 2011) ==
+  * First prototype (beta release)
+  * Tinderbox backend
+  * Dispatcher
+  * Frontend with buildstatus
+  * Subversion repository
+  * Give redports.org his own server
