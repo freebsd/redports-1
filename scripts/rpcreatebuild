@@ -67,7 +67,12 @@ if [ `uname -m` != "${ARCH}" ]; then
     echo "export UNAME_p=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
 fi
 
-${TINDERBOX}/scripts/tc createPortsTree -p ${BUILD} -u CSUP -d "FreeBSD Portstree" || exit 1
+if [ "${SUFFIX}" = "-QAT" -o "${SUFFIX}" = "-QAT2" ]; then
+    ${TINDERBOX}/scripts/tc createPortsTree -p ${BUILD} -u SVN -H svn.freebsd.org -P http -D ports/head -d "FreeBSD Portstree" || exit 1
+else
+    ${TINDERBOX}/scripts/tc createPortsTree -p ${BUILD} -u CSUP -d "FreeBSD Portstree" || exit 1
+fi
+
 ${TINDERBOX}/scripts/tc createJail -j ${BUILD} ${OPTIONS} -d "FreeBSD ${VERSION}/${ARCH}" -a ${ARCH} || exit 1
 ${TINDERBOX}/scripts/tc createBuild -b ${BUILD} -j ${BUILD} -p ${BUILD} -d "FreeBSD ${VERSION}/${ARCH} for redports" || exit 1
 
