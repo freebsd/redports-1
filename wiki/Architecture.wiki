@@ -1,6 +1,6 @@
 = Redports Architecture =
 
-https://redports.org/raw-attachment/wiki/Architecture/redports-arch.jpg
+http://people.freebsd.org/~decke/redports/redports-arch.jpg
 
 ==Repository==
   [http://subversion.apache.org/ Subversion Repository] for users
