@@ -29,7 +29,6 @@ checkout()
     REPOSITORY=$2
     REVISION=$3
     BUILD=$4
-    REPOSITORYMD5=`echo ${REPOSITORY} | md5`
 
     if [ -z "${BUILD}" ]; then
         echo "Build not specified."
@@ -91,21 +90,20 @@ checkout()
         find ${WRKBASE}/${BUILD}/ports -type d -d 2 | grep -v "${WRKBASE}/${BUILDS}/ports/Mk/" | sed -e "s|^${WRKBASE}/${BUILD}/ports/|${TINDERBOX}/portstrees/${PORTSTREE}/ports/|" | xargs rm -Rf || return 1
         cp -pr ${WRKBASE}/${BUILD}/ports/* ${TINDERBOX}/portstrees/${PORTSTREE}/ports/
     elif [ "${TYPE}" = "svn-full" ]; then
-        REPOSITORYMD5=`echo ${REPOSITORY} | md5`
-        ZFSVOLUME="${ZFSREPOROOT}/${REPOSITORYMD5}"
+        ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
+        echo "ZFSVOLUME=\"${ZFSVOLUME}@work\"" >> ${LOCK}
 
-        if ! zfs list ${ZFSVOLUME} >/dev/null ; then
-            echo "Unknown repository ${ZFSVOLUME}"
-            return 3
+        zfs snapshot ${ZFSVOLUME}@work || return 3
+        ln -s ${TINDERBOX}/portstrees/${PORTSTREE}/ports ${WRKBASE}/${BUILD}/ports || return 3
+
+        BASEREPO=`svn info ${TINDERBOX}/portstrees/${PORTSTREE}/ports | grep "URL:" | cut -d' ' -f2-`
+
+        if [ "${REPOSITORY}" != "${BASEREPO}" ] ; then
+            echo "Repository does not match! ${BASEREPO} != ${REPOSITORY}"
+            return 2
         fi
 
-        echo "ZFSVOLUME=\"${ZFSVOLUME}@${BUILD}\"" >> ${LOCK}
-
-        zfs snapshot ${ZFSVOLUME}@${BUILD} || return 3
-        zfs clone ${ZFSVOLUME}@${BUILD} ${ZFSVOLUME}/${BUILD} || return 3
-        zfs set mountpoint=${WRKBASE}/${BUILD} ${ZFSVOLUME}/${BUILD} || return 3
-
-        svn switch ${PARAMS} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports >/dev/null || return 2
+        svn update ${PARAMS} ${TINDERBOX}/portstrees/${PORTSTREE}/ports >/dev/null || return 2
     fi
 
     if [ -z "${REVISION}" ]; then
@@ -254,9 +252,11 @@ build()
     echo "LASTPACKAGEDATE=\"${LASTPACKAGEDATE}\"" >> ${LOCK}
 
     if [ -f "${TINDERBOX}/portstrees/${PORTSTREE}/ports/${PORT}/Makefile" ]; then
-        PKGVERSION=`cd ${TINDERBOX}/portstrees/${PORTSTREE}/ports/${PORT} && make -V PKGVERSION`
-        echo "PKGVERSION=\"${PKGVERSION}\"" >> ${LOCK}
-        echo "PKGVERSION=${PKGVERSION}"
+        if cd ${TINDERBOX}/portstrees/${PORTSTREE}/ports/${PORT} && make -V PKGVERSION >/dev/null 2>/dev/null ; then
+            PKGVERSION=`cd ${TINDERBOX}/portstrees/${PORTSTREE}/ports/${PORT} && make -V PKGVERSION`
+            echo "PKGVERSION=\"${PKGVERSION}\"" >> ${LOCK}
+            echo "PKGVERSION=${PKGVERSION}"
+        fi
 
         ${TINDERBOX}/scripts/tc addBuildPortsQueueEntry -b ${BUILD} -d ${PORT} -p ${PRIORITY} 2>/dev/null || return 1
     else

@@ -2,7 +2,6 @@ from trac.core import *
 from trac.util.datefmt import from_utimestamp, pretty_timedelta
 from trac.versioncontrol import RepositoryManager
 from trac.util.translation import _
-from trac.web.session import DetachedSession
 from datetime import datetime
 from time import time
 import math
@@ -206,32 +205,6 @@ class Build(object):
 
     def setStatus(self, status):
         self.status = status
-
-    def notifyEnabled(self):
-        cursor = self.env.get_db_cnx().cursor()
-
-        cursor.execute("SELECT status, owner FROM buildqueue WHERE id = %s", (self.queueid,))
-        if cursor.rowcount != 1:
-            return False
-
-        row = cursor.fetchone()
-
-        if row[0] != 90:
-            return False
-
-        session = DetachedSession(self.env, row[1])
-
-        if not session:
-            return False
-
-        # email not verified or no email set
-        if not session.get('email') or session.get('email_verification_token'):
-            return False
-
-        if not session.get('build_notifications'):
-            return False
-
-        return True
 
     def addBuild(self, groups, ports, req):
         db = self.env.get_db_cnx()
@@ -459,7 +432,7 @@ class Port(object):
 def GlobalBuildqueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
 
-    cursor.execute("SELECT builds.id, builds.buildgroup, builds.portname, builds.pkgversion, builds.status, builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, CASE WHEN builds.enddate < builds.startdate THEN extract(epoch from now())*1000000 ELSE builds.enddate END, buildqueue.id, buildqueue.priority, buildqueue.owner FROM builds, buildqueue WHERE buildqueue.id = builds.queueid AND builds.status < 90 ORDER BY priority, builds.id DESC LIMIT 50")
+    cursor.execute("SELECT builds.id, builds.buildgroup, builds.portname, builds.pkgversion, builds.status, builds.buildstatus, builds.buildreason, builds.buildlog, builds.wrkdir, builds.startdate, CASE WHEN builds.enddate < builds.startdate THEN extract(epoch from now())*1000000 ELSE builds.enddate END, buildqueue.id, buildqueue.priority, buildqueue.owner FROM builds, buildqueue WHERE buildqueue.id = builds.queueid AND builds.status < 90 ORDER BY builds.status DESC, buildqueue.priority, builds.id DESC LIMIT 50")
 
     lastport = None
     for id, group, portname, pkgversion, status, buildstatus, buildreason, buildlog, wrkdir, startdate, enddate, queueid, priority, owner in cursor:
@@ -652,10 +625,24 @@ def BuildgroupsIterator(env, req):
 
 def AvailableBuildgroupsIterator(env, req):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT name FROM buildgroups WHERE name NOT IN (SELECT buildgroup FROM automaticbuildgroups WHERE username = %s) ORDER BY version DESC, name", (req.authname,) )
+    cursor.execute("SELECT name FROM buildgroups WHERE version != '000' AND name NOT IN (SELECT buildgroup FROM automaticbuildgroups WHERE username = %s) ORDER BY version DESC, name", (req.authname,) )
 
     for name in cursor:
         buildgroup = Buildgroup(env, name)
+
+        yield buildgroup
+
+
+def UserBuildgroupsIterator(env):
+    cursor = env.get_db_cnx().cursor()
+    cursor.execute("SELECT name, version, arch, type, description FROM buildgroups WHERE version != '000' ORDER BY version DESC, name")
+
+    for name, version, arch, type, description in cursor:
+        buildgroup = Buildgroup(env, name)
+        buildgroup.version = version
+        buildgroup.arch = arch
+        buildgroup.type = type
+        buildgroup.description = description
 
         yield buildgroup
 

@@ -80,5 +80,5 @@ elif [ "${STATUS}" != "DUD" ]; then
 fi
 
 if [ ! -z "${FINISHURL}" ]; then
-    curl -s "${FINISHURL}" >/dev/null
+    curl -s "${FINISHURL}" >/dev/null 2>/dev/null
 fi
