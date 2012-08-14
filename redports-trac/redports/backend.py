@@ -43,7 +43,7 @@ class BackendConnector(Component):
 
         # https://redports.org/backend/notify/20120105095150-2805
         if req.path_info.startswith("/backend/notify/"):
-            queueid = req.path_info[16:]
+            queueid = req.path_info[16:36]
 
             notifier = BuildNotify(self.env)
             if not notifier.notify(queueid):
