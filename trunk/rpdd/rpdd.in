@@ -17,7 +17,7 @@
 . /etc/rc.subr
 
 name=rpdd
-rcvar=`set_rcvar`
+rcvar=rpdd_enable
 
 command="/usr/local/bin/rpdd"
 pidfile="/var/run/${name}.pid"
