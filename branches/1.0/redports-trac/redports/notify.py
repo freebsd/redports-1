@@ -46,7 +46,7 @@ class BuildNotify(Component):
         if row[0] != 90:
             return False
 
-        if find(row[1], '@'):
+        if find(row[1], '@') != -1:
             return DetachedSession(self.env, "qatbot")
 
         return DetachedSession(self.env, row[1])
@@ -66,7 +66,7 @@ class BuildNotifyEmail(NotifyEmail):
         self.queueid = queueid
         self.data.update(self.template_data())
 
-        if find(self.build.owner, '@'):
+        if find(self.build.owner, '@') != -1:
             self.subject = '[QAT] r%s: %s' % (self.build.revision, self.status)
         else:
             self.subject = '[%s] Build %s completed: %s' % (self.env.project_name, self.queueid, self.status)
@@ -80,9 +80,9 @@ class BuildNotifyEmail(NotifyEmail):
 
     def get_recipients(self, resid):
         to = [self.build.owner]
-        cc = None
+        cc = []
 
-        if find(self.build.owner, '@'):
+        if find(self.build.owner, '@') != -1:
             cc = ['decke@FreeBSD.org', 'beat@FreeBSD.org', 'linimon@FreeBSD.org']
 
         return (to, cc)
