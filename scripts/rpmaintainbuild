@@ -134,6 +134,11 @@ fi
 if [ "${CLEANTEMP}" = "yes" ]; then
     zfs destroy ${ZFSROOT}/tinderbox/${BUILD}/portstree@work 2>/dev/null
 
+    # unmount tmpfs
+    while umount -f ${ZFSROOT}/tinderbox/${BUILD} 2>/dev/null ; do
+        sleep 1
+    done
+
     echo "Removing redports temporary directory for build ${BUILD}"
     rm -rf /tmp/rptinderbox/${BUILD}
 fi
