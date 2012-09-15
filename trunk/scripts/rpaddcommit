@@ -26,7 +26,7 @@ fi
 REPOS=$1
 REV=$2
 USER=`svnlook author -r ${REV} ${REPOS} 2>/dev/null`
-LOGMSG=`svnlook log -r ${REV} ${REPOS} 2>/dev/null`
+LOGMSG=`svnlook log -r ${REV} ${REPOS} | sed -e "s/\'/\'\'/g" 2>/dev/null`
 COMMITROOT=`svnlook changed -r ${REV} ${REPOS} | cut -b5- | cut -d'/' -f1 | uniq`
 
 if [ -z "${USER}" ]; then
@@ -68,7 +68,7 @@ if [ -z "${REPOSITORYID}" ]; then
     exit 1
 fi
 
-SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, '%s');" "${BUILDID}" "${USER}" ${REPOSITORYID} ${REV} 10 ${PRIORITY} ${START} 0 "${LOGMSG}"`
+SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, left('%s', 255));" "${BUILDID}" "${USER}" ${REPOSITORYID} ${REV} 10 ${PRIORITY} ${START} 0 "${LOGMSG}"`
 SQLBUILDS=""
 
 # add affected ports to buildqueue
