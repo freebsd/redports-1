@@ -23,6 +23,11 @@ class BuildqueuePanel(Component):
         else:
             yield('mainnav', 'buildqueue', tag.a(_('Builds'), href=req.href.buildarchive()))
 
+        if req.authname == 'anonymous':
+            yield('mainnav', 'sbrowser', tag.a(_('Browse Source'), href=req.href.browser()))
+        else:
+            yield('mainnav', 'sbrowser', tag.a(_('Browse Source'), href=req.href.browser(req.authname)))
+
     def get_htdocs_dirs(self):
         return [('redports', resource_filename('redports', 'htdocs'))]
 
