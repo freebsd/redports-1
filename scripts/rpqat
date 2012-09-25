@@ -11,7 +11,7 @@
 PATH=${PATH}:/usr/local/bin
 
 REVISIONSTORE=/tmp/rpqat.idx
-REPOSITORY=http://svn.freebsd.org/ports/head
+REPOSITORY=http://svn0.us-east.FreeBSD.org/ports/head
 
 USER=qatbot
 PRIORITY=1
