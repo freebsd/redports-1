@@ -500,6 +500,18 @@ int handleStep80(void)
                 RETURN_ROLLBACK(conn);
         }
 
+        loginfo("Checking build %s on backend %s", PQgetvalue(result2, 0, 4), PQgetvalue(result2, 0, 1));
+
+        sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
+        		PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 4));
+        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_SHORTTIMEOUT) != CURLE_OK)
+        {
+            logcgi(url, getenv("ERROR"));
+
+            if(!PQupdate(conn, "UPDATE backendbuilds SET status = 2 WHERE id = %ld", atol(PQgetvalue(result2, 0, 5))))
+                RETURN_ROLLBACK(conn);
+        }
+
         if(recalcBuildPriority(conn, atol(PQgetvalue(result, i, 0))) != 0)
            RETURN_ROLLBACK(conn);
 
