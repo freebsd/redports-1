@@ -44,6 +44,7 @@
 #include "steputil.h"
 #include "util.h"
 #include "rpdd.h"
+#include "remote.h"
 
 void usage(void);
 void version(void);
@@ -84,7 +85,7 @@ void run(void)
                     exit(0);
                 }
                 setlastrun(step);
-                usleep(250000);
+                usleep(750000);
                 break;
             }
         }
@@ -186,6 +187,8 @@ int main(int argc, char *argv[])
 
     logwrite(LOG_INFO, "-------------------------------");
     logwrite(LOG_INFO, "%s/%s started", DAEMON_NAME, RPD_VERSION);
+
+    curl_global_init(CURL_GLOBAL_DEFAULT);
 
     if(daemonize)
     {
