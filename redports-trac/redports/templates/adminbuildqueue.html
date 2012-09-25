@@ -34,7 +34,7 @@
                   $port.portname <py:if test="port.pkgversion">$port.pkgversion</py:if>
                 </a>
               </td>
-              <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
+              <td><a href="/buildgroups?group=$port.group">$port.group</a></td>
               <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
               <td>$port.runtime</td>
               <td>$port.priorityname</td>
