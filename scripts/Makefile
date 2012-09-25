@@ -1,7 +1,7 @@
 # redports scripts Makefile
 
 TARGET=/usr/local/bin
-FRONTENDFILES=rpaddcommit rparchivesvn rpcreateaccount
+FRONTENDFILES=rpaddcommit rparchivesvn rpcreateaccount rpqat
 BACKENDFILES=rpcreatebuild rpmaintainbuild
 PRTOOLFILES=rpfetchpr rpcommitpr rpwatchpr
 

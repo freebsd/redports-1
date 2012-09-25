@@ -28,6 +28,8 @@
 #include <stdlib.h>
 #include <curl/curl.h>
 
+#include "log.h"
+
 char pagebuffer[4096];
 char *ppagebuffer;
 
@@ -52,6 +54,7 @@ int readpage(void *ptr, size_t size, size_t nmemb, FILE *stream);
 
 int getpage(char *url, char *credentials, int timeout)
 {
+    time_t start;
     CURL *curl;
     CURLcode res;
 
@@ -61,7 +64,7 @@ int getpage(char *url, char *credentials, int timeout)
     curl = curl_easy_init();
     if(!curl)
     {
-        setenv("ERROR", curl_easy_strerror(res), 1);
+        setenv("ERROR", "curl initialization failed", 1);
         return CURLE_FAILED_INIT;
     }
 
@@ -74,8 +77,14 @@ int getpage(char *url, char *credentials, int timeout)
     if(credentials != NULL)
         curl_easy_setopt(curl, CURLOPT_USERPWD, credentials);
 
+    start = time(NULL);
+
     res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
+
+    /* only log if consumed time is > 50% of timeout */
+    if(time(NULL)-start > timeout*0.5)
+        loginfo("Request to %s took %ld seconds (timeout %d)", url, (long)(time(NULL)-start), timeout); 
 
     if(res != CURLE_OK)
     {
@@ -97,7 +106,7 @@ int downloadfile(char *url, char *credentials, char *filename)
     curl = curl_easy_init();
     if(!curl)
     {
-        setenv("ERROR", curl_easy_strerror(res), 1);
+        setenv("ERROR", "curl initialization failed", 1);
         return CURLE_FAILED_INIT;
     }
 

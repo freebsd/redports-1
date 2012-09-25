@@ -29,9 +29,9 @@
 
 #include <curl/curl.h>
 
-#define REMOTE_SHORTTIMEOUT	30
-#define REMOTE_TIMEOUT		90
-#define REMOTE_NOTIMEOUT	(-1)
+#define REMOTE_SHORTTIMEOUT	60
+#define REMOTE_TIMEOUT		120
+#define REMOTE_NOTIMEOUT	0
 
 extern int downloadfile(char *url, char *credentials, char *filename);
 extern int getpage(char *url, char *credentials, int timeout);
