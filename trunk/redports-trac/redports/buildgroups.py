@@ -45,10 +45,16 @@ class BuildgroupPanel(Component):
         add_stylesheet(req, 'redports/redports.css')
         add_ctxtnav(req, _('Buildgroups'), req.href.buildgroups())
 
+        if req.args.get('group'):
+            filter = 'for %s' % req.args.get('group')
+        else:
+            filter = ''
+
         return ('buildgroups.html', 
             {   'buildgroups': BuildgroupsIterator(self.env, req),
                 'availablegroups': AvailableBuildgroupsIterator(self.env, req),
                 'buildqueue': GlobalBuildqueueIterator(self.env, req),
+                'queuefilter': filter,
                 'authenticated': (req.authname and req.authname != 'anonymous'),
                 'authname': req.authname
             },  None)
