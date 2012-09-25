@@ -909,6 +909,9 @@ int handleStep31(void)
 
         PQclear(result3);
         PQclear(result2);
+
+        /* we've successfully started a build so be sure to commit */
+        break;
     }
 
     PQclear(result);
