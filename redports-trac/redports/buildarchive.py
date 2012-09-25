@@ -12,7 +12,6 @@ from pkg_resources import resource_filename
 import re
 
 from model import BuildarchiveIterator, BuildqueueIterator
-from buildqueue import render_ctxtnav
 
 class BuildarchivePanel(Component):
     implements(INavigationContributor, ITemplateProvider, IRequestHandler, IPermissionRequestor)
@@ -21,7 +20,7 @@ class BuildarchivePanel(Component):
         """Number of builds displayed per page in buildarchive""")
 
     def get_active_navigation_item(self, req):
-        return 'buildqueue'
+        return 'buildarchive'
 
     def get_navigation_items(self, req):
         return ""
@@ -40,7 +39,7 @@ class BuildarchivePanel(Component):
         uriparts = req.path_info.split('/')
 
         add_stylesheet(req, 'redports/redports.css')
-        render_ctxtnav(req)
+        add_ctxtnav(req, _('All'), req.href.buildarchive())
 
         if len(uriparts) == 2 or (len(uriparts) == 3 and len(uriparts[2]) < 1):
             # Buildarchive list
