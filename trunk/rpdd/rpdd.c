@@ -85,7 +85,7 @@ void run(void)
                     exit(0);
                 }
                 setlastrun(step);
-                usleep(250000);
+                usleep(750000);
                 break;
             }
         }
