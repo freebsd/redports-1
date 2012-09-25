@@ -63,7 +63,7 @@
                 </form>
               </td>
               <td py:if="authenticated">$group.priorityname</td>
-              <td><a href="#id-$group.name" id="id-$group.name">$group.name</a></td>
+              <td><a href="?group=$group.name">$group.name</a></td>
               <td class="status-$group.status">$group.available</td>
               <td>$group.queued</td>
               <td>$group.description</td>
@@ -73,7 +73,7 @@
 
         <br style="clear: right" />
 
-        <h2>Buildqueue</h2>
+        <h2>Buildqueue ${queuefilter}</h2>
 
         <table class="listing">
           <thead>
@@ -95,7 +95,7 @@
                     $port.portname <py:if test="port.pkgversion">$port.pkgversion</py:if>
                   </a>
                 </td>
-                <td><a href="/buildgroups#id-$port.group">$port.group</a></td>
+                <td><a href="/buildgroups?group=$port.group">$port.group</a></td>
                 <td class="status-$port.buildstatus"><a href="/wiki/Buildstatus" title="($port.status) $port.buildstatus">$port.statusname</a></td>
                 <td>$port.runtime</td>
                 <td>$port.priorityname</td>
