@@ -10,7 +10,6 @@ from pkg_resources import resource_filename
 import re
 
 from model import Buildgroup, BuildgroupsIterator, AvailableBuildgroupsIterator, GlobalBuildqueueIterator
-from buildqueue import render_ctxtnav
 
 class BuildgroupPanel(Component):
     implements(INavigationContributor, ITemplateProvider, IRequestHandler, IPermissionRequestor)
@@ -44,12 +43,18 @@ class BuildgroupPanel(Component):
             req.redirect(req.href.buildgroups())
         
         add_stylesheet(req, 'redports/redports.css')
-        render_ctxtnav(req)
+        add_ctxtnav(req, _('Buildgroups'), req.href.buildgroups())
+
+        if req.args.get('group'):
+            filter = 'for %s' % req.args.get('group')
+        else:
+            filter = ''
 
         return ('buildgroups.html', 
             {   'buildgroups': BuildgroupsIterator(self.env, req),
                 'availablegroups': AvailableBuildgroupsIterator(self.env, req),
                 'buildqueue': GlobalBuildqueueIterator(self.env, req),
+                'queuefilter': filter,
                 'authenticated': (req.authname and req.authname != 'anonymous'),
                 'authname': req.authname
             },  None)
