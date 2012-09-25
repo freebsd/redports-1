@@ -19,13 +19,16 @@ class BuildqueuePanel(Component):
 
     def get_navigation_items(self, req):
         if 'BUILDQUEUE_VIEW' in req.perm('buildqueue'):
-            yield('mainnav', 'buildqueue', tag.a(_('Your Builds'), href=req.href.buildqueue()))
+            yield('mainnav', 'buildarchive', tag.a(_('Archive'), href=req.href.buildarchive(owner=req.authname)))
+            yield('mainnav', 'buildqueue', tag.a(_('Builds'), href=req.href.buildqueue()))
         else:
-            yield('mainnav', 'buildqueue', tag.a(_('Builds'), href=req.href.buildarchive()))
+            yield('mainnav', 'buildarchive', tag.a(_('Archive'), href=req.href.buildarchive()))
 
         if req.authname == 'anonymous':
+            yield('mainnav', 'swiki', tag.a(_('Wiki'), href=req.href.wiki()))
             yield('mainnav', 'sbrowser', tag.a(_('Browse Source'), href=req.href.browser()))
         else:
+            yield('mainnav', 'swiki', tag.a(_('Wiki'), href=req.href.wiki('Users')+'/'+req.authname))
             yield('mainnav', 'sbrowser', tag.a(_('Browse Source'), href=req.href.browser(req.authname)))
 
     def get_htdocs_dirs(self):
@@ -67,7 +70,7 @@ class BuildqueuePanel(Component):
             add_warning(req, e.message);
 
         add_stylesheet(req, 'redports/redports.css')
-        render_ctxtnav(req)
+        add_ctxtnav(req, _('Environments'), req.href.buildgroups())
 
         return ('buildqueue.html', 
             {   'buildqueue': BuildqueueIterator(self.env, req),
@@ -79,10 +82,3 @@ class BuildqueuePanel(Component):
     def get_permission_actions(self):
         return ['BUILDQUEUE_VIEW']
 
-def render_ctxtnav(req):
-    if 'BUILDQUEUE_VIEW' in req.perm('buildqueue'):
-        add_ctxtnav(req, _('Your Builds'), req.href.buildqueue())
-        add_ctxtnav(req, _('Your Archive'), req.href.buildarchive(owner=req.authname))
-
-    add_ctxtnav(req, _('Buildgroups'), req.href.buildgroups())
-    add_ctxtnav(req, _('Archive'), req.href.buildarchive())
