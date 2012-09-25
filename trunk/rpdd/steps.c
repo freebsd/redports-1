@@ -909,6 +909,7 @@ int handleStep31(void)
 int handleStep30(void)
 {
     PGconn *conn;
+    PGresult *reslock;
     PGresult *result;
     PGresult *result2;
     PGresult *result3;
@@ -919,12 +920,35 @@ int handleStep30(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT builds.id, backendid, buildgroup, revision, buildqueue.id FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND builds.status = 30 FOR UPDATE NOWAIT");
+    result = PQexec(conn, "SELECT builds.id, backendid, buildgroup, revision, buildqueue.id FROM builds, buildqueue WHERE builds.queueid = buildqueue.id AND builds.status = 30");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
     for(i=0; i < PQntuples(result); i++)
     {
+        loginfo("Trying to lock build %s / %ld", PQgetvalue(result, i, 4), PQgetvalue(result, i, 0));
+
+        reslock = PQselect(conn, "SELECT id FROM buildqueue WHERE id = '%s' FOR UPDATE NOWAIT", PQgetvalue(result, i, 4));
+        if (PQresultStatus(reslock) != PGRES_TUPLES_OK || PQntuples(reslock) != 1)
+        {
+            if (strcmp(PQgetErrorCode(reslock), PQERROR_LOCK_NOT_AVAILABLE) == 0)
+            {
+                logwarn("Could not lock buildqueue entry %s. Continuing.", PQgetvalue(result, i, 4));
+
+                reslock = PQexec(conn, "ROLLBACK");
+                if (PQresultStatus(reslock) != PGRES_COMMAND_OK)
+                    RETURN_ROLLBACK(conn);
+
+                reslock = PQexec(conn, "BEGIN");
+                if (PQresultStatus(reslock) != PGRES_COMMAND_OK)
+                    RETURN_ROLLBACK(conn);
+
+                continue;
+            }
+
+            RETURN_ROLLBACK(conn);
+        }
+
         loginfo("Trying to lock backend %s for buildgroup %s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2));
 
         result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
@@ -941,11 +965,13 @@ int handleStep30(void)
             continue;
         }
          
-
         sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
         		PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 4));
         if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_SHORTTIMEOUT) != CURLE_OK || (getenv("STATUS") != NULL && strcmp(getenv("STATUS"), "idle") != 0))
         {
+           if(getenv("STATUS") != NULL && strcmp(getenv("STATUS"), "busy") == 0)
+              logwarn("Status of backendbuild %s should be IDLE is: %s", PQgetvalue(result2, 0, 4), getenv("STATUS"));
+
            if(getenv("ERROR") != NULL)
               logcgi(url, getenv("ERROR"));
            
@@ -986,6 +1012,9 @@ int handleStep30(void)
         PQclear(result4);
         PQclear(result3);
         PQclear(result2);
+
+        /* we've successfully checked out a build so be sure to commit */
+        break;
     }
          
     PQclear(result);
