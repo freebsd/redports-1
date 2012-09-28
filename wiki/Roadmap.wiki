@@ -1,16 +1,26 @@
 = Roadmap =
 
+== 1.0.1 (October 2012) ==
+  * Migrate to Trac 1.0
+  * Bugfixes
+
+
 == 1.1.0 (Q2 2012) ==
-  * poudriere based backend
-  * Patch building support
-  * Package building support
-  * QAT support
+  * Shared package cache
+  * Build specific shared cache
   * Stop running builds
+  * Migrate Trac DB API usage to Trac 1.0
+  * redqueue integration
+    * rpbackend daemon for calling rptinderbox
+    * minimum rpdd changes (still synchronous)
 
 
 == Future ==
-  * Sanity backend (portlint)
+  * rpdd rewrite using STOMP (asynchronous)
   * Port Options (make.conf) support
+  * poudriere based backend
+  * Patch building support
+  * Sanity backend (portlint)
   * rpclient script support (submit, status)
   * Generate and send patch PRs (new backend type, Email as notifications)
 
