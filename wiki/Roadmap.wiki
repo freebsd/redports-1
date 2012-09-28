@@ -2,6 +2,7 @@
 
 == 1.0.1 (October 2012) ==
   * Migrate to Trac 1.0
+  * Tinderbox jail support
   * Bugfixes
 
 
@@ -20,9 +21,11 @@
   * Port Options (make.conf) support
   * poudriere based backend
   * Patch building support
-  * Sanity backend (portlint)
+  * Sanity environment (portlint, port-mgmt/pchecker)
+  * Web API
   * rpclient script support (submit, status)
   * Generate and send patch PRs (new backend type, Email as notifications)
+
 
 
 ----
