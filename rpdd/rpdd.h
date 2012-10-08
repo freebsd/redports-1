@@ -32,6 +32,6 @@
 #define CONF_FILE "rpdd.conf"
 #define PID_FILE "/var/run/rpdd.pid"
  
-#define MAXCHILDS 5
+#define MAXCHILDS 16
  
 #endif /* _RPDD_H_ */
