@@ -1054,7 +1054,8 @@ int handleStep20(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT builds.id, builds.buildgroup, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status < 90 AND builds.status = 20 AND builds.backendid = 0 ORDER BY priority, builds.id DESC");
+    result = PQexec(conn, "SELECT DISTINCT ON (buildgroup) buildgroup, id, queueid FROM (SELECT builds.id, builds.buildgroup, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status < 90 AND builds.status = 20 AND builds.backendid = 0 ORDER BY priority, builds.id DESC) as query");
+
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
@@ -1081,13 +1082,13 @@ int handleStep20(void)
             RETURN_ROLLBACK(conn);
         }
 
-        result2 = PQselect(conn, "SELECT backendid, maxparallel FROM backendbuilds, backends WHERE backendid = backends.id AND buildgroup = '%s' AND backendbuilds.status = 1 AND backends.status = 1 ORDER BY priority", PQgetvalue(result, i, 1));
+        result2 = PQselect(conn, "SELECT backendid, maxparallel FROM backendbuilds, backends WHERE backendid = backends.id AND buildgroup = '%s' AND backendbuilds.status = 1 AND backends.status = 1 ORDER BY priority", PQgetvalue(result, i, 0));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK)
             RETURN_ROLLBACK(conn);
 
         if(PQntuples(result2) < 1)
         {
-            logdebug("No backend available for buildgroup %s", PQgetvalue(result, i, 1));
+            logdebug("No backend available for buildgroup %s", PQgetvalue(result, i, 0));
             continue;
         }
 
@@ -1099,17 +1100,17 @@ int handleStep20(void)
 
             if(atoi(PQgetvalue(result3, 0, 0)) < atoi(PQgetvalue(result2, j, 1)))
             {
-                result4 = PQselect(conn, "SELECT count(*) FROM builds WHERE backendid = %ld AND buildgroup = '%s' AND status >= 30 AND status < 90", atol(PQgetvalue(result2, j, 0)), PQgetvalue(result, i, 1));
+                result4 = PQselect(conn, "SELECT count(*) FROM builds WHERE backendid = %ld AND buildgroup = '%s' AND status >= 30 AND status < 90", atol(PQgetvalue(result2, j, 0)), PQgetvalue(result, i, 0));
                 if (PQresultStatus(result4) != PGRES_TUPLES_OK)
                     RETURN_ROLLBACK(conn);
 
-                logdebug("Running %d jobs for group %s", atoi(PQgetvalue(result4, 0, 0)), PQgetvalue(result, i, 1));
+                logdebug("Running %d jobs for group %s", atoi(PQgetvalue(result4, 0, 0)), PQgetvalue(result, i, 0));
 
                 if(atoi(PQgetvalue(result4, 0, 0)) == 0)
                 {
-                    loginfo("Choose backend %s for build %s", PQgetvalue(result2, j, 0), PQgetvalue(result, i, 0));
+                    loginfo("Choose backend %s for build %s", PQgetvalue(result2, j, 0), PQgetvalue(result, i, 1));
 
-                    if(!PQupdate(conn, "UPDATE builds SET backendid = %ld, status = 30, startdate = %lli WHERE id = %ld", atol(PQgetvalue(result2, j, 0)), microtime(), atol(PQgetvalue(result, i, 0))))
+                    if(!PQupdate(conn, "UPDATE builds SET backendid = %ld, status = 30, startdate = %lli WHERE id = %ld", atol(PQgetvalue(result2, j, 0)), microtime(), atol(PQgetvalue(result, i, 1))))
                         RETURN_ROLLBACK(conn);
 
                     done++;
