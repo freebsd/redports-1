@@ -103,7 +103,11 @@ checkout()
             return 2
         fi
 
-        svn update ${PARAMS} ${TINDERBOX}/portstrees/${PORTSTREE}/ports >/dev/null || return 2
+        CURREVISION=`svn info --xml ${TINDERBOX}/portstrees/${PORTSTREE}/ports | xml sel -t -m "/info/entry" -v "@revision"`
+
+        PORTS=`svn diff -r ${CURREVISION}:${REVISION} --summarize --xml ${TINDERBOX}/portstrees/${PORTSTREE}/ports | xml sel -t -m "/diff/paths/path" -v "node()" -n | cut -d'/' -f8-9 | sort | uniq | grep -v '^$' | xargs`
+
+        cd ${TINDERBOX}/portstrees/${PORTSTREE}/ports && svn update ${PARAMS} ${PORTS} >/dev/null || return 2
     fi
 
     if [ -z "${REVISION}" ]; then
