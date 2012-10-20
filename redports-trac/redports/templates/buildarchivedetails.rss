@@ -24,7 +24,7 @@
         <guid>${abs_href.buildarchive(build.queueid)}/#${port.id}</guid>
         <description>
             Port: $port.portname $port.pkgversion&lt;br /&gt;
-            Builgroup: $port.group&lt;br /&gt;
+            Buildgroup: $port.group&lt;br /&gt;
             Buildstatus: ${port.statusname.upper()}&lt;br /&gt;
             <py:if test="port.buildlog">
                 Log: $project.url$port.directory/$port.buildlog
