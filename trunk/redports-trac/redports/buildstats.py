@@ -33,7 +33,8 @@ class BuildstatsPanel(Component):
     def process_request(self, req):
         add_stylesheet(req, 'redports/redports.css')
         add_script(req, 'redports/flot/jquery.flot.js')
-        add_ctxtnav(req, _('Buildgroups'), req.href.buildgroups())
+        add_ctxtnav(req, _('Environments'), req.href.buildgroups())
+        add_ctxtnav(req, _('Statistics'), req.href.buildstats())
 
         return ('buildstats.html', 
             {   'alljobs': BuildstatsAllIterator(self.env),
