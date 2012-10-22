@@ -1,0 +1,42 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/"
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="layout.html" />
+  <xi:include href="macros.html" />
+  <head>
+    <title>Redports Statistics</title>
+  </head>
+
+  <body>
+      <div id="content">
+        <h1>Jobs Statistics</h1>
+
+        <div id="placeholder" style="width:800px;height:500px"></div>
+      </div>
+
+<script type="text/javascript">
+$(function () {
+    var qatjobs = [
+    <py:for each="jnum, job in enumerate(qatjobs)">${jnum is not 0 and ',' or ''} [ <py:for each="dnum, data in enumerate(job)">${dnum is not 0 and ',' or ''} ${data}</py:for>]</py:for>
+    ];
+
+    var alljobs = [
+    <py:for each="jnum, job in enumerate(alljobs)">${jnum is not 0 and ',' or ''} [ <py:for each="dnum, data in enumerate(job)">${dnum is not 0 and ',' or ''} ${data}</py:for>]</py:for>
+    ];
+
+    $.plot($("#placeholder"), [
+      { data: alljobs, label: "# all jobs" },
+      { data: qatjobs, label: "# QAT jobs" },
+    ],
+      { xaxis: { mode: "time" },
+        yaxis: { min: 0 }
+      }
+    );
+});
+</script>
+
+  </body>
+</html>
