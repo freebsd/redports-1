@@ -43,7 +43,8 @@ class BuildgroupPanel(Component):
             req.redirect(req.href.buildgroups())
         
         add_stylesheet(req, 'redports/redports.css')
-        add_ctxtnav(req, _('Buildgroups'), req.href.buildgroups())
+        add_ctxtnav(req, _('Environments'), req.href.buildgroups())
+        add_ctxtnav(req, _('Statistics'), req.href.buildstats())
 
         if req.args.get('group'):
             filter = 'for %s' % req.args.get('group')

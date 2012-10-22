@@ -71,6 +71,7 @@ class BuildqueuePanel(Component):
 
         add_stylesheet(req, 'redports/redports.css')
         add_ctxtnav(req, _('Environments'), req.href.buildgroups())
+        add_ctxtnav(req, _('Statistics'), req.href.buildstats())
 
         return ('buildqueue.html', 
             {   'buildqueue': BuildqueueIterator(self.env, req),

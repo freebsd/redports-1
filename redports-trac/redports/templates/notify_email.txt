@@ -18,7 +18,7 @@ $build.description
     Port:            $port.portname $port.pkgversion
 
 {%  end if %}\
-      Builgroup:     $port.group
+      Buildgroup:     $port.group
       Buildstatus:   ${port.statusname.upper()}
 {%    if port.buildlog %}\
       Log: $project.url$port.directory/$port.buildlog

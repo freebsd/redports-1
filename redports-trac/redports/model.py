@@ -817,3 +817,17 @@ class BuildarchiveIterator(object):
                 build.ports.append(port)
 
             yield build
+
+def BuildstatsAllQATIterator(env):
+    cursor = env.get_db_cnx().cursor()
+    cursor.execute("SELECT EXTRACT(epoch FROM date)*1000, count FROM (SELECT DATE_TRUNC('day', TO_TIMESTAMP(enddate/1000000))::timestamptz date, COUNT(*) FROM (SELECT max(enddate) enddate FROM builds WHERE buildgroup LIKE '%QAT%' GROUP BY queueid, portname) base WHERE 1=1 GROUP BY DATE_TRUNC('day', TO_TIMESTAMP(enddate/1000000)) ORDER BY 1 DESC LIMIT 30) src WHERE EXTRACT(epoch FROM src.date)::int > 0")
+
+    for date, sum in cursor:
+        yield [date, sum]
+
+def BuildstatsAllIterator(env):
+    cursor = env.get_db_cnx().cursor()
+    cursor.execute("SELECT EXTRACT(epoch FROM date)*1000, count FROM (SELECT DATE_TRUNC('day', TO_TIMESTAMP(enddate/1000000))::timestamptz date, COUNT(*) FROM (SELECT max(enddate) enddate FROM builds WHERE 1=1 GROUP BY queueid, portname) base WHERE 1=1 GROUP BY DATE_TRUNC('day', TO_TIMESTAMP(enddate/1000000)) ORDER BY 1 DESC LIMIT 30) src WHERE EXTRACT(epoch FROM src.date)::int > 0")
+
+    for date, sum in cursor:
+        yield [date, sum]
