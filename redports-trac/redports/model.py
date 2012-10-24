@@ -820,14 +820,14 @@ class BuildarchiveIterator(object):
 
 def BuildstatsAllQATIterator(env):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT EXTRACT(epoch FROM date)*1000, count FROM (SELECT DATE_TRUNC('day', TO_TIMESTAMP(enddate/1000000))::timestamptz date, COUNT(*) FROM buildqueue WHERE owner LIKE '%@FreeBSD.org' GROUP BY DATE_TRUNC('day', TO_TIMESTAMP(enddate/1000000)) ORDER BY 1 DESC LIMIT 30) src WHERE EXTRACT(epoch FROM src.date)::int > 0")
+    cursor.execute("SELECT EXTRACT(epoch FROM date)*1000, count FROM (SELECT DATE_TRUNC('day', TO_TIMESTAMP(enddate/1000000))::timestamptz date, COUNT(*) FROM (SELECT enddate FROM builds WHERE enddate > 0 AND buildgroup LIKE '%QAT%') base WHERE 1=1 GROUP BY DATE_TRUNC('day', TO_TIMESTAMP(enddate/1000000)) ORDER BY 1 DESC LIMIT 30) src WHERE EXTRACT(epoch FROM src.date)::int > 0")
 
     for date, sum in cursor:
         yield [date, sum]
 
 def BuildstatsAllIterator(env):
     cursor = env.get_db_cnx().cursor()
-    cursor.execute("SELECT EXTRACT(epoch FROM date)*1000, count FROM (SELECT DATE_TRUNC('day', TO_TIMESTAMP(enddate/1000000))::timestamptz date, COUNT(*) FROM buildqueue WHERE 1=1 GROUP BY DATE_TRUNC('day', TO_TIMESTAMP(enddate/1000000)) ORDER BY 1 DESC LIMIT 30) src WHERE EXTRACT(epoch FROM src.date)::int > 0")
+    cursor.execute("SELECT EXTRACT(epoch FROM date)*1000, count FROM (SELECT DATE_TRUNC('day', TO_TIMESTAMP(enddate/1000000))::timestamptz date, COUNT(*) FROM (SELECT enddate FROM builds WHERE enddate > 0) base WHERE 1=1 GROUP BY DATE_TRUNC('day', TO_TIMESTAMP(enddate/1000000)) ORDER BY 1 DESC LIMIT 30) src WHERE EXTRACT(epoch FROM src.date)::int > 0")
 
     for date, sum in cursor:
         yield [date, sum]
