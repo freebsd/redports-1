@@ -9,7 +9,7 @@ from genshi.builder import tag
 from pkg_resources import resource_filename
 import re
 
-from model import BuildstatsAllIterator, BuildstatsAllQATIterator
+from model import BuildstatsAllIterator, BuildstatsAllQATIterator, BuildstatsUserIterator
 
 class BuildstatsPanel(Component):
     implements(INavigationContributor, ITemplateProvider, IRequestHandler, IPermissionRequestor)
@@ -36,9 +36,19 @@ class BuildstatsPanel(Component):
         add_ctxtnav(req, _('Environments'), req.href.buildgroups())
         add_ctxtnav(req, _('Statistics'), req.href.buildstats())
 
+        if req.args.get('owner', None) != None:
+            username = req.args.get('owner', None)
+        elif req.authname != 'anonymous':
+            username = req.authname
+        else:
+            username = None
+        
+
         return ('buildstats.html', 
             {   'alljobs': BuildstatsAllIterator(self.env),
                 'qatjobs': BuildstatsAllQATIterator(self.env),
+                'userjobs': BuildstatsUserIterator(self.env, username),
+                'userjobname': username,
                 'authname': req.authname
             },  None)
 

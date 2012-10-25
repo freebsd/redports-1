@@ -831,3 +831,10 @@ def BuildstatsAllIterator(env):
 
     for date, sum in cursor:
         yield [date, sum]
+
+def BuildstatsUserIterator(env, username):
+    cursor = env.get_db_cnx().cursor()
+    cursor.execute("SELECT EXTRACT(epoch FROM date)*1000, count FROM (SELECT DATE_TRUNC('day', TO_TIMESTAMP(enddate/1000000))::timestamptz date, COUNT(*) FROM (SELECT builds.enddate FROM builds, buildqueue WHERE buildqueue.id = builds.queueid AND buildqueue.owner = %s) base WHERE 1=1 GROUP BY DATE_TRUNC('day', TO_TIMESTAMP(enddate/1000000)) ORDER BY 1 DESC LIMIT 30) src WHERE EXTRACT(epoch FROM src.date)::int > 0", (username, ))
+
+    for date, sum in cursor:
+        yield [date, sum]
