@@ -970,7 +970,7 @@ int handleStep30(void)
         if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
            RETURN_ROLLBACK(conn);
 
-        result4 = PQselect(conn, "SELECT count(*) FROM builds WHERE backendid = %ld AND buildgroup = '%s' AND status >= 30 AND status < 70", atol(PQgetvalue(result, i, 0)), PQgetvalue(result, i, 2));
+        result4 = PQselect(conn, "SELECT count(*) FROM builds WHERE backendid = %ld AND buildgroup = '%s' AND status >= 30 AND status < 90", atol(PQgetvalue(result, i, 0)), PQgetvalue(result, i, 2));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
            RETURN_ROLLBACK(conn);
 
