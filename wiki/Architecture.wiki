@@ -1,6 +1,6 @@
 = Redports Architecture =
 
-https://lh5.googleusercontent.com/-hM4mwUVWoVI/UCU_lZgOaTI/AAAAAAAAAlk/7ilbspKw7PA/s630/redports-2.0-arch.png
+https://lh4.googleusercontent.com/-0E9CNSant60/UMHJm5JXxvI/AAAAAAAAAo0/82NIYYiQKcg/s595/redports-arch.png
 
 ==Repository==
   [http://subversion.apache.org/ Subversion Repository] for users
