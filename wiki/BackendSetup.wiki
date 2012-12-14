@@ -25,11 +25,8 @@ For the system we need [http://wiki.freebsd.org/ZFS ZFS] because of the snapshot
 You also need to install all the required ports listed above.
 
 __SSL Certificate Validation:__
-For subversion to be able to validate the SSL certificate of svn.redports.org you need to trust the root certificate of StartSSL. That can easily be done by installing ca_root_nss and symlinking the place where OpenSSL looks to the ca-root-nss certs. 
+For subversion to be able to validate the SSL certificate of svn.redports.org you need to trust the root certificate of StartSSL. That can easily be done by installing security/ca_root_nss and enabling ETCSYMLINK options.
 
-{{{
-ln -s /usr/local/share/certs/ca-root-nss.crt /etc/ssl/cert.pem
-}}}
 
 __Hardware considerations (minimum):__
   * CPU: 4 cores or more
