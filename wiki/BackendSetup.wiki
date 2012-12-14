@@ -42,6 +42,17 @@ __Hardware considerations (minimum):__
 
 Install your tinderbox as you always do.
 
+*/etc/rc.conf*:
+{{{
+mysql_enable="YES"
+nginx_enable="YES"
+
+tinderd_enable="YES"
+tinderd_directory="/usr/local/tinderbox/scripts"
+tinderd_flags="-nullfs -onceonly"
+tinderd_instances="4"
+}}}
+
 {{{
 cd /usr/local/tinderbox/scripts
 ./tc Setup
@@ -65,10 +76,10 @@ Now we need to setup the CGI part of rptinderbox. If you want to use Apache for 
 
 */etc/rc.conf*:
 {{{
-spawn_fcgi_enable=\"YES\"
-spawn_fcgi_app=\"/usr/local/sbin/fcgiwrap\"
-spawn_fcgi_app_args=\"-c 2\"
-spawn_fcgi_bindport=\"9001\"
+spawn_fcgi_enable="YES"
+spawn_fcgi_app="/usr/local/sbin/fcgiwrap"
+spawn_fcgi_app_args="-c 2"
+spawn_fcgi_bindsocket="/tmp/fastcgi.socket"
 }}}
 
 Download rptinderbox and copy everything to /usr/local/www/rptinderbox.
@@ -80,9 +91,9 @@ Now we need to setup nginx to protect our cgi scripts because we don't want to l
 http {
     include       mime.types;
     default_type  text/plain;
-    # don't forget to add \"log\" to text/plain in mime.types
+    # don't forget to add "log" to text/plain in mime.types
 
-    sendfile        on;
+    sendfile        off;
     keepalive_timeout  10;
 
     gzip on;
@@ -98,7 +109,7 @@ http {
         }
 
         location /rptinderbox/ {
-            auth_basic    \"Redports Backend\";
+            auth_basic    "Redports Backend";
             auth_basic_user_file htpasswd;
             fastcgi_pass  127.0.0.1:9001;
             fastcgi_param SCRIPT_FILENAME /usr/local/www$fastcgi_script_name;
@@ -131,7 +142,8 @@ http {
 
 */usr/local/etc/sudoers*:
 {{{
-%www ALL=(ALL) NOPASSWD: ALL
+# www user is allowed to call rptinderbox script without password
+%www ALL=NOPASSWD: /usr/local/www/rptinderbox/rptinderbox
 }}}
 
 
