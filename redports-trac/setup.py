@@ -18,7 +18,7 @@ setup(
     """,
     zip_safe=True,
     packages=[PACKAGE],
-    package_data={PACKAGE : ['templates/*', 'htdocs/flot/*', 'htdocs/*.png']},
+    package_data={PACKAGE : ['templates/*', 'htdocs/flot/*', 'htdocs/*.css', 'htdocs/*.png']},
     entry_points = {
         'trac.plugins': [
             'redports.db = redports.db',
