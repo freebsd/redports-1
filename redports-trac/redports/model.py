@@ -600,6 +600,15 @@ class Buildgroup(object):
         cursor.execute("INSERT INTO buildgroups (name, version, arch, type, description) VALUES(%s, %s, %s, %s, %s)", ( self.name, self.version, self.arch, self.type, self.description) )
         db.commit()
 
+   def deleteAllJobs(self):
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        
+        cursor.execute("SELECT id FROM builds WHERE status < 30 AND buildgroup = %s", ( self.name, ))
+        for id in cursor:
+            port = Port(self.env, id)
+            port.delete()
+        db.commit()
 
 def BuildgroupsIterator(env, req):
    cursor = env.get_db_cnx().cursor()
