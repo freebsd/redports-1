@@ -122,6 +122,11 @@ class AdminPanel(Component):
                 buildgroup = Buildgroup(self.env, req.args.get('buildgroup'))
                 buildgroup.delete()
                 req.redirect(req.href.admin('redports/buildgroups'))
+            elif req.args.get('deleteAllJobs') and req.args.get('buildgroup'):
+                buildgroup = Buildgroup(self.env, req.args.get('buildgroup'))
+                buildgroup.deleteAllJobs()
+                add_notice(req, "Jobs for group %s deleted" % req.args.get('buildgroup'))
+                req.redirect(req.href.admin('redports/buildgroups'))
             elif req.args.get('add'):
                 buildgroup = Buildgroup(self.env, req.args.get('buildgroup'))
                 buildgroup.version = req.args.get('version')
