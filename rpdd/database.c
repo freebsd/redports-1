@@ -45,7 +45,7 @@ PGconn* PQautoconnect(void)
     PGconn *conn = NULL;
     PGresult *res;
 
-    sprintf(conninfo, "user=%s password=%s dbname=%s hostaddr=%s port=%s",
+    snprintf(conninfo, sizeof(conninfo), "user='%s' password='%s' dbname='%s' hostaddr='%s' port='%s'",
         configget("dbUsername"), configget("dbPassword"), configget("dbDatabase"),
         configget("dbHost"), "5432");
 
