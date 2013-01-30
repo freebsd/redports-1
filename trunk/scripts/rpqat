@@ -16,7 +16,7 @@ REPOSITORY=http://svn0.us-east.FreeBSD.org/ports/head
 USER=qatbot
 PRIORITY=1
 DBNAME=trac
-DBUSER=trac
+DBUSER=dispatcher
 
 START=`date +"%s"`000000
 
