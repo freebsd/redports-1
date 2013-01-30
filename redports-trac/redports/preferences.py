@@ -9,7 +9,8 @@ class RedportsPreferencePanel(Component):
 
     # IPreferencePanelProvider methods
     def get_preference_panels(self, req):
-        yield ('builds', 'Builds')
+        if 'BUILDQUEUE_VIEW' in req.perm('buildqueue'):
+            yield ('builds', 'Builds')
 
     def render_preference_panel(self, req, panel):
         if req.method == 'POST':
