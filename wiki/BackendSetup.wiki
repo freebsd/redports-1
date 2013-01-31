@@ -98,8 +98,8 @@ http {
     gzip_comp_level 4;
 
     server {
-        listen       188.20.160.67;
-        server_name  tb3.bluelife.at;
+        listen       80;
+        server_name  backend1;
 
         location / {
             root /usr/local/www/nginx;
@@ -108,9 +108,9 @@ http {
         location /rptinderbox/ {
             auth_basic    "Redports Backend";
             auth_basic_user_file htpasswd;
-            fastcgi_pass  127.0.0.1:9001;
+            fastcgi_pass  unix:/tmp/fastcgi.socket;
             fastcgi_param SCRIPT_FILENAME /usr/local/www$fastcgi_script_name;
-            fastcgi_read_timeout 900;
+            fastcgi_read_timeout 2400;
             include       fastcgi_params;
         }
 
