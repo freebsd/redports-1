@@ -10,7 +10,7 @@ REPOSITORY=`echo ${QUERY_STRING} | cut -d'&' -f 2 | cut -d'=' -f 2`
 REVISION=`echo ${QUERY_STRING} | cut -d'&' -f 3 | cut -d'=' -f 2`
 BUILD=`echo ${QUERY_STRING} | cut -d'&' -f 4 | cut -d'=' -f 2`
 
-sudo -n ${SCRIPTROOT}/rptinderbox checkout "${TYPE}" "${REPOSITORY}" "${REVISION}" "${BUILD}"
+${SCRIPTROOT}/rptinderbox checkout "${TYPE}" "${REPOSITORY}" "${REVISION}" "${BUILD}"
 
 exit 0
 
