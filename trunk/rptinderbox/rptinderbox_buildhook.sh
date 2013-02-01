@@ -14,6 +14,7 @@
 #COMPRESS_ALL=true
 #DELETE_OLD=true
 
+TBUSER=www
 LOCK=/tmp/rptinderbox/${BUILD}/.lock
 FINISHED=/tmp/rptinderbox/${BUILD}/.finished
 
@@ -22,6 +23,7 @@ compress_wrkdir () {
     cd ${PB}/${BUILD}/a/ports/${PORTDIR} && objdir=$(make -V WRKDIR) && \
     objdir=`echo ${objdir} | sed "s,${PB}/${BUILD}/,${PB}/${BUILD}/work/,"` && \
     tar cfjC ${PB}/wrkdirs/${BUILD}/${PACKAGE_NAME}.tbz ${objdir}/.. work && \
+    chown ${TBUSER} ${PB}/wrkdirs/${BUILD}/${PACKAGE_NAME}.tbz && \
     echo "WRKDIR=\"/wrkdirs/${BUILD}/${PACKAGE_NAME}.tbz\"" >> ${FINISHED}
     return 0
 }
@@ -38,6 +40,8 @@ collect_ignorereason() {
     fi
     echo "${REASON}"
 }
+
+chown -R ${TBUSER} ${PB}/packages/${BUILD}/
 
 if [ -f "${LOCK}" ]; then
     . ${LOCK}
