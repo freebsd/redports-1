@@ -11,10 +11,10 @@
 #   tinderbox (ports-mgmt/tinderbox)
 #   zfs
 
-FTP=ftp2.freebsd.org
+FTP=ftp8.freebsd.org
 ZFSROOT=zroot
 
-SVNPROTO=http
+SVNPROTO=svn
 SVNHOST=svn0.us-east.FreeBSD.org
 
 VERSION=$1
@@ -45,7 +45,7 @@ if echo ${VERSION} | grep "-" > /dev/null ; then
 elif ! echo ${VERSION} | grep "\." > /dev/null ; then
     OPTIONS="-t . -u SVN -P ${SVNPROTO} -H ${SVNHOST} -D base/head"
 else
-    OPTIONS="-t ${VERSION}-RELEASE -u LFTP -H ${FTP}"
+    OPTIONS="-t ${VERSION}-RELEASE -u LFTP -P http -H ${FTP}"
 fi
 
 if ! zfs list ${ZFSROOT}/tinderbox >/dev/null ; then
