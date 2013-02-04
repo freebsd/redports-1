@@ -83,7 +83,7 @@ class BuildNotifyEmail(NotifyEmail):
         cc = []
 
         if find(self.build.owner, '@') != -1:
-            cc = ['decke@FreeBSD.org', 'beat@FreeBSD.org', 'linimon@FreeBSD.org']
+            cc = ['ports@FreeBSD.org']
 
         return (to, cc)
 
