@@ -25,11 +25,15 @@ class BuildqueuePanel(Component):
             yield('mainnav', 'buildarchive', tag.a(_('Archive'), href=req.href.buildarchive()))
 
         if req.authname == 'anonymous':
-            yield('mainnav', 'swiki', tag.a(_('Wiki'), href=req.href.wiki()))
-            yield('mainnav', 'sbrowser', tag.a(_('Browse Source'), href=req.href.browser()))
+            if 'WIKI_VIEW' in req.perm('wiki'):
+                yield('mainnav', 'swiki', tag.a(_('Wiki'), href=req.href.wiki()))
+            if 'BROWSER_VIEW' in req.perm:
+                yield('mainnav', 'sbrowser', tag.a(_('Browse Source'), href=req.href.browser()))
         else:
-            yield('mainnav', 'swiki', tag.a(_('Wiki'), href=req.href.wiki('Users')+'/'+req.authname))
-            yield('mainnav', 'sbrowser', tag.a(_('Browse Source'), href=req.href.browser(req.authname)))
+            if 'WIKI_VIEW' in req.perm('wiki'):
+                yield('mainnav', 'swiki', tag.a(_('Wiki'), href=req.href.wiki('Users')+'/'+req.authname))
+            if 'BROWSER_VIEW' in req.perm:
+                yield('mainnav', 'sbrowser', tag.a(_('Browse Source'), href=req.href.browser(req.authname)))
 
     def get_htdocs_dirs(self):
         return [('redports', resource_filename('redports', 'htdocs'))]
