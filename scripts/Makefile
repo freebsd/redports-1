@@ -2,7 +2,7 @@
 
 TARGET=/usr/local/bin
 FRONTENDFILES=rpaddcommit rparchivesvn rpclient rpcreateaccount rpqat
-BACKENDFILES=rpcreatebuild rpmaintainbuild
+BACKENDFILES=rpcreatebuild rpmaintainbuild rptmpfsclean
 PRTOOLFILES=rpfetchpr rpcommitpr rpwatchpr
 
 all:

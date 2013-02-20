@@ -1,0 +1,23 @@
+#!/bin/sh
+
+#
+# RedPorts Backend cleanup script
+#
+# $Id$
+#
+
+TBROOT=/usr/local/tinderbox
+
+for TBENV in `df -t tmpfs | grep ${TBROOT} | cut -d'/' -f5 | sort | uniq`
+do
+   if [ ! -d "/tmp/rptinderbox/${TBENV}" ]; then
+      echo "Unmounting ${TBENV}"
+      # unmount tmpfs
+      while umount -f ${TBROOT}/${TBENV} 2>/dev/null ; do
+         sleep 1
+      done
+   fi
+done
+
+exit 0
+
