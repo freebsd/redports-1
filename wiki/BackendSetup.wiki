@@ -16,6 +16,7 @@ with a carefully thought out configuration and a few shell scripts.
   * security/sudo
   * devel/subversion
   * security/ca_root_nss
+  * databases/mysql56-server
 
 
 === System Setup ===
@@ -34,8 +35,35 @@ __Hardware considerations (minimum):__
   * 2 harddisks in ZFS RAID1
   * 1 static IP Address
 
+*/boot/loader.conf*:
+
+ZFS ARC wants to consume almost all RAM for caching so we have to reduce it so somewhat around 1/4 of physical RAM.
+
+{{{
+# limit ZFS ARC to a sensible amount because we heavily use tmpfs
+vfs.zfs.arc_max="8192M"
+
+# increase max swapzone to handle more swap even though we only
+# have 6GB of swap          
+kern.maxswzone="64M"
+}}}
+
 
 === Tinderbox Setup ===
+
+MySQL 5.6 is preferred and we also prefer speed over correctness.
+
+*/var/db/mysql/my.cnf*:
+{{{
+[mysqld]
+skip-networking
+innodb_buffer_pool_size = 196M
+
+# reduce flushing and I/O
+innodb_flush_log_at_trx_commit=0
+innodb_support_xa=0
+innodb_flush_method = O_DIRECT
+}}}
 
 Install your tinderbox as you always do.
 
@@ -47,7 +75,8 @@ nginx_enable="YES"
 tinderd_enable="YES"
 tinderd_directory="/usr/local/tinderbox/scripts"
 tinderd_flags="-nullfs -onceonly"
-tinderd_instances="4"
+tinderd_instances="16"
+tinderd_nice="20"
 }}}
 
 {{{
@@ -64,8 +93,12 @@ cd /usr/local/tinderbox/scripts
 The redports tinderbox backend consists of a few shell scripts and a tinderbox buildhook. To install the buildhook download rptinderbox and install the buildhook:
 
 {{{
+cd /usr/local/www
+svn co http://redports.googlecode.com/svn/trunk/rptinderbox remote
+chown -R www:www remote
+
 cd /usr/local/tinderbox/scripts
-./tc updateHookCmd -h postPortBuild -c /usr/local/tinderbox/hooks/rptinderbox_buildhook.sh
+./tc updateHookCmd -h postPortBuild -c /usr/local/www/remote/rptinderbox_buildhook.sh
 }}}
 
 
@@ -75,7 +108,7 @@ Now we need to setup the CGI part of rptinderbox. If you want to use Apache for 
 {{{
 spawn_fcgi_enable="YES"
 spawn_fcgi_app="/usr/local/sbin/fcgiwrap"
-spawn_fcgi_app_args="-c 2"
+spawn_fcgi_app_args="-c 8"
 spawn_fcgi_bindsocket="/tmp/fastcgi.socket"
 }}}
 
