@@ -51,7 +51,7 @@ else
 fi
 
 if ! zfs list ${ZFSROOT}/tinderbox >/dev/null ; then
-    zfs create -o compression=lzjb -o setuid=off -o atime=off ${ZFSROOT}/tinderbox
+    zfs create -o compression=lzjb -o setuid=off -o atime=off -o sync=disabled ${ZFSROOT}/tinderbox
     zfs set mountpoint=legacy ${ZFSROOT}/tinderbox
 
     zfs allow -s @rptinderbox destroy,snapshot,rollback,mount ${ZFSROOT}/tinderbox
