@@ -14,7 +14,7 @@
 FTP=ftp8.freebsd.org
 ZFSROOT=zroot
 
-SVNPROTO=svn
+SVNPROTO=http
 SVNHOST=svn0.us-east.FreeBSD.org
 
 TBUSER=www
