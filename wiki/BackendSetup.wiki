@@ -13,7 +13,6 @@ with a carefully thought out configuration and a few shell scripts.
   * www/nginx
   * www/spawn-fcgi
   * www/fcgiwrap
-  * security/sudo
   * devel/subversion
   * security/ca_root_nss
   * databases/mysql56-server
@@ -112,12 +111,16 @@ spawn_fcgi_app_args="-c 8"
 spawn_fcgi_bindsocket="/tmp/fastcgi.socket"
 }}}
 
-Download rptinderbox and copy everything to /usr/local/www/rptinderbox.
-
 Now we need to setup nginx to protect our cgi scripts because we don't want to let other people control our tinderbox.
 
 */usr/local/etc/nginx/nginx.conf*:
 {{{
+worker_processes  1;
+
+events {
+    worker_connections  64;
+}
+
 http {
     include       mime.types;
     default_type  text/plain;
@@ -128,18 +131,26 @@ http {
 
     gzip on;
     gzip_types text/plain;
-    gzip_comp_level 4;
 
     server {
+        # SSL
+        #listen       [::]:443;
+        #
+        #ssl          on;
+        #ssl_certificate       ssl.crt;
+        #ssl_certificate_key   ssl.key;
+
         listen       80;
         server_name  backend1;
 
         location / {
+            allow 192.168.100.10; # dispatcher IP
+            deny all;
             root /usr/local/www/nginx;
         }
 
-        location /rptinderbox/ {
-            auth_basic    "Redports Backend";
+        location /remote/ {
+            auth_basic    backend1;
             auth_basic_user_file htpasswd;
             fastcgi_pass  unix:/tmp/fastcgi.socket;
             fastcgi_param SCRIPT_FILENAME /usr/local/www$fastcgi_script_name;
@@ -167,13 +178,6 @@ http {
         }
     }
 }
-}}}
-
-
-*/usr/local/etc/sudoers*:
-{{{
-# www user is allowed to call rptinderbox script without password
-%www ALL=NOPASSWD: /usr/local/www/rptinderbox/rptinderbox
 }}}
 
 
