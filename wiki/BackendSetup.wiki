@@ -6,8 +6,9 @@ with a carefully thought out configuration and a few shell scripts.
 
 === Requirements ===
 
-  * FreeBSD >= 9.0 and ZFS
-  * ports-mgmt/tinderbox-devel (>= 3.4)
+  * FreeBSD 9-stable and ZFS
+  * ports-mgmt/tinderbox-devel
+  * databases/mysql56-server
   * ftp/curl
   * ftp/lftp
   * www/nginx
@@ -15,7 +16,7 @@ with a carefully thought out configuration and a few shell scripts.
   * www/fcgiwrap
   * devel/subversion
   * security/ca_root_nss
-  * databases/mysql56-server
+  * textproc/xmlstarlet
 
 
 === System Setup ===
@@ -64,7 +65,18 @@ innodb_support_xa=0
 innodb_flush_method = O_DIRECT
 }}}
 
-Install your tinderbox as you always do.
+Install your tinderbox as you always do. Required options for _ports-mgmt/tinderbox-devel_ are:
+
+{{{
+CHECK_FOR_ROOT=off
+LSOF=on
+PARALLEL=on
+TMPFS=on
+MYSQL=on
+NGINX=on
+}}}
+
+
 
 */etc/rc.conf*:
 {{{
