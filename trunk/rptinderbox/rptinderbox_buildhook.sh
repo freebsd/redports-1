@@ -84,5 +84,10 @@ elif [ "${STATUS}" != "DUD" ]; then
 fi
 
 if [ ! -z "${FINISHURL}" ]; then
+    # force using http since fetch cannot proxy https
+    if [ `echo "${FINISHURL}" | cut -d':' -f1` = "https" ]; then
+        FINISHURL=http${FINISHURL#https}
+    fi
+
     fetch -q -o /dev/null "${FINISHURL}" >/dev/null 2>/dev/null
 fi
