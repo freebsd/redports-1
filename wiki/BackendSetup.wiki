@@ -257,6 +257,6 @@ http-proxy-port = 3128
 
 */usr/local/tinderbox/scripts/etc/env/GLOBAL*:
 {{{
-HTTP_PROXY="http://[fd97:add1:f636:6420:214:00ff:beef:aaaa]:3128"
-FTP_PROXY="http://[fd97:add1:f636:6420:214:00ff:beef:aaaa]:3128"
+export HTTP_PROXY="http://[fd97:add1:f636:6420:214:00ff:beef:aaaa]:3128"
+export FTP_PROXY="http://[fd97:add1:f636:6420:214:00ff:beef:aaaa]:3128"
 }}}
