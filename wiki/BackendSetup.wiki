@@ -222,3 +222,41 @@ The last thing we have to do is create a few Tinderbox builds which consists of 
 ./rpcreatebuild 9-STABLE amd64 CLANG
 ./rpcreatebuild 9-STABLE i386 CLANG
 }}}
+
+
+=== Proxy Setups ===
+
+This example assumes that your backend does not have direct internet access but needs to use a HTTP proxy for both FTP and HTTP.
+
+*/etc/hosts*:
+{{{
+192.168.100.250	proxy
+fd97:add1:f636:6420:214:00ff:beef:aaaa	proxy
+}}}
+
+*/etc/csh.cshrc*:
+{{{
+# Proxy
+setenv HTTP_PROXY http://proxy:3128
+setenv FTP_PROXY http://proxy:3128
+}}}
+
+*/usr/local/etc/lftp.conf*:
+{{{
+set ftp:proxy http://proxy:3128
+set http:proxy http://proxy:3128
+set hftp:proxy http://proxy:3128
+}}}
+
+*/usr/local/etc/subversion/servers*:
+{{{
+[global]
+http-proxy-host = proxy
+http-proxy-port = 3128
+}}}
+
+*/usr/local/tinderbox/scripts/etc/env/GLOBAL*:
+{{{
+HTTP_PROXY="http://[fd97:add1:f636:6420:214:00ff:beef:aaaa]:3128"
+FTP_PROXY="http://[fd97:add1:f636:6420:214:00ff:beef:aaaa]:3128"
+}}}
