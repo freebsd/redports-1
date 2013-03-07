@@ -260,3 +260,26 @@ http-proxy-port = 3128
 export HTTP_PROXY="http://[fd97:add1:f636:6420:214:00ff:beef:aaaa]:3128"
 export FTP_PROXY="http://[fd97:add1:f636:6420:214:00ff:beef:aaaa]:3128"
 }}}
+
+
+=== CLANG Environment ===
+
+This is only supported for FreeBSD 9.x. CLANG is not in base before 9 and
+got default on FreeBSD 10.
+
+*/usr/local/tinderbox/scripts/etc/env/build.`<build>`*:
+{{{
+# CLANG
+export CC=clang
+export CXX=clang++
+export CPP=clang-cpp
+}}}
+
+
+=== QATty Environment ===
+
+*/usr/local/tinderbox/scripts/etc/env/build.`<build>`*:
+{{{
+export LOCALBASE=/usr/ppp
+export PREFIX=/usr/ppp
+}}}
