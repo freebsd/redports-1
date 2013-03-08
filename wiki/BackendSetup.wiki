@@ -280,7 +280,6 @@ got default on FreeBSD 10.
 
 */usr/local/tinderbox/scripts/etc/env/build.`<build>`*:
 {{{
-# CLANG
 export CC=clang
 export CXX=clang++
 export CPP=clang-cpp
