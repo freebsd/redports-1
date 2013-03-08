@@ -262,6 +262,17 @@ export FTP_PROXY="http://[fd97:add1:f636:6420:214:00ff:beef:aaaa]:3128"
 }}}
 
 
+=== PKGNG Environment ===
+
+All FreeBSD 9-stable and FreeBSD 10-current environments that use pkgng per default need this configuration.
+
+*/usr/local/tinderbox/scripts/etc/env/build.`<build>`*:
+{{{
+export WITH_PKGNG=yes
+export PKGSUFFIX=.txz
+}}}
+
+
 === CLANG Environment ===
 
 This is only supported for FreeBSD 9.x. CLANG is not in base before 9 and
