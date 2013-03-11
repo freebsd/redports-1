@@ -81,6 +81,18 @@ NGINX=on
 }}}
 
 
+*/usr/local/tinderbox/etc/env/GLOBAL*:
+{{{
+REDPORTS_NODE=<identifier-of-your-node>
+NO_JAIL_JOBS=yes
+PORTBUILD_USE_IPV4=NO
+}}}
+
+  * `REDPORTS_NODE` helps you to identify on which node a specific logfile was generated. It's very nice to know sometimes.
+  * `NO_JAIL_JOBS=yes` reduces parallelism for `make buildworld` to 1. Otherwise you usually get a lot of strange build errors on heavy boxes.
+  * `PORTBUILD_USE_IPV4=NO` should only be done on IPv6-only machines.
+
+
 
 */etc/rc.conf*:
 {{{
