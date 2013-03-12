@@ -81,7 +81,7 @@ NGINX=on
 }}}
 
 
-*/usr/local/tinderbox/etc/env/GLOBAL*:
+*/usr/local/tinderbox/scripts/etc/env/GLOBAL*:
 {{{
 REDPORTS_NODE=<identifier-of-your-node>
 NO_JAIL_JOBS=yes
