@@ -72,6 +72,7 @@ struct StepHandler stepreg[] = {
     { "101", handleStep101, 1, 7200, 0 },
     { "102", handleStep102, 1, 600, 0 },
     { "103", handleStep103, 1, 30, 0 },
+    { "104", handleStep104, 1, 30, 0 },
 };
 
 static int currstep;

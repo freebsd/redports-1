@@ -93,6 +93,10 @@ class AdminPanel(Component):
                 backendbuild = Backendbuild(self.env, req.args.get('backendbuild'))
                 backendbuild.updateStatus(1)
                 req.redirect(req.href.admin('redports/backendbuilds'))
+            elif req.args.get('recover') and req.args.get('backendbuild'):
+                backendbuild = Backendbuild(self.env, req.args.get('backendbuild'))
+                backendbuild.updateStatus(4)
+                req.redirect(req.href.admin('redports/backendbuilds'))
             elif req.args.get('delete') and req.args.get('backendbuild'):
                 backendbuild = Backendbuild(self.env, req.args.get('backendbuild'))
                 backendbuild.delete()
