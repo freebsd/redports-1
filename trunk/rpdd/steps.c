@@ -40,6 +40,66 @@
 #include "steputil.h"
 
 
+/* Recover builds on a backend */
+int handleStep104(void)
+{
+    PGconn *conn;
+    PGresult *result;
+    PGresult *result2;
+    char url[250];
+    int i;
+    int newstatus;
+
+    if((conn = PQautoconnect()) == NULL)
+        return 1;
+
+    result = PQexec(conn, "SELECT id, buildname, backendid FROM backendbuilds WHERE backendbuilds.status = 4 FOR UPDATE NOWAIT");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
+    {
+        if (strcmp(PQgetErrorCode(result), PQERROR_LOCK_NOT_AVAILABLE) == 0)
+            RETURN_COMMIT(conn);
+
+    	RETURN_ROLLBACK(conn);
+    }
+
+    for(i=0; i < PQntuples(result); i++)
+    {
+        result2 = PQselect(conn, "SELECT id, status, protocol, host, uri, credentials FROM backends WHERE id = %ld", atol(PQgetvalue(result, i, 2)));
+        if (PQresultStatus(result2) != PGRES_TUPLES_OK)
+           RETURN_ROLLBACK(conn);
+
+        if(atoi(PQgetvalue(result2, 0, 1)) != 1)
+        {
+            loginfo("Backend %s is disabled. Cannot recover build.", PQgetvalue(result, i, 2));
+            continue;
+        }
+
+        loginfo("Recovering build %s on backend %s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2));
+
+        sprintf(url, "%s://%s%srecover?build=%s", PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 3),
+                        PQgetvalue(result2, 0, 4), PQgetvalue(result, i, 1));
+        if(getpage(url, PQgetvalue(result2, 0, 5), REMOTE_SHORTTIMEOUT) != CURLE_OK)
+        {
+           logcgi(url, getenv("ERROR"));
+           newstatus = 2;
+        }
+        else
+           newstatus = 1;
+
+        if(!PQupdate(conn, "UPDATE backendbuilds SET status = %d WHERE id = %ld", newstatus, atol(PQgetvalue(result, i, 0))))
+           RETURN_ROLLBACK(conn);
+
+        PQclear(result2);
+
+        /* only 1 at a time */
+        break;
+    }
+
+    PQclear(result);
+
+    RETURN_COMMIT(conn);
+}
+
 /* Update portstrees on backend */
 int handleStep103(void)
 {
