@@ -64,7 +64,7 @@
 || buildgroup || varchar(25) || Foreign key for buildgroups.name ||
 || backendid || int || Foreign key for backends.id ||
 || priority || int || Backend Priority: 1=high, 9=low ||
-|| status || int || Backend status for this build: 0=disabled, 1=enabled, 2=failure, 3=portupdate ||
+|| status || int || Backend status for this build: 0=disabled, 1=enabled, 2=failure, 3=portupdate, 4=recovery ||
 || buildname || varchar(30) || Tinderbox buildname ||
 
 
