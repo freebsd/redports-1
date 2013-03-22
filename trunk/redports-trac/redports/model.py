@@ -147,7 +147,7 @@ class Backendbuild(object):
             self.failed = False
             self.statusname = 'dud'
         elif self.status == 4:
-            self.disabled = True
+            self.disabled = False
             self.failed = False
             self.statusname = 'dud'
         else:
