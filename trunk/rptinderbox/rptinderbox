@@ -205,7 +205,7 @@ recover()
     fi
 
     # reset build status in database to IDLE
-    mysql -u${DBUSER} ${DBPASS} -h ${DBHOST} -e "UPDATE builds SET build_status = \"IDLE\" WHERE build_name = \"${BUILD}\";" ${DBNAME} || return 1
+    mysql -u${DBUSER} ${DBPASS} -h ${DBHOST} -e "UPDATE builds SET build_status = \"IDLE\" WHERE build_name = \"${BUILD}\";" ${DBNAME} 2>/dev/null || return 1
 
     # cleanup tinderbox locks
     rm -f ${TINDERBOX}/builds/${BUILD}/lock
@@ -223,7 +223,9 @@ recover()
 
     # remove zfs snapshot
     ZFSVOLUME=`printf "${ZFSROOT}" ${BUILD}`
-    zfs destroy ${ZFSVOLUME}@work || return 1
+    if zfs list -t snapshot | grep "${ZFSVOLUME}" >/dev/null ; then
+        zfs destroy ${ZFSVOLUME}@work 2>/dev/null || return 1
+    fi
 
     # unmount tmpfs
     #while umount -f ${ZFSROOT}/tinderbox/${BUILD} 2>/dev/null ; do
