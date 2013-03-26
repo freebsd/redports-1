@@ -1,26 +1,25 @@
 = Roadmap =
 
-== 1.0.1 (October 2012) ==
-  * Migrate to Trac 1.0
+== 1.0.1 (Q2 2013) ==
   * Tinderbox jail support
   * Bugfixes
 
 
-== 1.1.0 (Q2 2012) ==
+== 1.1.0 (Q4 2013) ==
   * Shared package cache
   * Build specific shared cache
   * Stop running builds
+  * Migrate to Trac 1.0
   * Migrate Trac DB API usage to Trac 1.0
-  * redqueue integration
-    * rpbackend daemon for calling rptinderbox
-    * minimum rpdd changes (still synchronous)
 
 
 == Future ==
-  * rpdd rewrite using STOMP (asynchronous)
-  * Port Options (make.conf) support
+  * redqueue integration
+    * rpbackend daemon for calling rptinderbox
+    * rpdd rewrite using STOMP (asynchronous)
   * poudriere based backend
   * Patch building support
+  * Port Options (make.conf) support
   * Sanity environment (portlint, port-mgmt/pchecker)
   * Web API
   * rpclient script support (submit, status)
