@@ -146,7 +146,7 @@ clean()
         zfs destroy -R ${ZFSVOLUME}
     fi
 
-    if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
+    if [ -f "${WRKBASE}/${BUILD}/.build" -a ! -z "${LASTPACKAGEDATE}" ]; then
         NEWPACKAGES=`cd ${TINDERBOX}/packages/${PORTSTREE}/All/ && find * -type f -newermt "${LASTPACKAGEDATE}" -print`
 
         for package in ${NEWPACKAGES}
@@ -280,8 +280,12 @@ build()
         return 1
     fi
 
-    # aktuellstes package von build merken
-    if [ -d "${TINDERBOX}/packages/${BUILD}/All" ]; then
+    # for svn-full repositories we cannot delete the package cache
+    if [ -L "${WRKBASE}/${BUILD}/ports" ]; then
+        LASTPACKAGE=""
+        LASTPACKAGEDATE=""
+    # determine most recent package in the cache
+    elif [ -d "${TINDERBOX}/packages/${BUILD}/All" ]; then
         LASTPACKAGE=`ls -tr ${TINDERBOX}/packages/${BUILD}/All | grep -v "Makefile" | tail -1`
         LASTPACKAGEDATE=`stat -f %m ${TINDERBOX}/packages/${BUILD}/All/${LASTPACKAGE}`
         LASTPACKAGEDATE=`date -r ${LASTPACKAGEDATE} "+%Y-%m-%d %H:%M:%S"`
