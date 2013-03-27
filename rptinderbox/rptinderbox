@@ -155,13 +155,11 @@ clean()
         
             if [ ! -z "${CLEANROOM_MODE}" ]; then
                 if [ -d "${WRKBASE}/${BUILD}/ports/${PKGPORT}" ]; then
-                    rm ${TINDERBOX}/packages/${PORTSTREE}/${PKGPORT%${PKGPORT##*/}}/${package}
-                    rm ${TINDERBOX}/packages/${PORTSTREE}/All/${package}
+                    find -L ${TINDERBOX}/packages/${PORTSTREE} -samefile ${TINDERBOX}/packages/${PORTSTREE}/All/${package} | xargs rm
                 fi
             else
                 if [ "${PKGPORT}" = "${PORT}" ]; then
-                    rm ${TINDERBOX}/packages/${PORTSTREE}/${PKGPORT%${PKGPORT##*/}}/${package}
-                    rm ${TINDERBOX}/packages/${PORTSTREE}/All/${package}
+                    find -L ${TINDERBOX}/packages/${PORTSTREE} -samefile ${TINDERBOX}/packages/${PORTSTREE}/All/${package} | xargs rm
                 fi
             fi
         done
