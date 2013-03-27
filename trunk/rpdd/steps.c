@@ -271,7 +271,7 @@ int handleStep101(void)
     if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    result = PQexec(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE NOWAIT");
+    result = PQexec(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE OF backendbuilds NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
@@ -919,7 +919,7 @@ int handleStep31(void)
     {
         loginfo("Start building for build %s", PQgetvalue(result, i, 0));
 
-        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE OF backendbuilds NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
     	if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
             RETURN_ROLLBACK(conn);
 
@@ -1026,7 +1026,7 @@ int handleStep30(void)
 
         loginfo("Trying to lock backend %s for buildgroup %s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2));
 
-        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE OF backendbuilds NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
            RETURN_ROLLBACK(conn);
 
