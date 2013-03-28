@@ -321,22 +321,24 @@ build()
 status()
 {
     BUILD=$1
+    STATUS=""
+    BUILDSTATUS=""
 
     if ${TINDERBOX}/scripts/tc listBuildPortsQueue -s ENQUEUED -r | egrep ":${BUILD}:" >/dev/null ; then
-        echo "STATUS=building"
+        STATUS="building"
     elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s PROCESSING -r | egrep ":${BUILD}:" >/dev/null ; then
-        echo "STATUS=building"
+        STATUS="building"
     elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s FAIL -r | egrep ":${BUILD}:" >/dev/null ; then
-        echo "STATUS=finished"
-        echo "BUILDSTATUS=FAIL"
+        STATUS="finished"
+        BUILDSTATUS="FAIL"
     elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s SUCCESS -r | egrep ":${BUILD}:" >/dev/null ; then
-        echo "STATUS=finished"
+        STATUS="building"
     elif [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
-        echo "STATUS=finished"
+        STATUS="finished"
     elif [ -f "${WRKBASE}/${BUILD}/.lock" ]; then
-        echo "STATUS=busy"
+        STATUS="busy"
     else
-        echo "STATUS=idle"
+        STATUS="idle"
 
         # Portstree last builtdate
         PORTSTREE=`${TINDERBOX}/scripts/tc getPortsTreeForBuild -b ${BUILD} 2>/dev/null`
@@ -354,7 +356,7 @@ status()
     if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
         . ${WRKBASE}/${BUILD}/.finished
 
-        echo "BUILDSTATUS=${BUILDSTATUS}"
+        STATUS="finished"
 
         if [ -n "${FAIL_REASON}" ]; then
             echo "FAIL_REASON=${FAIL_REASON}"
@@ -367,6 +369,12 @@ status()
         if [ -n "${WRKDIR}" ]; then
             echo "WRKDIR=${WRKDIR}"
         fi
+    fi
+
+    echo "STATUS=${STATUS}"
+
+    if [ -n "${BUILDSTATUS}" ]; then
+        echo "BUILDSTATUS=${BUILDSTATUS}"
     fi
 
     return 0
