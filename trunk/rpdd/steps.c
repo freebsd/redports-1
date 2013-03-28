@@ -46,7 +46,7 @@ int handleStep104(void)
     PGconn *conn;
     PGresult *result;
     PGresult *result2;
-    char url[250];
+    char url[512];
     int i;
     int newstatus;
 
@@ -106,7 +106,7 @@ int handleStep103(void)
     PGconn *conn;
     PGresult *result;
     PGresult *result2;
-    char url[250];
+    char url[512];
     int i;
 
     if((conn = PQautoconnect()) == NULL)
@@ -181,7 +181,7 @@ int handleStep102(void)
     PGresult *reslock;
     PGresult *result;
     PGresult *result2;
-    char url[250];
+    char url[512];
     struct tm tm;
     int i;
 
@@ -265,7 +265,7 @@ int handleStep101(void)
 {
     PGconn *conn;
     PGresult *result;
-    char url[250];
+    char url[512];
     int i;
 
     if((conn = PQautoconnect()) == NULL)
@@ -303,7 +303,7 @@ int handleStep100(void)
 {
     PGconn *conn;
     PGresult *result;
-    char url[250];
+    char url[512];
     int status;
     int i;
 
@@ -498,7 +498,7 @@ int handleStep90(void)
 {
     PGconn *conn;
     PGresult *result;
-    char url[250];
+    char url[512];
     int i;
 
     if((conn = PQautoconnect()) == NULL)
@@ -532,7 +532,7 @@ int handleStep80(void)
     PGresult *result;
     PGresult *result2;
     PGresult *result3;
-    char url[250];
+    char url[512];
     int i;
 
     if((conn = PQautoconnect()) == NULL)
@@ -610,8 +610,8 @@ int handleStep71(void)
     char *localfilesql;
     char *buildstatus;
     char *failreason;
-    char url[250];
-    char remotefile[255];
+    char url[512];
+    char remotefile[512];
     char localfile[PATH_MAX];
     char localdir[PATH_MAX];
     int i;
@@ -795,7 +795,7 @@ int handleStep51(void)
     PGconn *conn;
     PGresult *result;
     PGresult *result2;
-    char url[250];
+    char url[512];
     int i;
 
     if((conn = PQautoconnect()) == NULL)
@@ -905,7 +905,7 @@ int handleStep31(void)
     PGresult *result2;
     PGresult *result3;
     char *pkgversion;
-    char url[500];
+    char url[512];
     int i;
 
     if((conn = PQautoconnect()) == NULL)
