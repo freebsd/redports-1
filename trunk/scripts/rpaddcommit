@@ -69,7 +69,7 @@ if [ -z "${REPOSITORYID}" ]; then
     exit 1
 fi
 
-SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, left('%s', 255));" "${BUILDID}" "${USER}" ${REPOSITORYID} ${REV} 10 ${PRIORITY} ${START} 0 "${LOGMSG}"`
+SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, left('%s', 4096));" "${BUILDID}" "${USER}" ${REPOSITORYID} ${REV} 10 ${PRIORITY} ${START} 0 "${LOGMSG}"`
 SQLBUILDS=""
 
 # add affected ports to buildqueue

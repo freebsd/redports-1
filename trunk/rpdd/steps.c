@@ -672,7 +672,7 @@ int handleStep71(void)
               RETURN_ROLLBACK(conn);
            }
 
-           localfilesql = PQescapeLiteral(conn, basename(localfile), 50);
+           localfilesql = PQescapeLiteral(conn, basename(localfile), 100);
 
            if(!PQupdate(conn, "UPDATE builds SET buildlog = %s WHERE id = %ld", localfilesql, atol(PQgetvalue(result, i, 0))))
               RETURN_ROLLBACK(conn);
@@ -696,7 +696,7 @@ int handleStep71(void)
                  RETURN_ROLLBACK(conn);
               }
 
-              localfilesql = PQescapeLiteral(conn, basename(localfile), 50);
+              localfilesql = PQescapeLiteral(conn, basename(localfile), 100);
 
               if(!PQupdate(conn, "UPDATE builds SET wrkdir = %s WHERE id = %ld", localfilesql, atol(PQgetvalue(result, i, 0))))
                  RETURN_ROLLBACK(conn);
