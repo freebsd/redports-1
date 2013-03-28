@@ -1,7 +1,9 @@
 = Roadmap =
 
 == 1.0.1 (Q2 2013) ==
-  * Tinderbox jail support
+  * Tinderbox 4.0.0 support
+  * Migrate to Trac 1.0
+  * Migrate Trac DB API usage to Trac 1.0
   * Bugfixes
 
 
@@ -9,8 +11,6 @@
   * Shared package cache
   * Build specific shared cache
   * Stop running builds
-  * Migrate to Trac 1.0
-  * Migrate Trac DB API usage to Trac 1.0
 
 
 == Future ==
