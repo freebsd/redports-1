@@ -124,6 +124,10 @@ clean()
     BUILD=$1
     LOCK=${WRKBASE}/${BUILD}/.lock
 
+    # WORKAROUND: Remove tinderdlock in case tinderbox parallel patch is active and
+    #             lock has been left over. (happens if you build a non existing port)
+    rm -f ${TINDERBOX}/builds/${BUILD}/tinderdlock
+
     if [ ! -d "${WRKBASE}/${BUILD}" ]; then
         return 0
     fi
@@ -165,12 +169,6 @@ clean()
         done
     fi
 
-    rm -rf ${WRKBASE}/${BUILD} || return 1
-
-    # WORKAROUND: Remove tinderdlock in case tinderbox parallel patch is active and
-    #             lock has been left over. (happens if you build a non existing port)
-    rm -f ${TINDERBOX}/builds/${BUILD}/tinderdlock
-
     # clean buildqueue from failed builds
     for ENTRY in `${TINDERBOX}/scripts/tc listBuildPortsQueue -s FAIL -r | egrep ":${BUILD}:"`
     do
@@ -186,6 +184,13 @@ clean()
 
         ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -i ${ID}
     done
+
+    if ${TINDERBOX}/scripts/tc listBuildPortsQueue -r | egrep ":${BUILD}:" >/dev/null ; then
+        echo "Still queued builds for ${BUILD}"
+        return 1
+    fi
+
+    rm -rf ${WRKBASE}/${BUILD} || return 1
 
     return 0
 }
