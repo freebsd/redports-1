@@ -413,6 +413,8 @@ update()
 
     # update portstree
     if ! ${TINDERBOX}/scripts/tc updatePortsTree -p ${PORTSTREE} >/dev/null ; then
+        mv ${TINDERBOX}/portstrees/${PORTSTREE}/ports/update.log ${TINDERBOX}/portstrees/${PORTSTREE}/ports/update.log.`date "+%Y%m%d%H%M"`
+        rm -rf ${TINDERBOX}/portstrees/${PORTSTREE}/ports
         rm -f ${LOCK}
         return 1
     fi
