@@ -334,7 +334,7 @@ status()
     elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s SUCCESS -r | egrep ":${BUILD}:" >/dev/null ; then
         STATUS="building"
     elif [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
-        STATUS="finished"
+        STATUS="building"
     elif [ -f "${WRKBASE}/${BUILD}/.lock" ]; then
         STATUS="busy"
     else
