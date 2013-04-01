@@ -40,6 +40,11 @@ checkout()
         return 1
     fi
 
+    if [ -f "${TINDERBOX}/builds/${BUILD}/tinderdlock" ]; then
+        echo "Tinderbox lock ${TINDERBOX}/builds/${BUILD}/tinderdlock exists."
+        return 1
+    fi
+
     LOCK=${WRKBASE}/${BUILD}/.lock
 
     if [ -f "${LOCK}" ]; then
@@ -123,10 +128,6 @@ clean()
 {
     BUILD=$1
     LOCK=${WRKBASE}/${BUILD}/.lock
-
-    # WORKAROUND: Remove tinderdlock in case tinderbox parallel patch is active and
-    #             lock has been left over. (happens if you build a non existing port)
-    rm -f ${TINDERBOX}/builds/${BUILD}/tinderdlock
 
     if [ ! -d "${WRKBASE}/${BUILD}" ]; then
         return 0
