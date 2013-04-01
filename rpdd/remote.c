@@ -54,12 +54,16 @@ int readpage(void *ptr, size_t size, size_t nmemb, FILE *stream);
 
 int getpage(char *url, char *credentials, int timeout)
 {
+    int i;
     time_t start;
     CURL *curl;
     CURLcode res;
 
     memset(pagebuffer, '\0', sizeof(pagebuffer));
     ppagebuffer = &pagebuffer[0];
+
+    for(i=0; remotevars[i] != '\0'; i++)
+        unsetenv(remotevars[i]);
 
     curl = curl_easy_init();
     if(!curl)
@@ -97,10 +101,15 @@ int getpage(char *url, char *credentials, int timeout)
 
 int downloadfile(char *url, char *credentials, char *filename)
 {
+    int i;
     CURL *curl;
     CURLcode res;
 
     FILE *outfile;
+
+    for(i=0; remotevars[i] != '\0'; i++)
+        unsetenv(remotevars[i]);
+
     outfile = fopen(filename, "w");
 
     curl = curl_easy_init();
