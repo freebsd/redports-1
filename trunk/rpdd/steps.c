@@ -1042,14 +1042,22 @@ int handleStep30(void)
          
         sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
         		PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 4));
-        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_SHORTTIMEOUT) != CURLE_OK || (getenv("STATUS") != NULL && strcmp(getenv("STATUS"), "idle") != 0))
+        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_SHORTTIMEOUT) != CURLE_OK)
         {
-           if(getenv("STATUS") != NULL && strcmp(getenv("STATUS"), "busy") == 0)
-              logwarn("Status of backendbuild %s should be IDLE is: %s", PQgetvalue(result2, 0, 4), getenv("STATUS"));
-
            if(getenv("ERROR") != NULL)
               logcgi(url, getenv("ERROR"));
            
+           if(updateBackendbuildFailed(conn, atol(PQgetvalue(result2, 0, 5))) != 0)
+              RETURN_ROLLBACK(conn);
+
+           PQclear(result2);
+           break;
+        }
+
+        if(getenv("STATUS") != NULL && strcmp(getenv("STATUS"), "idle") != 0)
+        {
+           logerror("Status of backendbuild %s should be IDLE is: %s", PQgetvalue(result2, 0, 4), getenv("STATUS"));
+
            if(updateBackendbuildFailed(conn, atol(PQgetvalue(result2, 0, 5))) != 0)
               RETURN_ROLLBACK(conn);
 
