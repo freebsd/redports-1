@@ -8,7 +8,7 @@ from genshi.builder import tag
 
 import re
 from string import hexdigits
-from model import Port
+from model import Port, BackendsIterator, BackendbuildsIterator
 from notify import BuildNotify
 
 class BackendConnector(Component):
@@ -51,6 +51,18 @@ class BackendConnector(Component):
             else:
                 req.send("OK", "text/plain", 200)
             return ""
+
+        # https://redports.org/backend/backends
+        if req.path_info.startswith("/backend/backends"):
+            return ('internalbackends.html',
+                {   'backends': BackendsIterator(self.env)
+                }, 'application/xml')
+
+        # https://redports.org/backend/backendbuilds
+        if req.path_info.startswith("/backend/backendbuilds"):
+            return ('internalbackendbuilds.html',
+                {   'backendbuilds': BackendbuildsIterator(self.env)
+                }, 'application/xml')
 
         req.send("ERROR", "text/plain", 500)
         return ""

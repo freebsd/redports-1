@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<backendbuilds xmlns:py="http://genshi.edgewall.org/" instance="${project.url or abs_href()}">
+<py:for each="backendbuild in backendbuilds">
+  <backendbuild>
+    <backend>${backendbuild.backend}</backend>
+    <buildgroup>${backendbuild.buildgroup}</buildgroup>
+    <buildname>${backendbuild.buildname}</buildname>
+    <status>${backendbuild.statusname}</status>
+  </backendbuild>
+</py:for>
+</backendbuilds>
