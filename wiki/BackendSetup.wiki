@@ -112,6 +112,7 @@ cd /usr/local/tinderbox/scripts
 ./tc configDistfile -c /usr/ports/distfiles
 ./tc configOptions -e -o /options
 ./tc configTinderd -t 20
+./tc configMd -s 4g -t tmpfs
 }}}
 
 
