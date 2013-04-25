@@ -657,6 +657,16 @@ int handleStep71(void)
            RETURN_ROLLBACK(conn);
         }
 
+        if(getenv("BUILDSTATUS") != NULL)
+           buildstatus = PQescapeLiteral(conn, getenv("BUILDSTATUS"), 25);
+        else
+           buildstatus = PQescapeLiteral(conn, "", 0);
+
+        if(getenv("FAIL_REASON") != NULL)
+           failreason = PQescapeLiteral(conn, getenv("FAIL_REASON"), 255);
+        else
+           failreason = PQescapeLiteral(conn, "", 0);
+
         sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), PQgetvalue(result3, 0, 0),
         		PQgetvalue(result3, 0, 1), PQgetvalue(result, i, 0));
         if(mkdirrec(localdir) != 0)
@@ -707,17 +717,7 @@ int handleStep71(void)
            PQclear(restmp);
         }
 
-        if(getenv("BUILDSTATUS") != NULL)
-           buildstatus = PQescapeLiteral(conn, getenv("BUILDSTATUS"), 25);
-        else
-           buildstatus = PQescapeLiteral(conn, "", 0);
-
-        if(getenv("FAIL_REASON") != NULL)
-           failreason = PQescapeLiteral(conn, getenv("FAIL_REASON"), 255);
-        else
-           failreason = PQescapeLiteral(conn, "", 0);
-
-        loginfo("Updating build status for build %ld", atol(PQgetvalue(result, i, 0)));
+        loginfo("Updating build status for build %ld to %s/%s", atol(PQgetvalue(result, i, 0)), buildstatus, failreason);
         if(!PQupdate(conn, "UPDATE builds SET buildstatus = %s, buildreason = %s, enddate = %lli, status = 80 WHERE id = %ld", buildstatus, failreason, microtime(), atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
 
