@@ -40,6 +40,11 @@ checkout()
         return 1
     fi
 
+    if [ -f "${TINDERBOX}/builds/${BUILD}/tinderdlock" ]; then
+        echo "Tinderbox lock ${TINDERBOX}/builds/${BUILD}/tinderdlock exists."
+        return 1
+    fi
+
     LOCK=${WRKBASE}/${BUILD}/.lock
 
     if [ -f "${LOCK}" ]; then
@@ -165,12 +170,6 @@ clean()
         done
     fi
 
-    rm -rf ${WRKBASE}/${BUILD} || return 1
-
-    # WORKAROUND: Remove tinderdlock in case tinderbox parallel patch is active and
-    #             lock has been left over. (happens if you build a non existing port)
-    rm -f ${TINDERBOX}/builds/${BUILD}/tinderdlock
-
     # clean buildqueue from failed builds
     for ENTRY in `${TINDERBOX}/scripts/tc listBuildPortsQueue -s FAIL -r | egrep ":${BUILD}:"`
     do
@@ -186,6 +185,13 @@ clean()
 
         ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -i ${ID}
     done
+
+    if ${TINDERBOX}/scripts/tc listBuildPortsQueue -r | egrep ":${BUILD}:" >/dev/null ; then
+        echo "Still queued builds for ${BUILD}"
+        return 1
+    fi
+
+    rm -rf ${WRKBASE}/${BUILD} || return 1
 
     return 0
 }
@@ -405,6 +411,8 @@ update()
 
     # update portstree
     if ! ${TINDERBOX}/scripts/tc updatePortsTree -p ${PORTSTREE} >/dev/null ; then
+        mv ${TINDERBOX}/portstrees/${PORTSTREE}/ports/update.log ${TINDERBOX}/portstrees/${PORTSTREE}/ports/update.log.`date "+%Y%m%d%H%M"`
+        rm -rf ${TINDERBOX}/portstrees/${PORTSTREE}/ports
         rm -f ${LOCK}
         return 1
     fi
