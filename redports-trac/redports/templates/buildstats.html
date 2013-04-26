@@ -13,8 +13,13 @@
   <body>
       <div id="content">
         <h1>Jobs Statistics</h1>
-
         <div id="placeholder" style="width:800px;height:500px"></div>
+        <br />
+
+<py:if test="userjobname">
+        <h1>User Statistics</h1>
+        <div id="userplaceholder" style="width:800px;height:500px"></div>
+</py:if>
       </div>
 
 <script type="text/javascript">
@@ -27,6 +32,10 @@ $(function () {
     <py:for each="jnum, job in enumerate(alljobs)">${jnum is not 0 and ',' or ''} [ <py:for each="dnum, data in enumerate(job)">${dnum is not 0 and ',' or ''} ${data}</py:for>]</py:for>
     ];
 
+    var userjobs = [
+    <py:for each="jnum, job in enumerate(userjobs)">${jnum is not 0 and ',' or ''} [ <py:for each="dnum, data in enumerate(job)">${dnum is not 0 and ',' or ''} ${data}</py:for>]</py:for>
+    ];
+
     $.plot($("#placeholder"), [
       { data: alljobs, label: "# all jobs" },
       { data: qatjobs, label: "# QAT jobs" },
@@ -35,6 +44,16 @@ $(function () {
         yaxis: { min: 0 }
       }
     );
+
+<py:if test="userjobname">
+    $.plot($("#userplaceholder"), [
+      { data: userjobs, label: "# ${userjobname}'s jobs" },
+    ],
+      { xaxis: { mode: "time" },
+        yaxis: { min: 0 }
+      }
+    );
+</py:if>
 });
 </script>
 
