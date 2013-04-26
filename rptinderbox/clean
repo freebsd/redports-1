@@ -7,7 +7,7 @@ echo ""
 
 BUILD=`echo ${QUERY_STRING} | cut -d'&' -f 1 | cut -d'=' -f 2`
 
-sudo -n ${SCRIPTROOT}/rptinderbox clean "${BUILD}"
+${SCRIPTROOT}/rptinderbox clean "${BUILD}"
 
 exit 0
 

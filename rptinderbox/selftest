@@ -7,7 +7,7 @@ echo ""
 
 BUILD=`echo ${QUERY_STRING} | cut -d'&' -f 1 | cut -d'=' -f 2`
 
-sudo -n ${SCRIPTROOT}/rptinderbox selftest "${BUILD}"
+${SCRIPTROOT}/rptinderbox selftest "${BUILD}"
 
 exit 0
 

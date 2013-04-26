@@ -24,10 +24,6 @@
 
 <script type="text/javascript">
 $(function () {
-    var qatjobs = [
-    <py:for each="jnum, job in enumerate(qatjobs)">${jnum is not 0 and ',' or ''} [ <py:for each="dnum, data in enumerate(job)">${dnum is not 0 and ',' or ''} ${data}</py:for>]</py:for>
-    ];
-
     var alljobs = [
     <py:for each="jnum, job in enumerate(alljobs)">${jnum is not 0 and ',' or ''} [ <py:for each="dnum, data in enumerate(job)">${dnum is not 0 and ',' or ''} ${data}</py:for>]</py:for>
     ];
@@ -38,7 +34,6 @@ $(function () {
 
     $.plot($("#placeholder"), [
       { data: alljobs, label: "# all jobs" },
-      { data: qatjobs, label: "# QAT jobs" },
     ],
       { xaxis: { mode: "time" },
         yaxis: { min: 0 }

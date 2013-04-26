@@ -10,6 +10,7 @@ PATH=${PATH}:/usr/local/bin
 
 REPOSITORYROOT="https://svn.redports.org/"
 PRIORITY=7
+DBHOST=localhost
 DBNAME=trac
 DBUSER=trac
 
@@ -47,7 +48,7 @@ if svnlook log -r ${REV} ${REPOS} | grep -i "^redports:" | grep -i "urgent" >/de
     PORTS=`svnlook changed ${REPOS} -r ${REV} | grep -v "D   " | cut -b5- | cut -d'/' -f2-3 | uniq | wc -l`
     if [ ${PORTS} -lt 3 ]; then
         SQL=`printf "SELECT count(*) FROM buildqueue WHERE owner = '%s' AND priority < 3 AND status < 90;" "${USER}"`
-        HIGHPRIOJOBS=`echo "${SQL}" | psql -qtA ${DBNAME} ${DBUSER}`
+        HIGHPRIOJOBS=`echo "${SQL}" | psql -qtA -h ${DBHOST} ${DBNAME} ${DBUSER}`
 
         if [ "${HIGHPRIOJOBS}" = "0" ]; then
             PRIORITY=1
@@ -61,7 +62,7 @@ fi
 
 SQL=`printf "SELECT id FROM portrepositories WHERE type = 'svn' AND (username = '%s' OR username IS NULL) AND replace(url, '%%OWNER%%', '%s') = '%s';" "${USER}" "${USER}" "${REPOSITORYROOT}${COMMITROOT}"`
 
-REPOSITORYID=`echo "${SQL}" | psql -qtA ${DBNAME} ${DBUSER}`
+REPOSITORYID=`echo "${SQL}" | psql -qtA -h ${DBHOST} ${DBNAME} ${DBUSER}`
 
 if [ -z "${REPOSITORYID}" ]; then
     echo "Could not determine RepositoryID"
@@ -98,7 +99,7 @@ do
     fi
 
     SQL=""
-    for GROUP in `echo "SELECT buildgroup FROM automaticbuildgroups WHERE username = '${USER}' ORDER BY priority" | psql -A -t -q ${DBNAME} ${DBUSER}`
+    for GROUP in `echo "SELECT buildgroup FROM automaticbuildgroups WHERE username = '${USER}' ORDER BY priority" | psql -qtA -h ${DBHOST} ${DBNAME} ${DBUSER}`
     do
         SQL=`printf "INSERT INTO builds (queueid, backendkey, buildgroup, portname, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate, checkdate) VALUES ('%s', SUBSTRING(MD5(RANDOM()::text), 1, 25), '%s', '%s', %d, null, null, null, null, 0, 0, 0, 0);" "${BUILDID}" "${GROUP}" "${PORT}" 20`
 
@@ -113,7 +114,7 @@ done
 if [ -z "${SQLBUILDS}" ]; then
     echo "Nothing to schedule"
 else
-    echo "BEGIN; ${SQLBUILDQUEUE} ${SQLBUILDS} COMMIT;" | psql -q ${DBNAME} ${DBUSER}
+    echo "BEGIN; ${SQLBUILDQUEUE} ${SQLBUILDS} COMMIT;" | psql -q -h ${DBHOST} ${DBNAME} ${DBUSER}
     if [ $? != 0 ]; then
         echo "ERROR: commit failed!"
         exit 1

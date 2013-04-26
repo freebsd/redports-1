@@ -65,16 +65,6 @@ getvar()
     cat ${TINDERBOX}/scripts/ds.ph | grep $1 | cut -d"'" -f2
 }
 
-if ! ${TINDERBOX}/scripts/tc listJails | grep ${BUILD} >/dev/null ; then
-    echo "Tinderbox jail ${BUILD} does not exist"
-    exit 1
-fi
-
-if ! ${TINDERBOX}/scripts/tc listBuilds | grep ${BUILD} >/dev/null ; then
-    echo "Tinderbox build ${BUILD} does not exist"
-    exit 1
-fi
-
 if ${TINDERBOX}/scripts/tc listBuildPortsQueue -s ENQUEUED -r | egrep ":${BUILD}:" >/dev/null ; then
     echo "Build ${BUILD} has queued jobs"
     exit 1

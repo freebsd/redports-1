@@ -15,8 +15,9 @@ REPOSITORY=http://svn0.us-east.FreeBSD.org/ports/head
 
 USER=qatbot
 PRIORITY=1
+DBHOST=localhost
 DBNAME=trac
-DBUSER=trac
+DBUSER=dispatcher
 
 START=`date +"%s"`000000
 
@@ -29,7 +30,7 @@ fi
 
 SQL=`printf "SELECT id FROM portrepositories WHERE type = 'svn-full' AND username = '%s';" "${USER}"`
 
-REPOSITORYID=`echo "${SQL}" | psql -qtA ${DBNAME} ${DBUSER}`
+REPOSITORYID=`echo "${SQL}" | psql -qtA -h ${DBHOST} ${DBNAME} ${DBUSER}`
 
 if [ -z "${REPOSITORYID}" ]; then
     echo "Could not determine RepositoryID"
@@ -99,7 +100,7 @@ do
 
 
         SQL=""
-        for GROUP in `echo "SELECT buildgroup FROM automaticbuildgroups WHERE username = '${USER}' ORDER BY priority" | psql -A -t -q ${DBNAME} ${DBUSER}`
+        for GROUP in `echo "SELECT buildgroup FROM automaticbuildgroups WHERE username = '${USER}' ORDER BY priority" | psql -qtA -h ${DBHOST} ${DBNAME} ${DBUSER}`
         do
             SQL=`printf "INSERT INTO builds (queueid, backendkey, buildgroup, portname, status, buildstatus, buildreason, buildlog, wrkdir, backendid, startdate, enddate, checkdate) VALUES ('%s', SUBSTRING(MD5(RANDOM()::text), 1, 25), '%s', '%s', %d, null, null, null, null, 0, 0, 0, 0);" "${BUILDID}" "${GROUP}" "${PORT}" 20`
 
@@ -115,7 +116,7 @@ do
     if [ -z "${SQLBUILDS}" ]; then
         echo "Nothing to schedule"
     else
-        echo "BEGIN; ${SQLBUILDQUEUE} ${SQLBUILDS} COMMIT;" | psql -q ${DBNAME} ${DBUSER}
+        echo "BEGIN; ${SQLBUILDQUEUE} ${SQLBUILDS} COMMIT;" | psql -q -h ${DBHOST} ${DBNAME} ${DBUSER}
         if [ $? != 0 ]; then
             echo "ERROR: commit failed!"
             exit 1

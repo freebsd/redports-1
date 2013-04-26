@@ -98,11 +98,6 @@ checkout()
 
         BASEREPO=`svn info ${TINDERBOX}/portstrees/${PORTSTREE}/ports | grep "URL:" | cut -d' ' -f2-`
 
-        if [ "${REPOSITORY}" != "${BASEREPO}" ] ; then
-            echo "Repository does not match! ${BASEREPO} != ${REPOSITORY}"
-            return 2
-        fi
-
         CURREVISION=`svn info --xml ${TINDERBOX}/portstrees/${PORTSTREE}/ports | xml sel -t -m "/info/entry" -v "@revision"`
 
         PORTS=`svn diff -r ${CURREVISION}:${REVISION} --summarize --xml ${TINDERBOX}/portstrees/${PORTSTREE}/ports | xml sel -t -m "/diff/paths/path" -v "node()" -n | cut -d'/' -f8-9 | sort | uniq | grep -v '^$' | xargs`

@@ -11,11 +11,13 @@
 #   tinderbox (ports-mgmt/tinderbox)
 #   zfs
 
-FTP=ftp2.freebsd.org
+FTP=ftp8.freebsd.org
 ZFSROOT=zroot
 
-SVNPROTO=http
+SVNPROTO=svn
 SVNHOST=svn0.us-east.FreeBSD.org
+
+TBUSER=www
 
 VERSION=$1
 ARCH=$2
@@ -45,12 +47,15 @@ if echo ${VERSION} | grep "-" > /dev/null ; then
 elif ! echo ${VERSION} | grep "\." > /dev/null ; then
     OPTIONS="-t . -u SVN -P ${SVNPROTO} -H ${SVNHOST} -D base/head"
 else
-    OPTIONS="-t ${VERSION}-RELEASE -u LFTP -H ${FTP}"
+    OPTIONS="-t ${VERSION}-RELEASE -u LFTP -P http -H ${FTP}"
 fi
 
 if ! zfs list ${ZFSROOT}/tinderbox >/dev/null ; then
-    zfs create -o compression=lzjb -o setuid=off ${ZFSROOT}/tinderbox
+    zfs create -o compression=lzjb -o setuid=off -o atime=off ${ZFSROOT}/tinderbox
     zfs set mountpoint=legacy ${ZFSROOT}/tinderbox
+
+    zfs allow -s @rptinderbox destroy,snapshot,rollback,mount ${ZFSROOT}/tinderbox
+    zfs allow -d -u ${TBUSER} @rptinderbox ${ZFSROOT}/tinderbox
 fi
 
 if ! zfs list ${ZFSROOT}/tinderbox/${BUILD} >/dev/null ; then
@@ -71,6 +76,7 @@ if [ `uname -m` != "${ARCH}" ]; then
 fi
 
 ${TINDERBOX}/scripts/tc createPortsTree -p ${BUILD} -u SVN -H ${SVNHOST} -P ${SVNPROTO} -D ports/head -d "FreeBSD Portstree" || exit 1
+chown -R ${TBUSER} ${TINDERBOX}/portstrees/${BUILD}/* || exit 1
 ${TINDERBOX}/scripts/tc createJail -j ${BUILD} ${OPTIONS} -d "FreeBSD ${VERSION}/${ARCH}" -a ${ARCH} || exit 1
 ${TINDERBOX}/scripts/tc createBuild -b ${BUILD} -j ${BUILD} -p ${BUILD} -d "FreeBSD ${VERSION}/${ARCH} for redports" || exit 1
 
