@@ -30,7 +30,7 @@
 
 #include "log.h"
 
-char pagebuffer[4096];
+char pagebuffer[16384];
 char *ppagebuffer;
 
 char *remotevars[] = {
@@ -134,7 +134,10 @@ int readpage(void *ptr, size_t size, size_t nmemb, FILE *stream)
     for(; i < nmemb ; i++)
     {
         if((ppagebuffer-&pagebuffer[0])+size > sizeof(pagebuffer))
+        {
+            logerror("Could not store %ld bytes (offset %ld)", size, (ppagebuffer-&pagebuffer[0])); 
             return 0;
+        }
 
         strncpy(ppagebuffer, ptr, size);
         ppagebuffer += size;
