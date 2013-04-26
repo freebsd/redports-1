@@ -9,7 +9,7 @@ from genshi.builder import tag
 from pkg_resources import resource_filename
 import re
 
-from model import BuildstatsAllIterator, BuildstatsAllQATIterator, BuildstatsUserIterator
+from model import BuildstatsAllIterator, BuildstatsUserIterator
 
 class BuildstatsPanel(Component):
     implements(INavigationContributor, ITemplateProvider, IRequestHandler, IPermissionRequestor)
@@ -46,7 +46,6 @@ class BuildstatsPanel(Component):
 
         return ('buildstats.html', 
             {   'alljobs': BuildstatsAllIterator(self.env),
-                'qatjobs': BuildstatsAllQATIterator(self.env),
                 'userjobs': BuildstatsUserIterator(self.env, username),
                 'userjobname': username,
                 'authname': req.authname
