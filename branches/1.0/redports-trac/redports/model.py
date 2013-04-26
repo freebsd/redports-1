@@ -146,6 +146,10 @@ class Backendbuild(object):
             self.disabled = False
             self.failed = False
             self.statusname = 'dud'
+        elif self.status == 4:
+            self.disabled = False
+            self.failed = False
+            self.statusname = 'dud'
         else:
             raise TracError('Invalid backendbuild status')
 
@@ -269,7 +273,7 @@ class Build(object):
             for portname in ports:
                 if not re.match('^([a-zA-Z0-9_+.-]+)/([a-zA-Z0-9_+.-]+)$', portname):
                     raise TracError(_('Invalid portname %(port)s', port=portname))
-                if len(portname) >= 50:
+                if len(portname) >= 100:
                     raise TracError(_('Portname %(port)s too long', port=portname))
 
         if groups[0] == 'automatic':

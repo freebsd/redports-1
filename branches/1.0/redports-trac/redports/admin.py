@@ -71,7 +71,7 @@ class AdminPanel(Component):
                 backend.credentials = req.args.get('credentials')
                 backend.maxparallel = req.args.get('maxparallel')
                 backend.type = 'tinderbox'
-                backend.setStatus(1)
+                backend.setStatus(0)
                 backend.add()
                 req.redirect(req.href.admin('redports/backends'))
             else:
@@ -93,6 +93,10 @@ class AdminPanel(Component):
                 backendbuild = Backendbuild(self.env, req.args.get('backendbuild'))
                 backendbuild.updateStatus(1)
                 req.redirect(req.href.admin('redports/backendbuilds'))
+            elif req.args.get('recover') and req.args.get('backendbuild'):
+                backendbuild = Backendbuild(self.env, req.args.get('backendbuild'))
+                backendbuild.updateStatus(4)
+                req.redirect(req.href.admin('redports/backendbuilds'))
             elif req.args.get('delete') and req.args.get('backendbuild'):
                 backendbuild = Backendbuild(self.env, req.args.get('backendbuild'))
                 backendbuild.delete()
@@ -103,7 +107,7 @@ class AdminPanel(Component):
                 backendbuild.backendid = req.args.get('backendid')
                 backendbuild.priority = req.args.get('priority')
                 backendbuild.buildname = req.args.get('buildname')
-                backendbuild.setStatus(1)
+                backendbuild.setStatus(0)
                 backendbuild.add()
                 req.redirect(req.href.admin('redports/backendbuilds'))
             else:

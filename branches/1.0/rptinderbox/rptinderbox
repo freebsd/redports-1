@@ -146,7 +146,7 @@ clean()
         zfs destroy -R ${ZFSVOLUME}
     fi
 
-    if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
+    if [ -f "${WRKBASE}/${BUILD}/.build" -a ! -z "${LASTPACKAGEDATE}" ]; then
         NEWPACKAGES=`cd ${TINDERBOX}/packages/${PORTSTREE}/All/ && find * -type f -newermt "${LASTPACKAGEDATE}" -print`
 
         for package in ${NEWPACKAGES}
@@ -155,13 +155,11 @@ clean()
         
             if [ ! -z "${CLEANROOM_MODE}" ]; then
                 if [ -d "${WRKBASE}/${BUILD}/ports/${PKGPORT}" ]; then
-                    rm ${TINDERBOX}/packages/${PORTSTREE}/${PKGPORT%${PKGPORT##*/}}/${package}
-                    rm ${TINDERBOX}/packages/${PORTSTREE}/All/${package}
+                    find -L ${TINDERBOX}/packages/${PORTSTREE} -samefile ${TINDERBOX}/packages/${PORTSTREE}/All/${package} | xargs rm
                 fi
             else
                 if [ "${PKGPORT}" = "${PORT}" ]; then
-                    rm ${TINDERBOX}/packages/${PORTSTREE}/${PKGPORT%${PKGPORT##*/}}/${package}
-                    rm ${TINDERBOX}/packages/${PORTSTREE}/All/${package}
+                    find -L ${TINDERBOX}/packages/${PORTSTREE} -samefile ${TINDERBOX}/packages/${PORTSTREE}/All/${package} | xargs rm
                 fi
             fi
         done
@@ -188,6 +186,52 @@ clean()
 
         ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -i ${ID}
     done
+
+    return 0
+}
+
+recover()
+{
+    BUILD=$1
+    DBUSER=`cat ${TINDERBOX}/scripts/ds.ph | grep "DB_USER" | cut -d"'" -f2`
+    DBPASS=`cat ${TINDERBOX}/scripts/ds.ph | grep "DB_PASS" | cut -d"'" -f2`
+    DBHOST=`cat ${TINDERBOX}/scripts/ds.ph | grep "DB_HOST" | cut -d"'" -f2`
+    DBNAME=`cat ${TINDERBOX}/scripts/ds.ph | grep "DB_NAME" | cut -d"'" -f2`
+
+    if [ ! -z "${DBPASS}" ]; then
+        DBPASS="-p${DBPASS}"
+    fi
+
+    # reset build status in database to IDLE
+    mysql -u${DBUSER} ${DBPASS} -h ${DBHOST} -e "UPDATE builds SET build_status = \"IDLE\" WHERE build_name = \"${BUILD}\";" ${DBNAME} 2>/dev/null || return 1
+
+    # cleanup tinderbox locks
+    rm -f ${TINDERBOX}/builds/${BUILD}/lock
+    rm -f ${TINDERBOX}/builds/${BUILD}/tinderdlock
+
+
+    # cleanup tinderbox queue
+    for ENTRY in `${TINDERBOX}/scripts/tc listBuildPortsQueue -r | egrep ":${BUILD}:"`
+    do
+        QUEUEID=`echo ${ENTRY} | cut -d: -f1`
+        PORT=`echo ${ENTRY} | cut -d: -f4`
+
+        ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -i ${QUEUEID}
+    done
+
+    # remove zfs snapshot
+    ZFSVOLUME=`printf "${ZFSROOT}" ${BUILD}`
+    if zfs list -t snapshot | grep "${ZFSVOLUME}" >/dev/null ; then
+        zfs destroy ${ZFSVOLUME}@work 2>/dev/null || return 1
+    fi
+
+    # unmount tmpfs
+    #while umount -f ${ZFSROOT}/tinderbox/${BUILD} 2>/dev/null ; do
+    #    sleep 1
+    #done
+
+    # remove 
+    rm -rf ${WRKBASE}/${BUILD} || return 1
 
     return 0
 }
@@ -234,8 +278,12 @@ build()
         return 1
     fi
 
-    # aktuellstes package von build merken
-    if [ -d "${TINDERBOX}/packages/${BUILD}/All" ]; then
+    # for svn-full repositories we cannot delete the package cache
+    if [ -L "${WRKBASE}/${BUILD}/ports" ]; then
+        LASTPACKAGE=""
+        LASTPACKAGEDATE=""
+    # determine most recent package in the cache
+    elif [ -d "${TINDERBOX}/packages/${BUILD}/All" ]; then
         LASTPACKAGE=`ls -tr ${TINDERBOX}/packages/${BUILD}/All | grep -v "Makefile" | tail -1`
         LASTPACKAGEDATE=`stat -f %m ${TINDERBOX}/packages/${BUILD}/All/${LASTPACKAGE}`
         LASTPACKAGEDATE=`date -r ${LASTPACKAGEDATE} "+%Y-%m-%d %H:%M:%S"`
@@ -412,6 +460,16 @@ case "$1" in
 ;;
 'clean')
     if clean "$2" 2>&1 ; then
+        echo "OK"
+        return 0
+    else
+        echo "ERROR"
+        return 1
+    fi
+    return $?
+;;
+'recover')
+    if recover "$2" 2>&1 ; then
         echo "OK"
         return 0
     else
