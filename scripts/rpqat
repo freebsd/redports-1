@@ -58,7 +58,7 @@ do
         PRIO=${PRIORITY}
     fi
 
-    SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, left('%s', 255));" "${BUILDID}" "${AUTHOR}@FreeBSD.org" ${REPOSITORYID} ${REVISION} 10 ${PRIO} ${START} 0 "${LOGMSG}"`
+    SQLBUILDQUEUE=`printf "INSERT INTO buildqueue (id, owner, repository, revision, status, priority, startdate, enddate, description) VALUES ('%s', '%s', %d, %d, %d, %d, %d, %d, left('%s', 4096));" "${BUILDID}" "${AUTHOR}@FreeBSD.org" ${REPOSITORYID} ${REVISION} 10 ${PRIO} ${START} 0 "${LOGMSG}"`
     SQLBUILDS=""
 
     PORTS=`echo "${SVNLOGINFO}" | xml sel -t -m "/log/logentry/paths/path[@action!='D']" -v "node()" -n | cut -d'/' -f3-4 | sort | uniq | grep -v '^$'`

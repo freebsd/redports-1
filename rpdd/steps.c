@@ -40,13 +40,73 @@
 #include "steputil.h"
 
 
+/* Recover builds on a backend */
+int handleStep104(void)
+{
+    PGconn *conn;
+    PGresult *result;
+    PGresult *result2;
+    char url[512];
+    int i;
+    int newstatus;
+
+    if((conn = PQautoconnect()) == NULL)
+        return 1;
+
+    result = PQexec(conn, "SELECT id, buildname, backendid FROM backendbuilds WHERE backendbuilds.status = 4 FOR UPDATE NOWAIT");
+    if (PQresultStatus(result) != PGRES_TUPLES_OK)
+    {
+        if (strcmp(PQgetErrorCode(result), PQERROR_LOCK_NOT_AVAILABLE) == 0)
+            RETURN_COMMIT(conn);
+
+    	RETURN_ROLLBACK(conn);
+    }
+
+    for(i=0; i < PQntuples(result); i++)
+    {
+        result2 = PQselect(conn, "SELECT id, status, protocol, host, uri, credentials FROM backends WHERE id = %ld", atol(PQgetvalue(result, i, 2)));
+        if (PQresultStatus(result2) != PGRES_TUPLES_OK)
+           RETURN_ROLLBACK(conn);
+
+        if(atoi(PQgetvalue(result2, 0, 1)) != 1)
+        {
+            loginfo("Backend %s is disabled. Cannot recover build.", PQgetvalue(result, i, 2));
+            continue;
+        }
+
+        loginfo("Recovering build %s on backend %s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2));
+
+        sprintf(url, "%s://%s%srecover?build=%s", PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 3),
+                        PQgetvalue(result2, 0, 4), PQgetvalue(result, i, 1));
+        if(getpage(url, PQgetvalue(result2, 0, 5), REMOTE_SHORTTIMEOUT) != CURLE_OK)
+        {
+           logcgi(url, getenv("ERROR"));
+           newstatus = 2;
+        }
+        else
+           newstatus = 1;
+
+        if(!PQupdate(conn, "UPDATE backendbuilds SET status = %d WHERE id = %ld", newstatus, atol(PQgetvalue(result, i, 0))))
+           RETURN_ROLLBACK(conn);
+
+        PQclear(result2);
+
+        /* only 1 at a time */
+        break;
+    }
+
+    PQclear(result);
+
+    RETURN_COMMIT(conn);
+}
+
 /* Update portstrees on backend */
 int handleStep103(void)
 {
     PGconn *conn;
     PGresult *result;
     PGresult *result2;
-    char url[250];
+    char url[512];
     int i;
 
     if((conn = PQautoconnect()) == NULL)
@@ -121,7 +181,7 @@ int handleStep102(void)
     PGresult *reslock;
     PGresult *result;
     PGresult *result2;
-    char url[250];
+    char url[512];
     struct tm tm;
     int i;
 
@@ -205,13 +265,13 @@ int handleStep101(void)
 {
     PGconn *conn;
     PGresult *result;
-    char url[250];
+    char url[512];
     int i;
 
     if((conn = PQautoconnect()) == NULL)
         return 1;
 
-    result = PQexec(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE NOWAIT");
+    result = PQexec(conn, "SELECT backends.id, protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.status = 1 AND backendbuilds.status = 1 FOR UPDATE OF backendbuilds NOWAIT");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
 
@@ -243,7 +303,7 @@ int handleStep100(void)
 {
     PGconn *conn;
     PGresult *result;
-    char url[250];
+    char url[512];
     int status;
     int i;
 
@@ -438,7 +498,7 @@ int handleStep90(void)
 {
     PGconn *conn;
     PGresult *result;
-    char url[250];
+    char url[512];
     int i;
 
     if((conn = PQautoconnect()) == NULL)
@@ -472,7 +532,7 @@ int handleStep80(void)
     PGresult *result;
     PGresult *result2;
     PGresult *result3;
-    char url[250];
+    char url[512];
     int i;
 
     if((conn = PQautoconnect()) == NULL)
@@ -550,8 +610,8 @@ int handleStep71(void)
     char *localfilesql;
     char *buildstatus;
     char *failreason;
-    char url[250];
-    char remotefile[255];
+    char url[512];
+    char remotefile[512];
     char localfile[PATH_MAX];
     char localdir[PATH_MAX];
     int i;
@@ -597,6 +657,16 @@ int handleStep71(void)
            RETURN_ROLLBACK(conn);
         }
 
+        if(getenv("BUILDSTATUS") != NULL)
+           buildstatus = PQescapeLiteral(conn, getenv("BUILDSTATUS"), 25);
+        else
+           buildstatus = PQescapeLiteral(conn, "", 0);
+
+        if(getenv("FAIL_REASON") != NULL)
+           failreason = PQescapeLiteral(conn, getenv("FAIL_REASON"), 255);
+        else
+           failreason = PQescapeLiteral(conn, "", 0);
+
         sprintf(localdir, "%s/%s/%s-%s", configget("wwwroot"), PQgetvalue(result3, 0, 0),
         		PQgetvalue(result3, 0, 1), PQgetvalue(result, i, 0));
         if(mkdirrec(localdir) != 0)
@@ -612,7 +682,7 @@ int handleStep71(void)
               RETURN_ROLLBACK(conn);
            }
 
-           localfilesql = PQescapeLiteral(conn, basename(localfile), 50);
+           localfilesql = PQescapeLiteral(conn, basename(localfile), 100);
 
            if(!PQupdate(conn, "UPDATE builds SET buildlog = %s WHERE id = %ld", localfilesql, atol(PQgetvalue(result, i, 0))))
               RETURN_ROLLBACK(conn);
@@ -636,7 +706,7 @@ int handleStep71(void)
                  RETURN_ROLLBACK(conn);
               }
 
-              localfilesql = PQescapeLiteral(conn, basename(localfile), 50);
+              localfilesql = PQescapeLiteral(conn, basename(localfile), 100);
 
               if(!PQupdate(conn, "UPDATE builds SET wrkdir = %s WHERE id = %ld", localfilesql, atol(PQgetvalue(result, i, 0))))
                  RETURN_ROLLBACK(conn);
@@ -647,17 +717,7 @@ int handleStep71(void)
            PQclear(restmp);
         }
 
-        if(getenv("BUILDSTATUS") != NULL)
-           buildstatus = PQescapeLiteral(conn, getenv("BUILDSTATUS"), 25);
-        else
-           buildstatus = PQescapeLiteral(conn, "", 0);
-
-        if(getenv("FAIL_REASON") != NULL)
-           failreason = PQescapeLiteral(conn, getenv("FAIL_REASON"), 255);
-        else
-           failreason = PQescapeLiteral(conn, "", 0);
-
-        loginfo("Updating build status for build %ld", atol(PQgetvalue(result, i, 0)));
+        loginfo("Updating build status for build %ld to %s/%s", atol(PQgetvalue(result, i, 0)), buildstatus, failreason);
         if(!PQupdate(conn, "UPDATE builds SET buildstatus = %s, buildreason = %s, enddate = %lli, status = 80 WHERE id = %ld", buildstatus, failreason, microtime(), atol(PQgetvalue(result, i, 0))))
            RETURN_ROLLBACK(conn);
 
@@ -735,7 +795,7 @@ int handleStep51(void)
     PGconn *conn;
     PGresult *result;
     PGresult *result2;
-    char url[250];
+    char url[512];
     int i;
 
     if((conn = PQautoconnect()) == NULL)
@@ -845,7 +905,7 @@ int handleStep31(void)
     PGresult *result2;
     PGresult *result3;
     char *pkgversion;
-    char url[500];
+    char url[512];
     int i;
 
     if((conn = PQautoconnect()) == NULL)
@@ -859,7 +919,7 @@ int handleStep31(void)
     {
         loginfo("Start building for build %s", PQgetvalue(result, i, 0));
 
-        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE OF backendbuilds NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
     	if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
             RETURN_ROLLBACK(conn);
 
@@ -966,7 +1026,7 @@ int handleStep30(void)
 
         loginfo("Trying to lock backend %s for buildgroup %s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2));
 
-        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE OF backendbuilds NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
            RETURN_ROLLBACK(conn);
 
@@ -982,14 +1042,22 @@ int handleStep30(void)
          
         sprintf(url, "%s://%s%sstatus?build=%s", PQgetvalue(result2, 0, 0), PQgetvalue(result2, 0, 1),
         		PQgetvalue(result2, 0, 2), PQgetvalue(result2, 0, 4));
-        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_SHORTTIMEOUT) != CURLE_OK || (getenv("STATUS") != NULL && strcmp(getenv("STATUS"), "idle") != 0))
+        if(getpage(url, PQgetvalue(result2, 0, 3), REMOTE_SHORTTIMEOUT) != CURLE_OK)
         {
-           if(getenv("STATUS") != NULL && strcmp(getenv("STATUS"), "busy") == 0)
-              logwarn("Status of backendbuild %s should be IDLE is: %s", PQgetvalue(result2, 0, 4), getenv("STATUS"));
-
            if(getenv("ERROR") != NULL)
               logcgi(url, getenv("ERROR"));
            
+           if(updateBackendbuildFailed(conn, atol(PQgetvalue(result2, 0, 5))) != 0)
+              RETURN_ROLLBACK(conn);
+
+           PQclear(result2);
+           break;
+        }
+
+        if(getenv("STATUS") != NULL && strcmp(getenv("STATUS"), "idle") != 0)
+        {
+           logerror("Status of backendbuild %s should be IDLE is: %s", PQgetvalue(result2, 0, 4), getenv("STATUS"));
+
            if(updateBackendbuildFailed(conn, atol(PQgetvalue(result2, 0, 5))) != 0)
               RETURN_ROLLBACK(conn);
 

@@ -80,8 +80,15 @@
             <td>
               <form method="post" action="">
                 <input type="hidden" name="backendbuild" value="$backendbuild.id" />
-                <input py:if="backendbuild.enabled" type="submit" name="disable" value="disable" />
-                <input py:if="backendbuild.disabled" type="submit" name="enable" value="enable" />
+                <py:choose test="backendbuild.failed">
+                  <py:when test="True">
+                    <input type="submit" name="recover" value="recover" />
+                  </py:when>
+                  <py:otherwise>
+                    <input py:if="backendbuild.enabled" type="submit" name="disable" value="disable" />
+                    <input py:if="backendbuild.disabled" type="submit" name="enable" value="enable" />
+                  </py:otherwise>
+                </py:choose>
                 <input type="submit" name="delete" value="delete" />
               </form>
             </td>
