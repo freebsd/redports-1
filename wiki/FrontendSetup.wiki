@@ -1,0 +1,31 @@
+= !HowTo Setup a Redports Frontend =
+
+A Redports Frontend runs the web interface for the user and is also the master that coordinates the communication to the backend nodes. All of those services can be separated in his own jail which is recommended for improved security.
+
+
+== Web Interface ==
+
+=== Requirements ===
+
+  * www/trac
+  * www/trac-accountmanager
+  * www/nginx
+  * mail/exim
+  * devel/subversion
+  * databases/postgresql92-client
+
+=== Trac ===
+
+For 
+
+
+== Dispatcher ==
+
+
+
+== Subversion repository ==
+
+
+=== Requirements ===
+
+  * devel/subversion
