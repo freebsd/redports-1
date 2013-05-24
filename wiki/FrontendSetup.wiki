@@ -29,3 +29,19 @@ For
 === Requirements ===
 
   * devel/subversion
+
+
+== Proxy ===
+
+A proxy is recommended for fetching distfiles because it allows to isolate the backends completely from the internet. www/squid33 has been tested and works flawless.
+
+All you need to do is add your private IP range to the squid.conf to allow your backends to use the proxy.
+
+*squid.conf*
+{{{
+# address range of the backends
+acl localnet src fd97:add1:f636:6420:214:00ff::/64
+
+# only listen on the required IP
+http_port [fd97:add1:f636:6420:214:00ff:beef:aaaa]:3128
+}}}
