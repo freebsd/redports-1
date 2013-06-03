@@ -71,7 +71,7 @@ if [ "${STATUS}" = "SUCCESS" -o "${STATUS}" = "LEFTOVERS" ]; then
         echo "BUILDLOG=\"/logs/${BUILD}/${PACKAGE_NAME}.log\"" >> ${FINISHED}
     fi
     if [ -n "${DELETE_OLD}" ]; then
-        rm ${PB}/wrkdirs/${BUILD}/${PACKAGE_NAME}.tbz
+        rm ${PB}/wrkdirs/${BUILD}/${PACKAGE_NAME}.t?z
     fi
     if [ -n "${COMPRESS_ALL}" ]; then
         compress_wrkdir
