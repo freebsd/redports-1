@@ -156,8 +156,12 @@ clean()
 
         for package in ${NEWPACKAGES}
         do
-            PKGPORT=`pkg_info -oq ${TINDERBOX}/packages/${PORTSTREE}/All/${package}`
-        
+            if [ -z "${package#*.txz}" ]; then
+                PKGPORT=`pkg info -oqF ${TINDERBOX}/packages/${PORTSTREE}/All/${package}`
+            else
+                PKGPORT=`pkg_info -oq ${TINDERBOX}/packages/${PORTSTREE}/All/${package}`
+            fi
+ 
             if [ ! -z "${CLEANROOM_MODE}" ]; then
                 if [ -d "${WRKBASE}/${BUILD}/ports/${PKGPORT}" ]; then
                     find -L ${TINDERBOX}/packages/${PORTSTREE} -samefile ${TINDERBOX}/packages/${PORTSTREE}/All/${package} | xargs rm
