@@ -1,6 +1,7 @@
 #!/bin/sh
 
 SCRIPTROOT=/usr/local/www/remote
+LOGROOT=/var/log/rptinderbox
 
 echo "Content-Type: text/plain"
 echo ""
@@ -10,7 +11,8 @@ REPOSITORY=`echo ${QUERY_STRING} | cut -d'&' -f 2 | cut -d'=' -f 2`
 REVISION=`echo ${QUERY_STRING} | cut -d'&' -f 3 | cut -d'=' -f 2`
 BUILD=`echo ${QUERY_STRING} | cut -d'&' -f 4 | cut -d'=' -f 2`
 
-${SCRIPTROOT}/rptinderbox checkout "${TYPE}" "${REPOSITORY}" "${REVISION}" "${BUILD}"
+printf "[%s] %s - %s\n" "`date`" "checkout" "${QUERY_STRING}" >> "${LOGROOT}/${BUILD}.log"
+${SCRIPTROOT}/rptinderbox checkout "${TYPE}" "${REPOSITORY}" "${REVISION}" "${BUILD}" | tee -a "${LOGROOT}/${BUILD}.log"
 
 exit 0
 
