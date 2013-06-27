@@ -331,20 +331,21 @@ build()
 status()
 {
     BUILD=$1
-    STATUS=""
+    STATUS="unknown"
     BUILDSTATUS=""
+
+    if ${TINDERBOX}/scripts/tc listBuildPortsQueue -s FAIL -r | egrep ":${BUILD}:" >/dev/null ; then
+        echo "STATUS=finished"
+        echo "BUILDSTATUS=FAIL"
+        return 0
+    fi
 
     if ${TINDERBOX}/scripts/tc listBuildPortsQueue -s ENQUEUED -r | egrep ":${BUILD}:" >/dev/null ; then
         STATUS="building"
     elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s PROCESSING -r | egrep ":${BUILD}:" >/dev/null ; then
         STATUS="building"
-    elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s FAIL -r | egrep ":${BUILD}:" >/dev/null ; then
-        STATUS="finished"
-        BUILDSTATUS="FAIL"
     elif ${TINDERBOX}/scripts/tc listBuildPortsQueue -s SUCCESS -r | egrep ":${BUILD}:" >/dev/null ; then
-        STATUS="building"
-    elif [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
-        STATUS="building"
+        STATUS="finished"
     elif [ -f "${WRKBASE}/${BUILD}/.lock" ]; then
         STATUS="busy"
     else
@@ -365,8 +366,6 @@ status()
 
     if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
         . ${WRKBASE}/${BUILD}/.finished
-
-        STATUS="finished"
 
         if [ -n "${FAIL_REASON}" ]; then
             echo "FAIL_REASON=${FAIL_REASON}"
