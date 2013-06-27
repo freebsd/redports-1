@@ -1,13 +1,15 @@
 #!/bin/sh
 
 SCRIPTROOT=/usr/local/www/remote
+LOGROOT=/var/log/rptinderbox
 
 echo "Content-Type: text/plain"
 echo ""
 
 BUILD=`echo ${QUERY_STRING} | cut -d'&' -f 1 | cut -d'=' -f 2`
 
-${SCRIPTROOT}/rptinderbox update "${BUILD}"
+printf "[%s] %s - %s\n" "`date`" "update" "${QUERY_STRING}" >> "${LOGROOT}/${BUILD}.log"
+${SCRIPTROOT}/rptinderbox update "${BUILD}" | tee -a "${LOGROOT}/${BUILD}.log"
 
 exit 0
 

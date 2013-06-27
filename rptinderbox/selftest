@@ -1,13 +1,15 @@
 #!/bin/sh
 
 SCRIPTROOT=/usr/local/www/remote
+LOGROOT=/var/log/rptinderbox
 
 echo "Content-Type: text/plain"
 echo ""
 
 BUILD=`echo ${QUERY_STRING} | cut -d'&' -f 1 | cut -d'=' -f 2`
 
-${SCRIPTROOT}/rptinderbox selftest "${BUILD}"
+printf "[%s] %s - %s\n" "`date`" "selftest" "${QUERY_STRING}" >> "${LOGROOT}/${BUILD}.log"
+${SCRIPTROOT}/rptinderbox selftest "${BUILD}" | tee -a "${LOGROOT}/${BUILD}.log"
 
 exit 0
 

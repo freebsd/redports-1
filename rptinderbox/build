@@ -1,6 +1,7 @@
 #!/bin/sh
 
 SCRIPTROOT=/usr/local/www/remote
+LOGROOT=/var/log/rptinderbox
 
 echo "Content-Type: text/plain"
 echo ""
@@ -10,7 +11,8 @@ BUILD=`echo ${QUERY_STRING} | cut -d'&' -f 2 | cut -d'=' -f 2`
 PRIORITY=`echo ${QUERY_STRING} | cut -d'&' -f 3 | cut -d'=' -f 2`
 FINISHURL=`echo ${QUERY_STRING} | cut -d'&' -f 4 | cut -d'=' -f 2`
 
-${SCRIPTROOT}/rptinderbox build "${PORT}" "${BUILD}" "${PRIORITY}" "${FINISHURL}"
+printf "[%s] %s - %s\n" "`date`" "build" "${QUERY_STRING}" >> "${LOGROOT}/${BUILD}.log"
+${SCRIPTROOT}/rptinderbox build "${PORT}" "${BUILD}" "${PRIORITY}" "${FINISHURL}" | tee -a "${LOGROOT}/${BUILD}.log"
 
 exit 0
 
