@@ -532,18 +532,34 @@ int handleStep80(void)
     PGresult *result;
     PGresult *result2;
     PGresult *result3;
+    PGresult *result4;
+    PGresult *restmp;
     char url[512];
     int i;
 
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT builds.id, backendid, buildgroup, buildqueue.id FROM builds, buildqueue WHERE buildqueue.id = builds.queueid AND builds.status = 80 FOR UPDATE NOWAIT");
+    result = PQexec(conn, "SELECT builds.id, backendid, buildgroup, buildqueue.id FROM builds, buildqueue WHERE buildqueue.id = builds.queueid AND builds.status = 80");
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
         RETURN_ROLLBACK(conn);
 
     for(i=0; i < PQntuples(result); i++)
     {
+        result4 = PQselect(conn, "SELECT builds.id, backendid FROM builds, buildqueue WHERE buildqueue.id = builds.queueid AND builds.id = %ld FOR UPDATE NOWAIT", atol(PQgetvalue(result, i, 0)));
+        if (PQresultStatus(result4) != PGRES_TUPLES_OK || PQntuples(result4) != 1)
+        {
+           restmp = PQexec(conn, "ROLLBACK");
+           if (PQresultStatus(restmp) != PGRES_COMMAND_OK)
+               RETURN_ROLLBACK(conn);
+
+           restmp = PQexec(conn, "BEGIN");
+           if (PQresultStatus(restmp) != PGRES_COMMAND_OK)
+               RETURN_ROLLBACK(conn);
+
+           continue;
+        }
+
         result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s'", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
            RETURN_ROLLBACK(conn);
@@ -590,6 +606,10 @@ int handleStep80(void)
 
         PQclear(result3);
         PQclear(result2);
+        PQclear(result4);
+
+        /* clear only one at a time */
+        break;
     }
 
     PQclear(result);
