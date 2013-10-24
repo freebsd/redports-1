@@ -62,7 +62,7 @@ int getpage(char *url, char *credentials, int timeout)
     memset(pagebuffer, '\0', sizeof(pagebuffer));
     ppagebuffer = &pagebuffer[0];
 
-    for(i=0; remotevars[i] != '\0'; i++)
+    for(i=0; remotevars[i][0] != '\0'; i++)
         unsetenv(remotevars[i]);
 
     curl = curl_easy_init();
@@ -107,7 +107,7 @@ int downloadfile(char *url, char *credentials, char *filename)
 
     FILE *outfile;
 
-    for(i=0; remotevars[i] != '\0'; i++)
+    for(i=0; remotevars[i][0] != '\0'; i++)
         unsetenv(remotevars[i]);
 
     outfile = fopen(filename, "w");
@@ -167,7 +167,7 @@ int parse(char *page)
 
     memset(errormsg, '\0', sizeof(errormsg));
 
-    for(i=0; remotevars[i] != '\0'; i++)
+    for(i=0; remotevars[i][0] != '\0'; i++)
         unsetenv(remotevars[i]);
 
     for(end=0,p=page,linep=page; !end; p++)
@@ -181,7 +181,7 @@ int parse(char *page)
 
         if(strchr(linep, '=') != NULL)
         {
-            for(i=0; remotevars[i] != '\0'; i++)
+            for(i=0; remotevars[i][0] != '\0'; i++)
             {
                 if(strncmp(remotevars[i], linep, strlen(remotevars[i])) == 0)
                 {
