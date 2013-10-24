@@ -101,14 +101,13 @@ int getpage(char *url, char *credentials, int timeout)
 
 int downloadfile(char *url, char *credentials, char *filename)
 {
-    int i;
     CURL *curl;
     CURLcode res;
 
     FILE *outfile;
 
-    for(i=0; remotevars[i][0] != '\0'; i++)
-        unsetenv(remotevars[i]);
+    unsetenv("OK");
+    unsetenv("ERROR");
 
     outfile = fopen(filename, "w");
 
