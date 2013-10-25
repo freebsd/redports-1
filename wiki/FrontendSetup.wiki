@@ -112,7 +112,46 @@ Enabled options in the port www/apache22:
      SSL=on: mod_ssl
 }}}
 
+`/usr/local/etc/apache22/svnaccess`
+{{{
+#[groups]
+#team-test = user1,user2
+ 
+[/]
+* = r
+ 
+# teams
+#[/test]
+#@team-test = rw
+ 
+# users
+#[/user1]
+#user1 = rw
+}}}
 
+`/usr/local/etc/apache22/Includes/svn.redports.org` (only the relevant parts)
+{{{
+    # WebDAV for SVN
+    <Location />
+        DAV svn
+        SVNPath /var/subversion/redports
+        SVNReposName svn.redports.org
+
+        AuthzSVNAccessFile /usr/local/etc/apache22/svnaccess
+
+        # only authenticated users may access the repository
+        Order allow,deny
+        Allow from all
+        Satisfy any
+        Require valid-user
+
+        # how to authenticated a user
+        AuthType  Digest
+        AuthName  "redports.org"
+        AuthUserFile /usr/local/etc/redports/htdigest
+        AuthDigestProvider file
+    </Location>
+}}}
 
 == Proxy ===
 
