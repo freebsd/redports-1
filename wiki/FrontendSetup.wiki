@@ -87,6 +87,31 @@ vi /usr/local/etc/rpdd.conf
 === Requirements ===
 
   * devel/subversion
+  * www/apache22
+
+=== rc.conf ===
+
+{{{
+apache22_enable="YES"
+}}}
+
+=== Apache ===
+
+Enabled options in the port www/apache22:
+
+{{{
+     AUTH_BASIC=on: mod_auth_basic
+     AUTH_DIGEST=on: mod_auth_digest
+     AUTHN_FILE=on: mod_authn_file
+     AUTHZ_HOST=on: mod_authz_host
+     DAV=on: mod_dav
+     INCLUDE=on: mod_include
+     LOG_CONFIG=on: mod_log_config
+     LOGIO=on: mod_logio
+     SETENVIF=on: mod_setenvif
+     SSL=on: mod_ssl
+}}}
+
 
 
 == Proxy ===
