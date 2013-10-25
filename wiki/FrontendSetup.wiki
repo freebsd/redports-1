@@ -85,6 +85,7 @@ All you need to do is add your private IP range to the squid.conf to allow your 
 *squid.conf*
 {{{
 # address range of the backends
+# not required for fd97 since it is a subnet of fc00::/7
 acl localnet src fd97:add1:ffff:aaaa::/64
 
 # only listen on the required IP
