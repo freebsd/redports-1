@@ -21,6 +21,14 @@ From the FreeBSD portstree:
 
 === Trac ===
 
+`/etc/crontab`
+{{{
+# update svn mirror
+*       *       *       *       *       root	su -m www -c "/usr/local/bin/svnsync --non-interactive --trust-server-cert sync file:///var/db/trac/redports/repository/redports >>/var/log/svnsync.log"
+# regular session cleanup
+5	3	*	*	*	root	/usr/local/bin/trac-admin /var/db/trac/redports session purge "2 days ago"
+}}}
+
 For 
 
 
