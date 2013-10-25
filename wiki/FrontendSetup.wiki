@@ -7,8 +7,13 @@ A Redports Frontend runs the web interface for the user and is also the master t
 
 === Requirements ===
 
+From https://svn.redports.org/redports/:
+
   * www/trac
   * www/trac-accountmanager
+
+From the FreeBSD portstree:
+
   * www/nginx
   * mail/exim
   * devel/subversion
