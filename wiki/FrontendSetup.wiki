@@ -153,13 +153,19 @@ Enabled options in the port www/apache22:
     </Location>
 }}}
 
-Install some management scripts to create users.
+Create the first user
 
 {{{
 svn checkout https://redports.googlecode.com/svn/trunk/scripts
 cd scripts
 make install-frontend
+
+mkdir /usr/local/etc/redports
+htdigest -c /usr/local/etc/redports/htdigest redports.org user1
+
+rpcreateaccount user1
 }}}
+
 
 == Proxy ===
 
