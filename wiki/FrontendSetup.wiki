@@ -86,7 +86,7 @@ vi /usr/local/etc/rpdd.conf
 
 === Requirements ===
 
-  * devel/subversion
+  * devel/subversion (with MOD_DAV_SVN)
   * www/apache22
 
 === rc.conf ===
