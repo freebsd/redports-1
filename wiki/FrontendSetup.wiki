@@ -21,6 +21,14 @@ From the FreeBSD portstree:
 
 === Trac ===
 
+Trac needs direct access to the repository so we use svnsync for that.
+
+{{{
+su -m www -c "svnsync init file:///var/db/trac/redports/repository/redports https://svn.beta.redports.org/"
+su -m www -c "svnsync --non-interactive --trust-server-cert sync file:///var/db/trac/redports/repository/redports"
+}}}
+
+
 `/etc/crontab`
 {{{
 # update svn mirror
