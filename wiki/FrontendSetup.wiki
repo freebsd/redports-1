@@ -153,6 +153,14 @@ Enabled options in the port www/apache22:
     </Location>
 }}}
 
+Install some management scripts to create users.
+
+{{{
+svn checkout https://redports.googlecode.com/svn/trunk/scripts
+cd scripts
+make install-frontend
+}}}
+
 == Proxy ===
 
 A proxy is recommended for fetching distfiles because it allows to isolate the backends completely from the internet. www/squid33 has been tested and works flawless.
