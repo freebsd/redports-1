@@ -85,8 +85,8 @@ All you need to do is add your private IP range to the squid.conf to allow your 
 *squid.conf*
 {{{
 # address range of the backends
-acl localnet src fd97:add1:f636:6420:214:00ff::/64
+acl localnet src fd97:add1:ffff:aaaa::/64
 
 # only listen on the required IP
-http_port [fd97:add1:f636:6420:214:00ff:beef:aaaa]:3128
+http_port [fd97:add1:ffff:aaaa::a1]:3128
 }}}
