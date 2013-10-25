@@ -12,7 +12,7 @@ A Redports Frontend runs the web interface for the user and is also the master t
   * www/nginx
   * mail/exim
   * devel/subversion
-  * databases/postgresql92-client
+  * databases/postgresql93-client
 
 === Trac ===
 
@@ -23,8 +23,31 @@ For
 
 === Requirements ===
 
+  * databases/postgresql93-server
   * databases/postgresql93-client
   * ftp/curl
+
+=== rc.conf ===
+
+{{{
+# redports platform
+postgresql_enable="YES"
+rpdd_enable="YES"
+}}}
+
+=== PostgreSQL Database ===
+
+If you are in a jail you need to ensure that `allow.sysvipc` is set.
+
+{{{
+/usr/local/etc/rc.d/postgresql initdb
+/usr/local/etc/rc.d/postgresql start
+su pgsql
+createuser trac
+createuser dispatcher
+createdb trac -O trac
+}}}
+
 
 === Redports Dispatcher ===
 
@@ -42,6 +65,7 @@ Create a rpdd.conf according to your needs.
 cp -p /usr/local/etc/rpdd.conf-dist /usr/local/etc/rpdd.conf
 vi /usr/local/etc/rpdd.conf
 }}}
+
 
 
 == Subversion repository ==
