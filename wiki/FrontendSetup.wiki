@@ -21,6 +21,27 @@ For
 
 == Dispatcher ==
 
+=== Requirements ===
+
+  * databases/postgresql93-client
+  * ftp/curl
+
+=== Redports Dispatcher ===
+
+You need to compile and install the latest rpdd.
+
+{{{
+svn co http://redports.googlecode.com/svn/trunk/rpdd
+cd rpdd
+make install clean
+}}}
+
+Create a rpdd.conf according to your needs.
+
+{{{
+cp -p /usr/local/etc/rpdd.conf-dist /usr/local/etc/rpdd.conf
+vi /usr/local/etc/rpdd.conf
+}}}
 
 
 == Subversion repository ==
