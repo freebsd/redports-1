@@ -153,6 +153,14 @@ Enabled options in the port www/apache22:
     </Location>
 }}}
 
+Create the repository
+
+{{{
+mkdir /var/subversion
+svnadmin create /var/subversion/redports
+chown -R www:www /var/subversion/redports
+}}}
+
 Create the first user
 
 {{{
