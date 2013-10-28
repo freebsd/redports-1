@@ -31,6 +31,8 @@ vi pre-revprop-change # Add: if [ "$USER" = "www" -o "$USER" = "root" ]; then ex
 svnsync init file:///var/db/trac/redports/repository/redports https://svn.beta.redports.org/
 svnsync --non-interactive --trust-server-cert sync file:///var/db/trac/redports/repository/redports
 chown -R www:www redports
+touch /var/log/svnsync.log
+chown www:www /var/log/svnsync.log
 }}}
 
 
