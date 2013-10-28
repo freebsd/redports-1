@@ -39,11 +39,16 @@ export PYTHON_EGG_CACHE="/var/db/trac/redports/.egg-cache"
 
 === Trac ===
 
-Now we need the install the redports-trac plugin.
+Install www/trac and www/trac-accountmanager as usual.
 
 {{{
 trac-admin /var/db/trac/redports initenv
+trac-admin /var/db/trac/redports permission add admin TRAC_ADMIN
+}}}
 
+Now we need the install the redports-trac plugin.
+
+{{{
 svn co https://redports.googlecode.com/svn/trunk/redports-trac
 cd redports-trac && make rollout restart
 }}}
