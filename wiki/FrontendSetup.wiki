@@ -21,6 +21,16 @@ From the FreeBSD portstree:
 
 === Trac ===
 
+Now we need the install the redports-trac plugin.
+
+{{{
+trac-admin /var/db/trac/redports initenv
+
+svn co https://redports.googlecode.com/svn/trunk/redports-trac
+cd redports-trac && make rollout restart
+}}}
+
+
 Trac needs direct access to the repository so we use svnsync for that.
 
 {{{
@@ -43,8 +53,6 @@ chown www:www /var/log/svnsync.log
 # regular session cleanup
 5	3	*	*	*	root	/usr/local/bin/trac-admin /var/db/trac/redports session purge "2 days ago"
 }}}
-
-For 
 
 
 == Dispatcher ==
