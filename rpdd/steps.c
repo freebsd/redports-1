@@ -939,6 +939,15 @@ int handleStep31(void)
     {
         loginfo("Start building for build %s", PQgetvalue(result, i, 0));
 
+        /* BUG: it happens that a build without a backendid is in status 31 so don't panic */
+	if(atol(PQgetvalue(result, i, 1)) == 0)
+	{
+            if(updateBuildFailed(conn, atol(PQgetvalue(result, i, 0))) != 0)
+               RETURN_ROLLBACK(conn);
+
+            break;
+	}
+
         result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE OF backendbuilds NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
     	if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
             RETURN_ROLLBACK(conn);
