@@ -18,13 +18,18 @@ working.
 === Cleanup failed Environment ===
 
 It can happen for various reasons that an environment fails and needs to
-be cleaned up manually. This is especially the case after a panic.
+be cleaned up manually. In most cases it is enough to just recover the
+backendbuild via the webinterface. In some cases this doesn't work which is
+especially true after a panic because some root owned locks are left back
+by tinderbox which the cgi script cannot remove because it's running as
+unprivileged user. In such cases you need to login to the backend and run
+the following:
 
 {{{
 # rpmaintainbuild -r <buildname>
 }}}
 
-In the webinterface you also need to recover the failed backendbuild.
+Then you need to recover the failed backendbuild via the the webinterface.
 
 https://redports.org/admin/redports/backendbuilds
 
