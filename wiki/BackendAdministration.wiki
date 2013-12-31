@@ -1,0 +1,80 @@
+== Administering Redports Tinderbox Backends ==
+
+A Redports Tinderbox Backend is not much more then a normal Tinderbox but
+there are a few shell scripts available that help with maintenance tasks.
+
+
+=== General notes ===
+
+Whenever a job is started on a backend a folder with all the metadata is
+kept in *`/tmp/rptinderbox/<buildname>`*.
+
+For debugging purposes a logfile that includes the communication trace is
+kept in *`/var/log/rptinderbox/<buildname>.log`*. This is usually a good
+starting point if you want to have a closer look at why something isn't
+working.
+
+
+=== Cleanup failed Environment ===
+
+It can happen for various reasons that an environment fails and needs to
+be cleaned up manually. This is especially the case after a panic.
+
+{{{
+# rpmaintainbuild -r <buildname>
+}}}
+
+In the webinterface you also need to recover the failed backendbuild.
+
+https://redports.org/admin/redports/backendbuilds
+
+
+=== Cleanup failed backend ===
+
+Whenever a backend panics some manual steps are required to get it back
+to work. This needs to be done for all environments that have a lock
+directory in *`/tmp/rptinderbox`*.
+
+{{{
+# rpmaintainbuild -r <buildname>
+}}}
+
+In the webinterface you also need to enable the backend again and recover
+all failed backendbuilds.
+
+Recover all failed backendbuilds:
+https://redports.org/admin/redports/backendbuilds
+
+Enable the backend:
+https://redports.org/admin/redports/backends
+
+
+=== Cleanup package cache ===
+
+Whenever ports people change important ports without bumping all dependent
+ports (but usually write an UPDATING entry) it's impossible for tinderbox
+to know about that. So if you see strange dependency errors this might be the cause.
+
+Before you do that it's important that the backend is completely idle and
+disabled in the webinterface to ensure that no new jobs are schedule to
+the backend while you do maintenance.
+
+The `tbcleanup` step can take multiple hours and cannot be cancelled easily.
+So it is recommended to run it in screen/tmux.
+
+{{{
+# cd /usr/local/tinderbox && rm -R errors/* logs/* packages/* wrkdirs/*
+# /usr/local/tinderbox/scripts/tc tbcleanup
+}}}
+
+
+=== Updating build environment ===
+
+From time to time you should update all environments that are build on top
+of FreeBSD stable branches or FreeBSD current.
+This will also clean the package cache for that environment so it will take
+multiple hours.
+
+{{{
+# rpmaintainbuild -u <buildname>
+}}}
