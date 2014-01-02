@@ -43,6 +43,7 @@ directory in *`/tmp/rptinderbox`*.
 {{{
 # rpmaintainbuild -r <buildname>
 # rmdir -f /tmp/tinderdlock
+# rm -f /tmp/tinderd.*
 }}}
 
 In the webinterface you also need to enable the backend again and recover
