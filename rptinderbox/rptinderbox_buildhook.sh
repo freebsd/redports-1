@@ -29,6 +29,11 @@ compress_wrkdir () {
 }
 
 collect_ignorereason() {
+    if [ ! -d "${CHROOT}" ]; then
+        REASON="INTERNAL REDPORTS ERROR: chroot does not exist!"
+        return 0
+    fi
+
     IGNORE=`chroot ${CHROOT} make -C /a/ports/${PORTDIR} -V IGNORE`
     FORBIDDEN=`chroot ${CHROOT} make -C /a/ports/${PORTDIR} -V FORBIDDEN`
 
@@ -71,7 +76,7 @@ if [ "${STATUS}" = "SUCCESS" -o "${STATUS}" = "LEFTOVERS" ]; then
         echo "BUILDLOG=\"/logs/${BUILD}/${PACKAGE_NAME}.log\"" >> ${FINISHED}
     fi
     if [ -n "${DELETE_OLD}" ]; then
-        rm ${PB}/wrkdirs/${BUILD}/${PACKAGE_NAME}.t?z
+        rm -f ${PB}/wrkdirs/${BUILD}/${PACKAGE_NAME}.t?z
     fi
     if [ -n "${COMPRESS_ALL}" ]; then
         compress_wrkdir
