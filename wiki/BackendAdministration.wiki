@@ -46,6 +46,19 @@ directory in *`/tmp/rptinderbox`*.
 # rm -f /tmp/tinderd.*
 }}}
 
+In some very rare cases a rpmaintainbuild does only give you the error
+message "Build 8.4-FreeBSD-i386 has queued jobs". This can only be fixed
+manually by cleaning up the tinderbox job queue and eventually also killing
+the running jail.
+
+{{{
+# cd /usr/local/tinderbox/scripts
+# ./tc listBuildPortsQueue
+# ./tc tbkill -b <buildname>
+# ./tc rmBuildPortsQueueEntry -b <buildname>
+# rpmaintainbuild -r <buildname>
+}}}
+
 In the webinterface you also need to enable the backend again and recover
 all failed backendbuilds.
 
