@@ -51,7 +51,7 @@ class BuildarchivePanel(Component):
                 raise TracError('Invalid page')
 
             builds = BuildarchiveIterator(self.env)
-            builds.filter(req.args.get('owner', None), None, True)
+            builds.filter(req.args.get('owner', None), None, None, True)
             builddata = list(builds.get_data(limit, offset))
 
             paginator = Paginator(builddata, page-1, limit, builds.count())
@@ -89,7 +89,12 @@ class BuildarchivePanel(Component):
         else:
             # Buildarchive details
             builds = BuildarchiveIterator(self.env)
-            builds.filter(None, uriparts[2])
+
+            # revision or queueid
+            if uriparts[2].startswith("r"):
+                builds.filter(None, None, uriparts[2][2:])
+            else:
+                builds.filter(None, uriparts[2])
 
             if req.args.get('format') == 'rss':
                 return ('buildarchivedetails.rss', {
