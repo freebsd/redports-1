@@ -92,7 +92,7 @@ class BuildarchivePanel(Component):
 
             # revision or queueid
             if uriparts[2].startswith("r"):
-                builds.filter(None, None, uriparts[2][2:])
+                builds.filter(None, None, uriparts[2][1:])
             else:
                 builds.filter(None, uriparts[2])
 
