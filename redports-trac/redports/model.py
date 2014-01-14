@@ -757,7 +757,7 @@ class BuildarchiveIterator(object):
     def filter(self, owner=None, queueid=None, revision=None, uniqueports=False):
         self.owner = owner
         self.queueid = queueid
-	self.revision = revision
+	self.revision = int(revision)
         self.uniqueports = uniqueports
 
     def count(self):
