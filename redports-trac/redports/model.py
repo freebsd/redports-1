@@ -754,9 +754,10 @@ class BuildarchiveIterator(object):
     def __init__(self, env):
         self.env = env
 
-    def filter(self, owner=None, queueid=None, uniqueports=False):
+    def filter(self, owner=None, queueid=None, revision=None, uniqueports=False):
         self.owner = owner
         self.queueid = queueid
+	self.revision = revision
         self.uniqueports = uniqueports
 
     def count(self):
@@ -775,6 +776,9 @@ class BuildarchiveIterator(object):
 
         if self.owner:
             filter += "AND buildqueue.owner = '%s'" % (self.owner)
+
+	if self.revision:
+            filter += "AND buildqueue.revision = '%s'" % (self.revision)
 
         return filter
 
