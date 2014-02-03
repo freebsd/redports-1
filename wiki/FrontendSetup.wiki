@@ -15,6 +15,7 @@ From https://svn.redports.org/redports/:
 From the FreeBSD portstree:
 
   * www/nginx
+  * www/uwsgi
   * mail/exim
   * devel/subversion
   * databases/postgresql93-client
@@ -26,14 +27,9 @@ From the FreeBSD portstree:
 nginx_enable="YES"
 exim_enable="YES"
 
-tracd_enable="YES"
-tracd_listen="127.0.0.1"
-tracd_port="8000"
-tracd_envdir="/var/db/trac"
-tracd_env="redports"
-tracd_user="www"
-tracd_pidfile="/var/db/trac/redports/tracd.pid"
-export PYTHON_EGG_CACHE="/var/db/trac/redports/.egg-cache"
+uwsgi_enable="YES"
+uwsgi_flags="-C -p 4 -w trac.web.main:dispatch_request --env TRAC_ENV=/var/db/trac/redports --env PYTHON_EGG_CACHE=/var/db
+/trac/redports/.egg-cache"
 }}}
 
 
