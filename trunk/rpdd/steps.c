@@ -847,7 +847,7 @@ int handleStep51(void)
            if(!PQupdate(conn, "UPDATE builds SET status = 70 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
                RETURN_ROLLBACK(conn);
         }
-        else if(getenv("STATUS") != NULL && strcmp(getenv("STATUS"), "building") == 0)
+        else if(getenv("STATUS") != NULL && (strcmp(getenv("STATUS"), "building") == 0 || strcmp(getenv("STATUS"), "busy") == 0))
         {
            if(!PQupdate(conn, "UPDATE builds SET status = 50 WHERE id = %ld", atol(PQgetvalue(result, i, 0))))
                RETURN_ROLLBACK(conn);
@@ -1055,11 +1055,17 @@ int handleStep30(void)
 
         loginfo("Trying to lock backend %s for buildgroup %s", PQgetvalue(result, i, 1), PQgetvalue(result, i, 2));
 
-        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE OF backendbuilds NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
+        result2 = PQselect(conn, "SELECT protocol, host, uri, credentials, buildname, backendbuilds.id, backendbuilds.status FROM backends, backendbuilds WHERE backendbuilds.backendid = backends.id AND backends.id = %ld AND buildgroup = '%s' FOR UPDATE OF backendbuilds NOWAIT", atol(PQgetvalue(result, i, 1)), PQgetvalue(result, i, 2));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
            RETURN_ROLLBACK(conn);
 
-        result4 = PQselect(conn, "SELECT count(*) FROM builds WHERE backendid = %ld AND buildgroup = '%s' AND status >= 30 AND status < 90", atol(PQgetvalue(result, i, 0)), PQgetvalue(result, i, 2));
+	if(atoi(PQgetvalue(result2, 0, 6)) != 1)
+	{
+            logwarn("Backendbuild %s has invalid status %d", PQgetvalue(result, i, 2), PQgetvalue(result2, 0, 6));
+            continue;
+	}
+
+        result4 = PQselect(conn, "SELECT count(*) FROM builds WHERE backendid = %ld AND buildgroup = '%s' AND status > 30 AND status < 90", atol(PQgetvalue(result, i, 0)), PQgetvalue(result, i, 2));
         if (PQresultStatus(result2) != PGRES_TUPLES_OK || PQntuples(result2) != 1)
            RETURN_ROLLBACK(conn);
 
