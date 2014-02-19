@@ -1151,7 +1151,7 @@ int handleStep20(void)
     if((conn = PQautoconnect()) == NULL)
         return -1;
 
-    result = PQexec(conn, "SELECT DISTINCT ON (buildgroup) buildgroup, id, queueid FROM (SELECT builds.id, builds.buildgroup, builds.queueid FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status < 90 AND builds.status = 20 AND builds.backendid = 0 ORDER BY priority, builds.id DESC) as query");
+    result = PQexec(conn, "SELECT * FROM (SELECT DISTINCT ON (buildgroup) buildgroup, id, queueid FROM (SELECT builds.id, builds.buildgroup, builds.queueid, priority FROM buildqueue, builds WHERE buildqueue.id = builds.queueid AND buildqueue.status < 90 AND builds.status = 20 AND builds.backendid = 0 ORDER BY priority, builds.id DESC) as query order by buildgroup, priority, id) ss ORDER BY random()");
 
     if (PQresultStatus(result) != PGRES_TUPLES_OK)
     	RETURN_ROLLBACK(conn);
