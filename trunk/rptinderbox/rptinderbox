@@ -320,6 +320,7 @@ build()
         touch ${WRKBASE}/${BUILD}/.finished
         echo "BUILDSTATUS=\"FAIL\"" >> ${WRKBASE}/${BUILD}/.finished
         echo "FAIL_REASON=\"Port does not exist\"" >> ${WRKBASE}/${BUILD}/.finished
+        echo "STATUS=\"finished\"" >> ${WRKBASE}/${BUILD}/.finished
     fi
 
     touch ${WRKBASE}/${BUILD}/.build || return 1
