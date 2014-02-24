@@ -232,7 +232,8 @@ recover()
     # remove zfs snapshot
     ZFSVOLUME=`printf "${ZFSROOT}" ${BUILD}`
     if zfs list -t snapshot | grep "${ZFSVOLUME}" >/dev/null ; then
-        zfs destroy ${ZFSVOLUME}@work 2>/dev/null || return 1
+        zfs rollback ${ZFSVOLUME}@work 2>/dev/null || return 1
+        zfs destroy -R ${ZFSVOLUME}@work 2>/dev/null || return 1
     fi
 
     # unmount tmpfs
