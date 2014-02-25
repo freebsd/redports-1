@@ -122,7 +122,10 @@ if [ "${CLEANQUEUE}" = "yes" ]; then
 fi
 
 if [ "${CLEANTEMP}" = "yes" ]; then
-    zfs destroy ${ZFSROOT}/tinderbox/${BUILD}/portstree@work 2>/dev/null
+    if zfs list -t snapshot | grep "${ZFSROOT}/tinderbox/${BUILD}/portstree" >/dev/null ; then
+	zfs rollback ${ZFSROOT}/tinderbox/${BUILD}/portstree@work 2>/dev/null
+	zfs destroy -R ${ZFSROOT}/tinderbox/${BUILD}/portstree@work 2>/dev/null
+    fi
 
     # unmount tmpfs
     while umount -f ${ZFSROOT}/tinderbox/${BUILD} 2>/dev/null ; do
