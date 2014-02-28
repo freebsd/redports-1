@@ -1,6 +1,6 @@
 # Trac redports plugin Makefile
 
-all:	build rollout clean
+all:	build
 
 build:
 	python setup.py bdist_egg
@@ -8,11 +8,11 @@ build:
 clean:
 	rm -fr build/ dist/ redports.egg-info/
 
-rollout: build
+install: build
 	chown www:www dist/*.egg
 	cp -p dist/*.egg /var/db/trac/redports/plugins/
 
 restart:
-	/usr/local/etc/rc.d/tracd stop && sleep 3
+	/usr/local/etc/rc.d/uwsgi stop && sleep 3
 	trac-admin /var/db/trac/redports upgrade
-	/usr/local/etc/rc.d/tracd start
+	/usr/local/etc/rc.d/uwsgi start
