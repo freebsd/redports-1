@@ -18,24 +18,37 @@
 
 MSG=""
 
-if [ "${RPACTION}" = "BUILD_STARTED" ]; then
-    MSG="[${RPBUILDGROUP}] (${RPOWNER}) - ${RPBUILDQUEUEID}-${RPBUILDID} - ${RPPORTNAME} - start"
-fi
+case "${RPACTION}" in
+    "BUILD_STARTED")
+	MSG="[%02${RPBUILDGROUP}%0f] (${RPOWNER}) - ${RPPORTNAME} - start"
+	;;
 
-if [ "${RPACTION}" = "BUILD_FINISHED" ]; then
-    MSG="[${RPBUILDGROUP}] (${RPOWNER}) - ${RPBUILDQUEUEID}-${RPBUILDID} - ${RPPORTNAME} ${RPPKGVERSION} - ${RPBUILDSTATUS} ${RPBUILDREASON}"
-    if [ ! -z "${RPBUILDLOG}" -a ! -z "${BUILDREASON}" ] ; then
-        MSG="${MSG} - ${RPWWWURL}/~${RPOWNER}/${RPBUILDQUEUEID}-${RPBUILDID}/${RPBUILDLOG}"
-    fi
-fi
+    "BUILD_FINISHED")
+	MSG="[%02${RPBUILDGROUP}%0f] (${RPOWNER}) - ${RPPORTNAME} ${RPPKGVERSION}"
+	case ${RPBUILDSTATUS} in
+	    SUCCESS)
+		MSG="${MSG} - %0303${RPBUILDSTATUS}%0f ${RPBUILDREASON}"
+		;;
+	    LEFTOVERS)
+		MSG="${MSG} - %0306${RPBUILDSTATUS}%0f ${RPBUILDREASON}"
+		;;
+	    *)
+		MSG="${MSG} - %0304${RPBUILDSTATUS}%0f ${RPBUILDREASON}"
+		;;
+	esac
+	if [ ! -z "${RPBUILDLOG}" -a ! -z "${BUILDREASON}" ] ; then
+	    MSG="${MSG} - ${RPWWWURL}/~${RPOWNER}/${RPBUILDQUEUEID}-${RPBUILDID}/${RPBUILDLOG}"
+	fi
+	;;
 
-if [ "${RPACTION}" = "BACKENDBUILD_FAILED" ]; then
-    MSG="[ERROR] Buildgroup ${RPBUILDGROUP} on ${RPBACKENDHOST} marked as failed!"
-fi
+    "BACKENDBUILD_FAILED")
+	MSG="[%02%0304ERROR%0f] Buildgroup %0304${RPBUILDGROUP}%0f on %0304${RPBACKENDHOST}%0f marked as failed! (call: decke mat_)"
+	;;
 
-if [ "${RPACTION}" = "BACKEND_FAILED" ]; then
-    MSG="[ERROR] Backend ${RPBACKENDHOST} marked as failed!"
-fi
+    "BACKEND_FAILED")
+	MSG="[%02%0304ERROR%0f] Backend %0304${RPBACKENDHOST}%0f marked as failed! (call: decke mat_)"
+	;;
+esac
 
 if [ ! -z "${MSG}" ]; then
     echo ${MSG} >> /var/log/rpdd-hook.log
