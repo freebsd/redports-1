@@ -28,8 +28,10 @@ setup(
             'redports.buildgroups = redports.buildgroups',
             'redports.buildqueue = redports.buildqueue',
             'redports.buildstats = redports.buildstats',
-            'redports.preferences = redports.preferences',
+            'redports.buildprefs = redports.buildprefs',
+            'redports.repoprefs = redports.repoprefs',
             'redports.tools = redports.tools',
             'redports.notify = redports.notify',
+            'redports.webhooks = redports.webhooks',
         ]
     })

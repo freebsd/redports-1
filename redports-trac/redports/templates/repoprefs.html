@@ -1,0 +1,50 @@
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:py="http://genshi.edgewall.org/" 
+      xmlns:xi="http://www.w3.org/2001/XInclude">
+  <xi:include href="prefs.html" />
+  <head>
+    <title>Repositories</title>
+  </head>
+
+  <body>
+    <h2>Manage Your Repositories</h2>
+
+    <form class="addnew" method="post">
+      <div class="field">
+        <label>URL:
+          <strong>https://github.com/</strong><input type="text" name="url" id="url" class="textwidget" value="username/repository" />
+        </label>
+      </div>
+      <div class="buttons">
+        <input type="submit" name="add" value="Add Repository" />
+      </div>
+    </form>
+
+    <div id="repositorylist" style="overflow: auto; padding: 0 1px;" >
+      <table class="listing" id="backendlist">
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>URL</th>
+            <th>Options</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr py:for="repository in repositories">
+            <td>${repository.type}</td>
+            <td>${repository.url}</td>
+            <td>
+              <form method="post" action="">
+                <input type="hidden" name="id" value="$repository.id" />
+                <input type="submit" name="delete" value="delete" />
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </body>
+</html>

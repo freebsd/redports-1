@@ -11,7 +11,7 @@ class RedportsEnvironment(Component):
                 Column('id', type='varchar(25)', size=25),
                 Column('owner', type='varchar(50)', size=50),
                 Column('repository', type='int'),
-                Column('revision', type='int'),
+                Column('revision', type='varchar(40)', size=40),
                 Column('status', type='int'),
                 Column('priority', type='int'),
                 Column('startdate', type='bigint'),

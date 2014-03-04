@@ -21,6 +21,22 @@ class PortRepository(object):
         self.browseurl = None
         self.username = None
 
+    def load(self, repoid=None):
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("SELECT id, name, type, url, browseurl, username FROM portrepositories WHERE id = %s", ( repoid or self.id, ))
+	
+	for id, name, type, url, browseurl, username in cursor:
+	    self.id = id
+	    self.name = name
+	    self.type = type
+	    self.url = url
+	    self.browseurl = browseurl
+	    self.username = username
+	    return True
+
+	return False
+
     def delete(self):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
@@ -41,10 +57,32 @@ class PortRepository(object):
 
         db = self.env.get_db_cnx()
         cursor = db.cursor()
+
+        cursor.execute("SELECT count(*) FROM portrepositories WHERE url = %s", ( self.url, ))
+        row = cursor.fetchone()
+        if not row:
+            raise TracError('SQL Error')
+        if row[0] > 0:
+            raise TracError('Repository already exists')
+
         cursor.execute("INSERT INTO portrepositories (name, type, url, browseurl, username) VALUES(%s, %s, %s, %s, %s)", ( self.name, self.type, self.url, self.browseurl, self.username ) )
         db.commit()
 
+    def getByUrl(self, url):
+        db = self.env.get_db_cnx()
+        cursor = db.cursor()
+        cursor.execute("SELECT id, name, type, url, browseurl, username FROM portrepositories WHERE url = %s", ( url, ))
+	
+	for id, name, type, url, browseurl, username in cursor:
+	    self.id = id
+	    self.name = name
+	    self.type = type
+	    self.url = url
+	    self.browseurl = browseurl
+	    self.username = username
+	    return True
 
+	return False
 
 class Backend(object):
     def __init__(self, env, id=None):
@@ -243,11 +281,8 @@ class Build(object):
             if row[0] > 0:
                 self.priority = 5
 
-        try:
-            if self.revision:
-                self.revision = int(self.revision)
-        except ValueError:
-            raise TracError('Revision needs to be numeric')
+	if len(self.revision) > 40:
+            raise TracError('Revision is too long')
 
         cursor.execute("SELECT id, type, replace(url, '%OWNER%', %s) FROM portrepositories WHERE id = %s AND ( username = %s OR username IS NULL )", (
  self.owner, self.repository, self.owner ))
@@ -715,6 +750,20 @@ def PortRepositoryIterator(env):
 
         yield repository
 
+def PortUserRepositoryIterator(env, authname):
+    cursor = env.get_db_cnx().cursor()
+    cursor.execute("SELECT id, name, type, url, browseurl, username FROM portrepositories WHERE username = %s ORDER BY id", (authname,))
+
+    for id, name, type, url, browseurl, username in cursor:
+        repository = PortRepository(env, id)
+        repository.name = name
+        repository.type = type
+        repository.url = url
+        repository.browseurl = browseurl
+        repository.username = username
+
+        yield repository
+
 
 def BackendsIterator(env):
     cursor = env.get_db_cnx().cursor()
@@ -783,7 +832,7 @@ class BuildarchiveIterator(object):
             filter += "AND buildqueue.owner = '%s'" % (re.sub("[\"']", "", self.owner))
 
 	if self.revision:
-            filter += "AND buildqueue.revision = %s" % (int(self.revision))
+            filter += "AND buildqueue.revision = %s" % (re.sub("[\"']", "", self.revision))
 
         return filter
 

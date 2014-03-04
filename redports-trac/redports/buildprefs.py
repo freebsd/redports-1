@@ -74,7 +74,7 @@ class RedportsPreferencePanel(Component):
         else:
             options['wrkdir'] = False
 
-        return 'preferences.html', {
+        return 'buildprefs.html', {
             'options': options
         }
 

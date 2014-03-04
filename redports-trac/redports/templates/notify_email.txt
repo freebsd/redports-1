@@ -7,7 +7,7 @@ $build.description
   Enddate:           ${http_date(build.enddate)}
 
 {% if build.revision %}\
-  Revision:          r$build.revision
+  Revision:          $build.revision
   Repository:        $build.repository
 
 {% end if %}\
