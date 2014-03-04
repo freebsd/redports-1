@@ -43,16 +43,28 @@ case "${RPACTION}" in
 
     "BACKENDBUILD_FAILED")
 	MSG="[%02%0304ERROR%0f] Buildgroup %0304${RPBUILDGROUP}%0f on %0304${RPBACKENDHOST}%0f marked as failed! (call: decke mat_)"
+	PROWLMSG="${RPBUILDGROUP} on ${RPBACKENDHOST} failed"
 	;;
 
     "BACKEND_FAILED")
 	MSG="[%02%0304ERROR%0f] Backend %0304${RPBACKENDHOST}%0f marked as failed! (call: decke mat_)"
+	PROWLMSG="${RPBACKENDHOST} failed"
 	;;
 esac
 
 if [ ! -z "${MSG}" ]; then
     echo ${MSG} >> /var/log/rpdd-hook.log
-    echo "#redports-buildlog ${MSG}" | nc localhost 9999
+    fetch -q -o /dev/null "https://redportsircbot-bluelife.rhcloud.com/?token=TOKEN&msg=${MSG}"
+fi
+
+if [ ! -z "${PROWLMSG}" ]
+then
+    /usr/local/bin/curl https://api.prowlapp.com/publicapi/add \
+	-F apikey=APIKEY1,APIKEY2 \
+	-F priority=0 \
+	-F application="Redports" \
+	-F event="${RPACTION}" \
+	-F description="${PROWLMSG}"
 fi
 
 exit 0
