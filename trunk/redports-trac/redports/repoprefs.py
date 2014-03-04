@@ -21,18 +21,19 @@ class RedportsRepositoryPreferencePanel(Component):
                     repo.delete()
                 add_notice(req, 'Repository has been deleted')
                 req.redirect(req.href.prefs(panel or None))
-            elif req.args.get('add'):
+            elif req.args.get('add') and req.args.get('url'):
+	        fullurl = "https://github.com/" + req.args.get('url').replace('.git', '')
+
                 repo = PortRepository(self.env, None)
                 repo.type = "git"
-                repo.name = "github.com/" + req.args.get('url')
-                repo.url = "https://github.com/" + req.args.get('url')
-                repo.browseurl = "https://github.com/" + req.args.get('url') + "/commits/%REVISION%"
+                repo.name = fullurl.replace('https://', '')
+                repo.url = fullurl
+                repo.browseurl = fullurl + "/commits/%REVISION%"
                 repo.username = req.authname
                 repo.add()
-                add_notice(req, 'Repository has been added. Please don\'t forget to configure the webhook on github.')
+                add_notice(req, 'Repository has been added. Please don\'t forget to configure the webhook on github')
                 req.redirect(req.href.prefs(panel or None))
 
-            add_notice(req, 'Your preferences have been saved.')
             req.redirect(req.href.prefs(panel or None))
 
         return 'repoprefs.html', {
