@@ -47,7 +47,7 @@ class WebhookConnector(Component):
 	        if not data or req.method != "POST":
 	            raise TracError("No Data or wrong method")
 
-	        ports = list()
+	        ports = set()
 	        payload = json.loads(data)
 
 	        # try to find the portrepository entry
@@ -60,11 +60,11 @@ class WebhookConnector(Component):
 	            for file in commit["added"]:
 	                portname = file[0:file.find("/", file.find("/")+1)]
 	                if re.match('^([a-zA-Z0-9_+.-]+)/([a-zA-Z0-9_+.-]+)$', portname) and len(portname) < 100:
-	                    ports.append(portname)
+	                    ports.add(portname)
 	            for file in commit["modified"]:
 	                portname = file[0:file.find("/", file.find("/")+1)]
 	                if re.match('^([a-zA-Z0-9_+.-]+)/([a-zA-Z0-9_+.-]+)$', portname) and len(portname) < 100:
-	                    ports.append(portname)
+	                    ports.add(portname)
 
                 build = Build(self.env)
                 build.owner = repo.username
