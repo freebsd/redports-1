@@ -66,7 +66,7 @@ checkout()
         return 1
     fi
 
-    if [ "${TYPE}" != "svn" -a "${TYPE}" != "svn-full" ]; then
+    if [ "${TYPE}" != "svn" -a "${TYPE}" != "svn-full" -a "${TYPE}" != "git" ]; then
         echo "Unknown repository type"
         return 1
     fi
@@ -108,6 +108,17 @@ checkout()
         PORTS=`svn diff -r ${CURREVISION}:${REVISION} --summarize --xml ${TINDERBOX}/portstrees/${PORTSTREE}/ports | xml sel -t -m "/diff/paths/path" -v "node()" -n | cut -d'/' -f8-9 | sort | uniq | grep -v '^$' | xargs`
 
         cd ${TINDERBOX}/portstrees/${PORTSTREE}/ports && svn update ${PARAMS} ${PORTS} >/dev/null || return 2
+    elif [ "${TYPE}" = "git" ]; then
+        ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
+        echo "ZFSVOLUME=\"${ZFSVOLUME}@work\"" >> ${LOCK}
+
+        git clone ${REPOSITORY}.git ${WRKBASE}/${BUILD}/ports >/dev/null || return 2
+        cd ${WRKBASE}/${BUILD}/ports && git checkout ${REVISION} >/dev/null || return 2
+        zfs snapshot ${ZFSVOLUME}@work || return 3
+
+        # apply overlay ports
+        find ${WRKBASE}/${BUILD}/ports -type d -d 2 | grep -v ".git" | grep -v "${WRKBASE}/${BUILDS}/ports/Mk/" | sed -e "s|^${WRKBASE}/${BUILD}/ports/|${TINDERBOX}/portstrees/${PORTSTREE}/ports/|" | xargs rm -Rf || return 1
+        cp -pr ${WRKBASE}/${BUILD}/ports/* ${TINDERBOX}/portstrees/${PORTSTREE}/ports/
     fi
 
     if [ -z "${REVISION}" ]; then
