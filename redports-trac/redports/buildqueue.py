@@ -57,7 +57,7 @@ class BuildqueuePanel(Component):
                 build.description = req.args.get('description')
                 build.priority = req.args.get('priority')
 
-                build.addBuild(req.args.get('group'), req.args.get('portname'), req)
+                build.addBuild(req.args.get('group'), req.args.get('portname'))
                 add_notice(req, 'New builds have been scheduled')
                 req.redirect(req.href.buildqueue())
             elif req.method == 'POST' and req.args.get('deleteport'):

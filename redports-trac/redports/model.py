@@ -210,7 +210,7 @@ class Build(object):
     def setStatus(self, status):
         self.status = status
 
-    def addBuild(self, groups, ports, req):
+    def addBuild(self, groups, ports):
         db = self.env.get_db_cnx()
         cursor = db.cursor()
 
@@ -232,8 +232,11 @@ class Build(object):
         if not ports:
             raise TracError('Portname needs to be set')
 
+	if not self.owner:
+	    raise TracError('Owner is not set')
+
         if self.priority < 3:
-            cursor.execute("SELECT count(*) FROM buildqueue WHERE owner = %s AND priority < 3 AND status < 90", ( req.authname, ))
+            cursor.execute("SELECT count(*) FROM buildqueue WHERE owner = %s AND priority < 3 AND status < 90", ( self.owner, ))
             row = cursor.fetchone()
             if not row:
                 raise TracError('SQL Error')
@@ -247,13 +250,15 @@ class Build(object):
             raise TracError('Revision needs to be numeric')
 
         cursor.execute("SELECT id, type, replace(url, '%OWNER%', %s) FROM portrepositories WHERE id = %s AND ( username = %s OR username IS NULL )", (
- req.authname, self.repository, self.owner ))
+ self.owner, self.repository, self.owner ))
         if cursor.rowcount != 1:
             raise TracError('SQL Error')
         row = cursor.fetchone()
 
         if row[1] == 'svn':
              reponame, repo, fullrepopath = RepositoryManager(self.env).get_repository_by_path(row[2])
+             if not repo:
+                 raise TracError(_('Repository %(repopath)s not found', repopath=row[2]))
              if not self.revision:
                  self.revision = repo.get_youngest_rev()
              if self.revision < 0 or self.revision > repo.get_youngest_rev():
