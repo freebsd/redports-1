@@ -1123,7 +1123,7 @@ int handleStep30(void)
 
         if(getenv("REVISION") != NULL)
         {
-           if(!PQupdate(conn, "UPDATE buildqueue SET revision = %ld WHERE id = '%s'", atol(getenv("REVISION")), PQgetvalue(result, i, 4)))
+           if(!PQupdate(conn, "UPDATE buildqueue SET revision = '%s' WHERE id = '%s'", PQescapeLiteral(conn, getenv("REVISION"), 40), PQgetvalue(result, i, 4)))
               RETURN_ROLLBACK(conn);
         }
 
