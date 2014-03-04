@@ -67,7 +67,7 @@ class BuildNotifyEmail(NotifyEmail):
         self.data.update(self.template_data())
 
         if find(self.build.owner, '@') != -1:
-            self.subject = '[QAT] r%s: %s' % (self.build.revision, self.status)
+            self.subject = '[QAT] %s: %s' % (self.build.revision, self.status)
         else:
             self.subject = '[%s] Build %s completed: %s' % (self.env.project_name, self.queueid, self.status)
 
