@@ -281,7 +281,7 @@ class Build(object):
             if row[0] > 0:
                 self.priority = 5
 
-	if len(self.revision) > 40:
+	if self.revision and len(self.revision) > 40:
             raise TracError('Revision is too long')
 
         cursor.execute("SELECT id, type, replace(url, '%OWNER%', %s) FROM portrepositories WHERE id = %s AND ( username = %s OR username IS NULL )", (
