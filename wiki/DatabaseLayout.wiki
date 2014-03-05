@@ -7,7 +7,7 @@
 || id || varchar(25) || Unique buildqueue id (YYYYMMDDHHMMSS-12345) ||
 || owner || varchar(50) || Trac username ||
 || repository || int || Foreign key to portrepository ||
-|| revision || int || Repository Revision to build ||
+|| revision || varchar(40)|| Repository Revision to build ||
 || status || int || Status ||
 || priority || int || Priority: 1=high, 9=low ||
 || startdate || longint || Startdate UNIXTIME ||
