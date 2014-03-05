@@ -469,14 +469,17 @@ class Port(object):
         if status >= 30 and status < 90:
             raise TracError('Cannot delete running build')
 
-        cursor.execute("UPDATE builds SET status = 95 WHERE id = %s", (self.id,) )
+        if status < 30:
+       	    cursor.execute("UPDATE builds SET status = 95, buildstatus = 'deleted' WHERE id = %s", (self.id,) )
+        else:
+       	    cursor.execute("UPDATE builds SET status = 95 WHERE id = %s", (self.id,) )
 
-        cursor.execute("SELECT count(*) FROM builds WHERE queueid = %s AND status <= 90", (queueid,) )
+        cursor.execute("SELECT count(*) FROM builds WHERE queueid = %s AND status < 90", (queueid,) )
         row = cursor.fetchone()
         if not row:
             raise TracError('SQL Error')
         if row[0] == 0:
-            cursor.execute("UPDATE buildqueue SET status = 95, enddate = %s WHERE id = %s", (long(time()*1000000), queueid ))
+            cursor.execute("UPDATE buildqueue SET status = 90, enddate = %s WHERE id = %s AND status < 90", (long(time()*1000000), queueid ))
 
         db.commit()
 
@@ -530,9 +533,16 @@ def BuildqueueIterator(env, req):
     cursor = env.get_db_cnx().cursor()
     cursor2 = env.get_db_cnx().cursor()
 
-    cursor.execute("SELECT buildqueue.id, owner, replace(replace(browseurl, '%OWNER%', owner), '%REVISION%', revision::text), revision, status, startdate, enddate, description FROM buildqueue, portrepositories WHERE buildqueue.repository = portrepositories.id AND owner = %s AND buildqueue.status < 95 ORDER BY buildqueue.id DESC", (req.authname,) )
+    cursor.execute("SELECT buildqueue.id, owner, replace(replace(browseurl, '%OWNER%', owner), '%REVISION%', revision), revision, status, startdate, enddate, description FROM buildqueue, portrepositories WHERE buildqueue.repository = portrepositories.id AND owner = %s AND buildqueue.status < 95 ORDER BY buildqueue.id DESC", (req.authname,) )
 
     for queueid, owner, repository, revision, status, startdate, enddate, description in cursor:
+        cursor2.execute("SELECT count(*) FROM builds WHERE queueid = %s AND status <= 90", (queueid,) )
+        row = cursor2.fetchone()
+        if not row:
+            raise TracError('SQL Error')
+        if row[0] < 1:
+            continue
+
         build = Build(env)
         build.queueid = queueid
         build.owner = owner
