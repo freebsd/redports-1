@@ -33,25 +33,25 @@
 
 #define RETURN_ROLLBACK(conn) \
 { \
-    PGresult *res; \
+    PGresult *res_rollback; \
     logsql(conn); \
-    res = PQexec(conn, "ROLLBACK"); \
-    if(PQresultStatus(res) != PGRES_COMMAND_OK) \
+    res_rollback = PQexec(conn, "ROLLBACK"); \
+    if(PQresultStatus(res_rollback) != PGRES_COMMAND_OK) \
         logsql(conn); \
-    PQclear(res); \
+    PQclear(res_rollback); \
     PQfinish(conn); \
     return -1; \
 }
 
 #define RETURN_COMMIT(conn) \
 { \
-    PGresult *res; \
-    res = PQexec(conn, "COMMIT"); \
-    if(PQresultStatus(res) != PGRES_COMMAND_OK) \
+    PGresult *res_commit; \
+    res_commit = PQexec(conn, "COMMIT"); \
+    if(PQresultStatus(res_commit) != PGRES_COMMAND_OK) \
     { \
         RETURN_ROLLBACK(conn); \
     } \
-    PQclear(res); \
+    PQclear(res_commit); \
     PQfinish(conn); \
     return 0; \
 }

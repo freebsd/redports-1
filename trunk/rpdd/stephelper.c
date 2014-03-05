@@ -32,6 +32,11 @@
 #include "database.h"
 #include "util.h"
 
+int updateBuildFailed(PGconn *conn, long buildId);
+int updateBackendbuildFailed(PGconn *conn, int backendBuildId);
+int updateBackendFailed(PGconn *conn, int backendId);
+int recalcBuildPriority(PGconn *conn, long buildId);
+
 int updateBuildFailed(PGconn *conn, long buildId)
 {
     PGresult *result;

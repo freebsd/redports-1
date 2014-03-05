@@ -49,7 +49,9 @@ char *remotevars[] = {
 
 /* Internals */
 int parse(char *page);
-int readpage(void *ptr, size_t size, size_t nmemb, FILE *stream);
+int getpage(char *url, char *credentials, int timeout);
+int downloadfile(char *url, char *credentials, char *filename);
+int readpage(char *ptr, size_t size, size_t nmemb, FILE *stream);
 
 
 int getpage(char *url, char *credentials, int timeout)
@@ -135,9 +137,9 @@ int downloadfile(char *url, char *credentials, char *filename)
     return res;
 }
 
-int readpage(void *ptr, size_t size, size_t nmemb, FILE *stream)
+int readpage(char *ptr, size_t size, size_t nmemb, FILE *stream)
 {
-    int i = 0;
+    size_t i = 0;
 
     for(; i < nmemb ; i++)
     {

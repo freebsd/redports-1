@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
         if(pfh == NULL)
         {
             if(errno == EEXIST)
-                printf("Daemon already running, pid: %jd.", (pid_t)otherpid);
+                printf("Daemon already running, pid: %d.", (pid_t)otherpid);
 
             printf("Cannot open or create pidfile");
         }
@@ -217,7 +217,8 @@ int main(int argc, char *argv[])
     run();
  
     logclose();
-    pidfile_remove(pfh);
+    if(daemonize)
+      pidfile_remove(pfh);
     exit(EXIT_SUCCESS);
 }
 
