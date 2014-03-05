@@ -79,14 +79,14 @@ checkout()
     echo "LOCK=\"${LOCK}\"" >> ${LOCK}
 
     # checkout overlay ports
-    PARAMS="--non-interactive"
-    if [ ! -z "${REVISION}" ]; then
-        PARAMS="${PARAMS} --revision ${REVISION}"
-    fi
-
     if [ "${TYPE}" = "svn" ]; then
         ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
         echo "ZFSVOLUME=\"${ZFSVOLUME}@work\"" >> ${LOCK}
+
+        PARAMS="--non-interactive"
+        if [ ! -z "${REVISION}" ]; then
+            PARAMS="${PARAMS} --revision ${REVISION}"
+        fi
 
         svn checkout ${PARAMS} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports >/dev/null || return 2
         zfs snapshot ${ZFSVOLUME}@work || return 3
@@ -97,6 +97,11 @@ checkout()
     elif [ "${TYPE}" = "svn-full" ]; then
         ZFSVOLUME=`printf "${ZFSROOT}" ${PORTSTREE}`
         echo "ZFSVOLUME=\"${ZFSVOLUME}@work\"" >> ${LOCK}
+
+        PARAMS="--non-interactive"
+        if [ ! -z "${REVISION}" ]; then
+            PARAMS="${PARAMS} --revision ${REVISION}"
+        fi
 
         zfs snapshot ${ZFSVOLUME}@work || return 3
         ln -s ${TINDERBOX}/portstrees/${PORTSTREE}/ports ${WRKBASE}/${BUILD}/ports || return 3
@@ -113,7 +118,9 @@ checkout()
         echo "ZFSVOLUME=\"${ZFSVOLUME}@work\"" >> ${LOCK}
 
         git clone ${REPOSITORY}.git ${WRKBASE}/${BUILD}/ports >/dev/null || return 2
-        cd ${WRKBASE}/${BUILD}/ports && git checkout ${REVISION} >/dev/null || return 2
+	if [ ! -z "${REVISION}" ]; then
+            cd ${WRKBASE}/${BUILD}/ports && git checkout ${REVISION} >/dev/null || return 2
+	fi
         zfs snapshot ${ZFSVOLUME}@work || return 3
 
         # apply overlay ports
@@ -122,8 +129,12 @@ checkout()
     fi
 
     if [ -z "${REVISION}" ]; then
-        REVISION=`svn info ${WRKBASE}/${BUILD}/ports | grep "Revision:" | cut -d: -f2`
-        REVISION=`expr ${REVISION} + 0`
+        if [ "${TYPE}" = "git" ]; then
+            REVISION=`cd ${WRKBASE}/${BUILD}/ports && git rev-parse HEAD`
+        else
+            REVISION=`svn info ${WRKBASE}/${BUILD}/ports | grep "Revision:" | cut -d: -f2`
+            REVISION=`expr ${REVISION} + 0`
+        fi
         echo "REVISION=${REVISION}"
     fi
 
