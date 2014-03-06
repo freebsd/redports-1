@@ -1,0 +1,10 @@
+#!/bin/sh
+
+. cgi.subr
+
+build=`getparam $1 build`
+
+log $build $QUERY_STRING
+
+callhandler "${build}" clean "${build}"
+
