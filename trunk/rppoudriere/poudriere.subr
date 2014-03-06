@@ -15,24 +15,6 @@ poudriere_checkout()
     return 0
 }
 
-poudriere_clean()
-{
-    BUILD=$1
-
-    echo "do clean for ${BUILD}"
-
-    return 0
-}
-
-poudriere_recover()
-{
-    BUILD=$1
-
-    echo "do recover for ${BUILD}"
-
-    return 0
-}
-
 poudriere_build()
 {
     PORT=$1
@@ -45,7 +27,6 @@ poudriere_build()
     return 0
 }
 
-
 poudriere_status()
 {
     BUILD=$1
@@ -55,11 +36,29 @@ poudriere_status()
     return 0
 }
 
+poudriere_clean()
+{
+    BUILD=$1
+
+    echo "do clean for ${BUILD}"
+
+    return 0
+}
+
 poudriere_update()
 {
     BUILD=$1
 
     echo "do update for ${BUILD}"
+
+    return 0
+}
+
+poudriere_recover()
+{
+    BUILD=$1
+
+    echo "do recover for ${BUILD}"
 
     return 0
 }
