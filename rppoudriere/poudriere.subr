@@ -1,0 +1,75 @@
+# RedPorts poudriere backend helper
+#
+# $Id$
+#
+
+poudriere_checkout()
+{
+    TYPE=$1
+    REPOSITORY=$2
+    REVISION=$3
+    BUILD=$4
+
+    echo "do checkout for ${BUILD}"
+  
+    return 0
+}
+
+poudriere_clean()
+{
+    BUILD=$1
+
+    echo "do clean for ${BUILD}"
+
+    return 0
+}
+
+poudriere_recover()
+{
+    BUILD=$1
+
+    echo "do recover for ${BUILD}"
+
+    return 0
+}
+
+poudriere_build()
+{
+    PORT=$1
+    BUILD=$2
+    PRIORITY=$3
+    FINISHURL=$4
+
+    echo "do build for ${BUILD}"
+
+    return 0
+}
+
+
+poudriere_status()
+{
+    BUILD=$1
+
+    echo "give status for ${BUILD}"
+
+    return 0
+}
+
+poudriere_update()
+{
+    BUILD=$1
+
+    echo "do update for ${BUILD}"
+
+    return 0
+}
+
+poudriere_selftest()
+{
+    BUILD=$1
+
+    echo "do selftest for ${BUILD}"
+
+    return 0
+}
+

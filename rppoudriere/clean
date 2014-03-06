@@ -1,10 +1,11 @@
 #!/bin/sh
 
 . cgi.subr
+. poudriere.subr
 
 build=`getparam $1 build`
 
 log $build $QUERY_STRING
 
-callhandler "${build}" clean "${build}"
+callhandler "${build}" poudriere_clean "${build}"
 

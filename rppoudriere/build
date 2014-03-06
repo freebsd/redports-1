@@ -1,0 +1,12 @@
+#!/bin/sh
+
+. cgi.subr
+. poudriere.subr
+
+port=`getparam $1 port`
+build=`getparam $2 build`
+priority=`getparam $3 priority`
+finishurl=`getparam $4 finishurl`
+
+callhandler "${build}" poudriere_build "${port}" "${build}" "${priority}" "${finishurl}"
+

@@ -1,0 +1,6 @@
+#!/bin/sh
+
+. cgi.subr
+
+echo "OK"
+
