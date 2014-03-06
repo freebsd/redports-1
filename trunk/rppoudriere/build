@@ -3,10 +3,11 @@
 . cgi.subr
 . poudriere.subr
 
-port=`getparam $1 port`
-build=`getparam $2 build`
-priority=`getparam $3 priority`
-finishurl=`getparam $4 finishurl`
+# ARG:
+# port:      port origin
+# build:     build name
+# priority:  priority of the job
+# finishurl: callback handler
 
 callhandler "${build}" poudriere_build "${port}" "${build}" "${priority}" "${finishurl}"
 

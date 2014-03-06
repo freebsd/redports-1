@@ -6,34 +6,12 @@ cgiroot=.
 #logroot=/var/log/rptinderbox
 logroot=.
 
-
-# parse parameters from URI into $1 $2 ...
-OLDIFS="$IFS"
-IFS='&'
-set -- $QUERY_STRING
-IFS="$OLDIFS"
-
-
 # log
 log()
 {
   logfile=$logroot/${1:=unknown}.log
 
   printf "[%s] %s - %s\n" "`date`" "$SCRIPT_NAME" "$2" >> $logfile
-}
-
-# parse parameter from URI
-getparam()
-{
-  key=`echo $1 | cut -d'=' -f1 | sed 's % \\\\x g' | xargs printf`
-  value=`echo $1 | cut -d'=' -f2- | sed 's % \\\\x g' | xargs printf`
-
-  if [ ! -z "$2" -a "$key" != "$2" ]; then
-    echo "Parameter $1 does not contain key named $2"
-    exit 1
-  fi
-
-  echo -n $value
 }
 
 # call handler
@@ -50,6 +28,38 @@ callhandler()
 
   $handler $@ | tee -a ${logfile}
 }
+
+# parse parameters from URI
+OLDIFS="$IFS"
+IFS='&='
+set -- $QUERY_STRING
+IFS="$OLDIFS"
+
+urldecode(){
+  awk '{
+	for (i = 0; i < 255; ++i) {
+	  repl = sprintf("%c", i);
+	  if ((repl == "&") || (repl == "\\"))
+	    repl = "\\" repl;
+	    gsub(sprintf("%%%02X", i), repl);
+	    gsub(sprintf("%%%02x", i), repl);
+	  }
+	  print
+	}'
+}
+
+while [ $# -gt 0 ]
+do
+  key="$1"
+  shift
+  value="$1"
+  shift
+  if echo "$value" | grep -q %
+  then
+    value=`echo $value | urldecode`
+  fi
+  export $key="$value"
+done
 
 # send HTTP headers
 echo "Content-Type: text/plain"
