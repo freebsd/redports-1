@@ -1,0 +1,9 @@
+#!/bin/sh
+
+. cgi.subr
+. poudriere.subr
+
+build=`getparam $1 build`
+
+callhandler "${build}" poudriere_recover "${build}"
+

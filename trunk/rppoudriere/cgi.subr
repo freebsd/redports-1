@@ -6,9 +6,6 @@ cgiroot=.
 #logroot=/var/log/rptinderbox
 logroot=.
 
-# default handler
-handler=${cgiroot}/rppoudriere
-
 
 # parse parameters from URI into $1 $2 ...
 OLDIFS="$IFS"
@@ -47,9 +44,11 @@ getparam()
 callhandler()
 {
   logfile=$logroot/${1:=unknown}.log
+  handler=${2}
+  shift
   shift
 
-  . $handler $@ | tee -a ${logfile}
+  $handler $@ | tee -a ${logfile}
 }
 
 # send HTTP headers
