@@ -1,0 +1,58 @@
+# CGI script root directory
+#cgiroot=/usr/local/www/remote
+cgiroot=.
+
+# Logfile root directory
+#logroot=/var/log/rptinderbox
+logroot=.
+
+# default handler
+handler=${cgiroot}/rppoudriere
+
+
+# parse parameters from URI into $1 $2 ...
+OLDIFS="$IFS"
+IFS='&'
+set -- $QUERY_STRING
+IFS="$OLDIFS"
+
+
+# log
+log()
+{
+  logfile=$logroot/${1:=unknown}.log
+
+  printf "[%s] %s - %s\n" "`date`" "$SCRIPT_NAME" "$2" >> $logfile
+}
+
+# parse parameter from URI
+getparam()
+{
+  key=`echo $1 | cut -d'=' -f1 | sed 's % \\\\x g' | xargs printf`
+  value=`echo $1 | cut -d'=' -f2- | sed 's % \\\\x g' | xargs printf`
+
+  if [ ! -z "$2" -a "$key" != "$2" ]; then
+    echo "Parameter $1 does not contain key named $2"
+    exit 1
+  fi
+
+  echo -n $value
+}
+
+# call handler
+#
+# parameters:
+#   build
+#   arguments
+callhandler()
+{
+  logfile=$logroot/${1:=unknown}.log
+  shift
+
+  . $handler $@ | tee -a ${logfile}
+}
+
+# send HTTP headers
+echo "Content-Type: text/plain"
+echo ""
+
