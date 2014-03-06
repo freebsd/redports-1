@@ -3,6 +3,8 @@
 # $Id$
 #
 
+POUDRIERED_SOCK=/tmp/poudriered.sock
+
 poudriere_checkout()
 {
     TYPE=$1
@@ -70,5 +72,24 @@ poudriere_selftest()
     echo "do selftest for ${BUILD}"
 
     return 0
+}
+
+
+
+# poudriered helper functions
+poudriered_addjob()
+{
+    build=${1}
+    port=${2}
+
+    echo '{command:bulk;arguments:"-j ${build} ${port}"}' | nc -w 1 -U $POUDRIERED_SOCK
+}
+
+poudriered_status()
+{
+    build=${1}
+
+    # TODO: command is wrong
+    echo '{command:status;arguments:"-j ${build}"}' | nc -w 1 -U $POUDRIERED_SOCK
 }
 
