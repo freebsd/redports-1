@@ -3,10 +3,10 @@
 . cgi.subr
 . poudriere.subr
 
-type=`getparam $1 type`
-repository=`getparam $2 repository`
-revision=`getparam $3 revision`
-build=`getparam $4 build`
+# type:       checkout type svn/svn-full/git
+# repository: repository url
+# revision:   revision id
+# build:      build to use
 
 callhandler "${build}" poudriere_checkout "${type}" "${repository}" "${revision}" "${build}"
 

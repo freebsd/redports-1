@@ -3,7 +3,7 @@
 . cgi.subr
 . poudriere.subr
 
-build=`getparam $1 build`
+# build: build to clean
 
 log $build $QUERY_STRING
 
