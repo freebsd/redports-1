@@ -13,7 +13,7 @@
 #   RPPKGVERSION
 #   RPBUILDSTATUS
 #   RPBUILDREASON
-#   RPBUILDLOG
+#   BUILDLOG
 #   RPBACKENDHOST
 
 MSG=""
@@ -36,8 +36,8 @@ case "${RPACTION}" in
 		MSG="${MSG} - %0304${RPBUILDSTATUS}%0f ${RPBUILDREASON}"
 		;;
 	esac
-	if [ ! -z "${RPBUILDLOG}" -a ! -z "${BUILDREASON}" ] ; then
-	    MSG="${MSG} - ${RPWWWURL}/~${RPOWNER}/${RPBUILDQUEUEID}-${RPBUILDID}/${RPBUILDLOG}"
+	if [ ! -z "${BUILDLOG}" -a ! -z "${BUILDREASON}" ] ; then
+	    MSG="${MSG} - ${RPWWWURL}/~${RPOWNER}/${RPBUILDQUEUEID}-${RPBUILDID}/${BUILDLOG}"
 	fi
 	;;
 
