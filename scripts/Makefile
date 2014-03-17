@@ -37,6 +37,7 @@ deinstall-backend:
 .for file in ${BACKENDFILES}
 	rm -f ${TARGET}/${file}
 .endfor
+	rm -f /usr/local/etc/rc.d/rpmaintainbuild
 
 deinstall-prtools:
 .for file in ${PRTOOLFILES}
