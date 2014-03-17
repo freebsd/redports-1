@@ -12,17 +12,18 @@ deinstall: deinstall-frontend deinstall-backend deinstall-prtools
 # install
 install-frontend:
 .for file in ${FRONTENDFILES}
-	install -o root -g wheel -m 0755 ${file} ${TARGET}
+	install -o root -g wheel -m 0555 ${file} ${TARGET}
 .endfor
 
 install-backend:
 .for file in ${BACKENDFILES}
-	install -o root -g wheel -m 0755 ${file} ${TARGET}
+	install -o root -g wheel -m 0555 ${file} ${TARGET}
 .endfor
+	install -o root -g wheel -m 0555 rpmaintainbuild.rc /usr/local/etc/rc.d/rpmaintainbuild
 
 install-prtools:
 .for file in ${PRTOOLFILES}
-	install -o root -g wheel -m 0755 ${file} ${TARGET}
+	install -o root -g wheel -m 0555 ${file} ${TARGET}
 .endfor
 
 

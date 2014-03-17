@@ -1,0 +1,50 @@
+#!/bin/sh
+#
+
+# PROVIDE: rpmaintainbuild
+# REQUIRE: LOGIN mysql postgresql
+# BEFORE: tinderd
+
+#rpmaintainbuild_enable="YES"
+#
+
+. /etc/rc.subr
+
+name="rpmaintainbuild"
+rcvar=rpmaintainbuild_enable
+
+# read settings, set default values
+load_rc_config "${name}"
+: ${rpmaintainbuild_enable="NO"}
+: ${rpmaintainbuild_debug="NO"}
+
+command="/usr/local/bin/rpmaintainbuild"
+
+# needed when your daemon is a shell script
+command_interpreter="/bin/sh"
+
+# extra required arguments
+if checkyesno rpmaintainbuild_debug
+then
+    command_args=""
+else
+    command_args=">/dev/null 2>&1"
+fi
+
+start_cmd="${name}_start"
+
+rpmaintainbuild_start()
+{
+	# wait to be sure mysql has started
+	sleep 5 
+
+	# Cleanup tinderbox
+	rm -rf /tmp/tinderd*
+
+	# Cleanup redports builds
+	for i in `/usr/local/tinderbox/scripts/tc listBuilds`; do
+		${command} -r $i ${command_args}
+	done
+}
+
+run_rc_command "$1"
