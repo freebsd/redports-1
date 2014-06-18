@@ -79,6 +79,7 @@ if [ "${CLEANDATABASE}" = "yes" ]; then
     DBPASS=`getvar DB_PASS`
     DBHOST=`getvar DB_HOST`
     DBNAME=`getvar DB_NAME`
+    MYSQL=/usr/local/bin/mysql
 
     echo "Reset build_status in database to IDLE"
     echo "MySQL Database ${DBNAME} ${DBUSER}@${DBHOST}"
@@ -86,7 +87,7 @@ if [ "${CLEANDATABASE}" = "yes" ]; then
     if [ ! -z "${DBPASS}" ]; then
         DBPASS="-p${DBPASS}"
     fi
-    mysql -u${DBUSER} ${DBPASS} -h ${DBHOST} -e "UPDATE builds SET build_status = \"IDLE\" WHERE build_name = \"${BUILD}\";" ${DBNAME} || exit 1
+    ${MYSQL} -u${DBUSER} ${DBPASS} -h ${DBHOST} -e "UPDATE builds SET build_status = \"IDLE\" WHERE build_name = \"${BUILD}\";" ${DBNAME} || exit 1
 fi
 
 if [ "${CLEANJAIL}" = "yes" ]; then
