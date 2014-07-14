@@ -87,6 +87,14 @@ So it is recommended to run it in screen/tmux.
 # /usr/local/tinderbox/scripts/tc tbcleanup
 }}}
 
+A workaround which does the same as tbcleanup but also deletes all port entries in the tinderbox database is this.
+{{{
+mysql> use tinderbox;
+mysql> delete from build_ports;    
+mysql> delete from ports;
+mysql> optimize table build_ports, ports;
+}}}
+
 
 === Updating build environment ===
 
