@@ -23,8 +23,7 @@ callhandler()
 {
   logfile=$logroot/${1:=unknown}.log
   handler=${2}
-  shift
-  shift
+  shift 2
 
   $handler $@ | tee -a ${logfile}
 }
@@ -51,9 +50,8 @@ urldecode(){
 while [ $# -gt 0 ]
 do
   key="$1"
-  shift
-  value="$1"
-  shift
+  value="$2"
+  shift 2
   if echo "$value" | grep -q %
   then
     value=`echo $value | urldecode`

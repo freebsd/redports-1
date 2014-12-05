@@ -6,12 +6,10 @@
 # $Id$
 #
 
-TINDERBOX=/usr/local/tinderbox
+POUDRIERE=/poudriere
 ZFSROOT=zroot
 
-CLEANDATABASE=no
-CLEANJAIL=no
-CLEANLOCK=no
+UPDATEJAIL=no
 CLEANPACKAGES=no
 CLEANTEMP=no
 CLEANJAILREMOVE=no
@@ -19,28 +17,18 @@ CLEANJAILREMOVE=no
 while getopts dlpqrtux arg >/dev/null 2>&1
 do
     case "${arg}" in
-        d)   CLEANDATABASE=yes ;;
-        l)   CLEANLOCK=yes ;;
         p)   CLEANPACKAGES=yes ;;
-        q)   CLEANQUEUE=yes ;;
-        r)   CLEANDATABASE=yes
-             CLEANLOCK=yes
-             CLEANQUEUE=yes
-             CLEANTEMP=yes ;;
-        t)   CLEANTEMP=yes ;;
-        u)   CLEANJAIL=yes
+        r)   CLEANTEMP=yes ;;
+        u)   UPDATEJAIL=yes
+             CLEANTEMP=yes
              CLEANPACKAGES=yes ;;
-        x)   CLEANLOCK=yes
-             CLEANPACKAGES=yes
-             CLEANQUEUE=yes
+        x)   CLEANPACKAGES=yes
              CLEANTEMP=yes
              CLEANJAILREMOVE=yes ;;
         [?]) echo "Unknown option -${OPTARG}" exit 1 ;;
     esac
 done
 shift `expr $OPTIND - 1`
-
-BUILD=$1
 
 if [ -z "$1" ]; then
     echo "Usage ${0##*/} [dlprtux] build"
@@ -51,118 +39,42 @@ if [ -z "$1" ]; then
     echo "  -x          Remove build completely"
     echo ""
     echo "Expert Options:"
-    echo "  -d          Cleanup buildstatus in Database"
-    echo "  -l          Cleanup tinderd lockfiles for build"
     echo "  -p          Remove all packages for build"
-    echo "  -q          Remove queue entries for build"
-    echo "  -t          Cleanup redports temporary directory"
     echo ""
     exit 1
 fi
 
-getvar()
-{
-    cat ${TINDERBOX}/scripts/ds.ph | grep $1 | cut -d"'" -f2
-}
+BUILD=$1
 
-if ${TINDERBOX}/scripts/tc listBuildPortsQueue -s ENQUEUED -r | egrep ":${BUILD}:" >/dev/null ; then
-    echo "Build ${BUILD} has queued jobs"
-    exit 1
+if [ "${CLEANTEMP}" = "yes" ]; then
+    echo "Cleaning up the ports tree"
+    zfs rollback ${ZFSROOT}${POUDRIERE}/ports/${BUILD}@clean
+    echo "Cleaning up the build"
+    /usr/local/bin/poudriere jail -j ${BUILD} -p ${BUILD} -k
 fi
 
-if ${TINDERBOX}/scripts/tc listBuildPortsQueue -s PROCESSING -r | egrep ":${BUILD}:" >/dev/null ; then
-    echo "Warning: Build ${BUILD} has running jobs"
-fi
+if [ "${UPDATEJAIL}" = "yes" ]; then
+    echo "Updating jail ${BUILD}"
+    /usr/local/bin/poudriere jail -u -j ${BUILD}
 
-if [ "${CLEANDATABASE}" = "yes" ]; then
-    DBUSER=`getvar DB_USER`
-    DBPASS=`getvar DB_PASS`
-    DBHOST=`getvar DB_HOST`
-    DBNAME=`getvar DB_NAME`
-    MYSQL=/usr/local/bin/mysql
-
-    echo "Reset build_status in database to IDLE"
-    echo "MySQL Database ${DBNAME} ${DBUSER}@${DBHOST}"
-
-    if [ ! -z "${DBPASS}" ]; then
-        DBPASS="-p${DBPASS}"
+    if [ -f "${POUDRIERE}/jails/${BUILD}/.svnrev.txt" ]
+    then
+      tmp=`mktemp -u`
+      echo `cat /usr/local/etc/poudriere.d/jails/${BUILD}/version`@`cat ${POUDRIERE}/jails/${BUILD}/.svnrev.txt`> $tmp
+      mv $tmp /usr/local/etc/poudriere.d/jails/${BUILD}/version
     fi
-    ${MYSQL} -u${DBUSER} ${DBPASS} -h ${DBHOST} -e "UPDATE builds SET build_status = \"IDLE\" WHERE build_name = \"${BUILD}\";" ${DBNAME} || exit 1
-fi
-
-if [ "${CLEANJAIL}" = "yes" ]; then
-    echo "Rebuilding jail for build ${BUILD}"
-    ${TINDERBOX}/scripts/tc makeJail -j ${BUILD} || exit 1
-fi
-
-if [ "${CLEANLOCK}" = "yes" ]; then
-    echo "Removing tinderd locks for ${BUILD}"
-    rm -f ${TINDERBOX}/builds/${BUILD}/lock
-    rm -f ${TINDERBOX}/builds/${BUILD}/tinderdlock
 fi
 
 if [ "${CLEANPACKAGES}" = "yes" ]; then
     echo "Removing all packages for build ${BUILD}"
-    rm -rf ${TINDERBOX}/packages/${BUILD}
-
-    echo "Cleanup tinderbox database"
-    ${TINDERBOX}/scripts/tc tbcleanup || exit 1
-fi
-
-if [ "${CLEANQUEUE}" = "yes" ]; then
-    echo "Removing Queue entries for build ${BUILD}"
-
-    for ENTRY in `${TINDERBOX}/scripts/tc listBuildPortsQueue -r | egrep ":${BUILD}:"`
-    do
-       QUEUEID=`echo ${ENTRY} | cut -d: -f1`
-       PORT=`echo ${ENTRY} | cut -d: -f4`
-
-       echo "Removing job for ${PORT}"
-       ${TINDERBOX}/scripts/tc rmBuildPortsQueueEntry -i ${QUEUEID}
-    done
-fi
-
-if [ "${CLEANTEMP}" = "yes" ]; then
-    if zfs list -t snapshot | grep "${ZFSROOT}/tinderbox/${BUILD}/portstree" >/dev/null ; then
-	zfs rollback ${ZFSROOT}/tinderbox/${BUILD}/portstree@work 2>/dev/null
-	zfs destroy -R ${ZFSROOT}/tinderbox/${BUILD}/portstree@work 2>/dev/null
-    fi
-
-    # unmount tmpfs
-    while umount -f ${ZFSROOT}/tinderbox/${BUILD} 2>/dev/null ; do
-        sleep 1
-    done
-
-    echo "Removing redports temporary directory for build ${BUILD}"
-    rm -rf /tmp/rptinderbox/${BUILD}
+    rm -rf ${POUDRIERE}/data/packages/${BUILD}-${BUILD}
 fi
 
 if [ "${CLEANJAILREMOVE}" = "yes" ]; then
-    echo "Removing build ${BUILD}"
-    ${TINDERBOX}/scripts/tc rmBuild -b ${BUILD} -f
-
     echo "Removing jail ${BUILD}"
-    ${TINDERBOX}/scripts/tc rmJail -j ${BUILD} -f
-
+    /usr/local/bin/poudriere jail -j ${BUILD} -d
     echo "Removing portstree for ${BUILD}"
-    ${TINDERBOX}/scripts/tc rmPortsTree -p ${BUILD} -f
-
-    echo "Cleaning up filesystem"
-    rm -rf ${TINDERBOX}/${BUILD}
-    rm -rf ${TINDERBOX}/builds/${BUILD}
-    rm -rf ${TINDERBOX}/errors/${BUILD}
-    rm -rf ${TINDERBOX}/logs/${BUILD}
-    rm -rf ${TINDERBOX}/options/${BUILD}
-    rm -rf ${TINDERBOX}/wrkdirs/${BUILD}
-    mv ${TINDERBOX}/scripts/etc/env/build.${BUILD} ${TINDERBOX}/scripts/etc/env/build.${BUILD}.bak
-
-    echo "Removing ZFS filesystems"
-    zfs destroy ${ZFSROOT}/tinderbox/${BUILD}/portstree
-    zfs destroy ${ZFSROOT}/tinderbox/${BUILD}/jail
-    zfs destroy ${ZFSROOT}/tinderbox/${BUILD}
-
-    rm -rf ${TINDERBOX}/jails/${BUILD} 2>/dev/null
-    rm -rf ${TINDERBOX}/portstrees/${BUILD} 2>/dev/null
+    /usr/local/bin/poudriere ports -p ${BUILD} -d
 fi
 
 echo "Successfully Finished!"
