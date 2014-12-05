@@ -104,8 +104,12 @@ poudriere_status()
 poudriere_clean()
 {
     BUILD=$1
+    PORTSTREE=${POUDRIERE}/ports/${BUILD}
 
-    echo "clean ${BUILD}"
+    zfs rollback ${ZFSROOT}${PORTSTREE}@clean
+
+    # There possibly is more cleanup to do here.
+    # Also, this "more" may be needed in recover after.
 
     return 0
 }
@@ -140,10 +144,12 @@ poudriere_update()
 poudriere_recover()
 {
     BUILD=$1
-
     PORTSTREE=${POUDRIERE}/ports/${BUILD}
 
     zfs rollback ${ZFSROOT}${PORTSTREE}@clean
+
+    # There is possibly more cleanup to do here.
+    # Also, this "more" may be needed in clean before.
 
     return 0
 }
