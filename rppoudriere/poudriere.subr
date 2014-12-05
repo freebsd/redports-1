@@ -35,15 +35,8 @@ poudriere_build()
 poudriere_status()
 {
     BUILD=$1
-
-    echo "give status for ${BUILD}"
-
-    return 0
-}
-
-poudriere_clean()
-{
-    BUILD=$1
+    STATUS="unknown"
+    BUILDSTATUS=""
 
     set -- `poudriere status -H -j ${BUILD} -p ${BUILD} -z 0 -l -f`
 
@@ -60,6 +53,59 @@ poudriere_clean()
     remain=${11}
     time=${12}
     logs=${13}
+
+    case $status in
+	"done")
+	    STATUS="finished" ;;
+	"balancing_pool"|"build_port_done"|"building"|"clean_pool"|"clean_restricted"|"cleaning"|"committing"|"computingdeps"|"computingrdeps"|"index"|"loading_moved"|"parallel_build"|"pkgrepo"|"sanity"|"starting_builders"|"starting_jobs"|"stopping_jobs"|"updating_stats"|"stage-qa"|"check-plist"|"leftovers")
+	    STATUS="building" ;;
+	"idle")
+	    STATUS="idle"
+	    PORTSTREE=${POUDRIERE}/ports/${BUILD}
+	    # XXX
+	    PORTSTREELASTBUILT=some timestamp I have to figure out the format of
+
+	    echo "PORTSTREELASTBUILT=${PORTSTREELASTBUILT}"
+	    ;;
+	*)
+	    STATUS="finished"
+	    BUILDSTATUS=$status
+	    ;;
+    esac
+
+    # XXX
+    # Do some archeology on what's in there, where it comes from, and how rppd
+    # uses those.
+    if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
+        . ${WRKBASE}/${BUILD}/.finished
+
+        if [ -n "${FAIL_REASON}" ]; then
+            echo "FAIL_REASON=${FAIL_REASON}"
+        fi
+
+        if [ -n "${BUILDLOG}" ]; then
+            echo "BUILDLOG=${BUILDLOG}"
+        fi
+
+        if [ -n "${WRKDIR}" ]; then
+            echo "WRKDIR=${WRKDIR}"
+        fi
+    fi
+
+    echo "STATUS=${STATUS}"
+
+    if [ -n "${BUILDSTATUS}" ]; then
+        echo "BUILDSTATUS=${BUILDSTATUS}"
+    fi
+
+    return 0
+}
+
+poudriere_clean()
+{
+    BUILD=$1
+
+    echo "clean ${BUILD}"
 
     return 0
 }
