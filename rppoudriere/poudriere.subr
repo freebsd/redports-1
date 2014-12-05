@@ -1,9 +1,12 @@
+#!/bin/sh
+
 # RedPorts poudriere backend helper
 #
 # $Id$
 #
 
-POUDRIERED_SOCK=/tmp/poudriered.sock
+POUDRIERE=/poudriere
+ZFSROOT=zroot
 
 poudriere_checkout()
 {
@@ -42,7 +45,21 @@ poudriere_clean()
 {
     BUILD=$1
 
-    echo "do clean for ${BUILD}"
+    set -- `poudriere status -H -j ${BUILD} -p ${BUILD} -z 0 -l -f`
+
+    zset=${1}
+    tree=${2}
+    jail=${3}
+    build=${4}
+    status=${5}
+    queue=${6}
+    built=${7}
+    fail=${8}
+    skip=${9}
+    ignore=${10}
+    remain=${11}
+    time=${12}
+    logs=${13}
 
     return 0
 }
@@ -51,7 +68,25 @@ poudriere_update()
 {
     BUILD=$1
 
-    echo "do update for ${BUILD}"
+    PORTSTREE=${POUDRIERE}/ports/${BUILD}
+
+    if [ ! -d "${PORTSTREE}" ]; then
+        echo "Unknown portstree for build ${BUILD}"
+        return 1
+    fi
+
+    zfs rollback ${ZFSROOT}${PORTSTREE}@clean
+
+    if svn update -q ${PORTSTREE}
+    then
+	zfs snapshot ${ZFSROOT}${PORTSTREE}@clean2
+	zfs destroy ${ZFSROOT}${PORTSTREE}@clean
+	zfs rename ${ZFSROOT}${PORTSTREE}@clean2 ${ZFSROOT}${PORTSTREE}@clean
+    else
+	zfs rollback ${ZFSROOT}${PORTSTREE}@clean
+	echo "svn update failed for ${PORTSTREE}"
+	return 1
+    fi
 
     return 0
 }
@@ -60,7 +95,9 @@ poudriere_recover()
 {
     BUILD=$1
 
-    echo "do recover for ${BUILD}"
+    PORTSTREE=${POUDRIERE}/ports/${BUILD}
+
+    zfs rollback ${ZFSROOT}${PORTSTREE}@clean
 
     return 0
 }
@@ -69,33 +106,17 @@ poudriere_selftest()
 {
     BUILD=$1
 
-    echo "do selftest for ${BUILD}"
+    if [ ! -d "${POUDRIERE}/jails/${BUILD}" ]; then
+        echo "Unknown build ${BUILD}"
+        return 1
+    fi
+
+    if [ -z "${POUDRIERE}/ports/${BUILD}" ]; then
+        echo "Unknown portstree for build ${BUILD}"
+        return 1
+    fi
 
     return 0
 }
 
-
-
-# poudriered helper functions
-poudriered_addjob()
-{
-    build=${1}
-    port=${2}
-
-    echo '{command:"bulk","arguments":"-j ${build} ${port}"}' | nc -w 1 -U $POUDRIERED_SOCK
-}
-
-poudriered_status()
-{
-    build=${1}
-
-    echo '{operation:"status","arguments":"-j ${build}"}' | nc -w 1 -U $POUDRIERED_SOCK
-}
-
-poudriered_portupdate()
-{
-    build=${1}
-
-    echo '{command:"ports","arguments":"-p ${build} -u"}' | nc -w 1 -U $POUDRIERED_SOCK
-}
 

@@ -1,35 +1,18 @@
 #!/bin/sh
 
 #
-# RedPorts Tinderbox backend build creation script
+# RedPorts Poudriere backend build creation script
 #
 # $Id$
 #
 
 # Requirements:
-#   lftp (ftp/lftp)
-#   tinderbox (ports-mgmt/tinderbox)
+#   poudriere (ports-mgmt/poudriere-devel)
 #   zfs
 
-FTP=ftp8.freebsd.org
-ZFSROOT=zroot
-
-SVNPROTO=http
-SVNHOST=svn0.us-east.FreeBSD.org
-
-TBUSER=www
-
-VERSION=$1
-ARCH=$2
-
-if [ ! -z "$3" ]; then
-    SUFFIX=-${3}
-else
-    SUFFIX=
-fi
-
-BUILD=${VERSION}-FreeBSD-${ARCH}${SUFFIX}
-TINDERBOX=/usr/local/tinderbox
+PORTSUSER=www
+POUDRIERE=/poudriere
+ZPOOL=zroot
 
 if [ -z "$1" -o -z "$2" ]; then
     echo "Usage ${0##*/} version architecture [extra-suffix]"
@@ -42,42 +25,45 @@ if [ -z "$1" -o -z "$2" ]; then
     exit 1
 fi
 
-if echo ${VERSION} | grep "-" > /dev/null ; then
-    OPTIONS="-t . -u SVN -P ${SVNPROTO} -H ${SVNHOST} -D base/stable/${VERSION%-STABLE}"
-elif ! echo ${VERSION} | grep "\." > /dev/null ; then
-    OPTIONS="-t . -u SVN -P ${SVNPROTO} -H ${SVNHOST} -D base/head"
+VERSION=$1
+ARCH=$2
+
+if [ ! -z "$3" ]; then
+    SUFFIX=-${3}
 else
-    OPTIONS="-t ${VERSION}-RELEASE -u LFTP -P http -H ${FTP}"
+    SUFFIX=
 fi
 
-if ! zfs list ${ZFSROOT}/tinderbox >/dev/null ; then
-    zfs create -o compression=lzjb -o setuid=off -o atime=off -o sync=disabled ${ZFSROOT}/tinderbox
-    zfs set mountpoint=legacy ${ZFSROOT}/tinderbox
+# Jails can't have a . in their names.
+BUILD=`echo ${VERSION}-${ARCH}${SUFFIX}|sed -e 's/\./_/g'`
 
-    zfs allow -s @rptinderbox destroy,snapshot,rollback,mount ${ZFSROOT}/tinderbox
-    zfs allow -d -u ${TBUSER} @rptinderbox ${ZFSROOT}/tinderbox
+# 9-STABLE -> stable/9
+# 10.0 -> 10.0-RELEASE
+# 11 -> 11-CURRENT
+if echo ${VERSION} | grep "-" > /dev/null ; then
+    OPTIONS="-v stable/${VERSION%-STABLE} -m svn+https"
+elif ! echo ${VERSION} | grep "\." > /dev/null ; then
+    OPTIONS="-v ${VERSION} -m url=http://admin-http.nyi.freebsd.org/install/${ARCH}_${VERSION}"
+else
+    OPTIONS="-v ${VERSION}-RELEASE -m http"
 fi
 
-if ! zfs list ${ZFSROOT}/tinderbox/${BUILD} >/dev/null ; then
-    zfs create -o compression=lzjb -o setuid=on ${ZFSROOT}/tinderbox/${BUILD}
-    zfs create -o compression=lzjb -o setuid=off ${ZFSROOT}/tinderbox/${BUILD}/portstree
-    zfs create -o compression=lzjb -o setuid=off ${ZFSROOT}/tinderbox/${BUILD}/jail
+set -e
 
-    zfs set mountpoint=legacy ${ZFSROOT}/tinderbox/${BUILD}
-    zfs set mountpoint=${TINDERBOX}/portstrees/${BUILD} ${ZFSROOT}/tinderbox/${BUILD}/portstree
-    zfs set mountpoint=${TINDERBOX}/jails/${BUILD} ${ZFSROOT}/tinderbox/${BUILD}/jail
+# Make sure www is allowed to do stuff to the ports trees
+zfs allow -s @rppoudriere rollback,snapshot,rename,destroy,mount zroot/poudriere/ports
+zfs allow -d -u www @rppoudriere zroot/poudriere/ports
+
+/usr/local/bin/poudriere ports -c -p ${BUILD} -m svn+https -q 
+chown -R ${PORTSUSER} ${POUDRIERE}/ports/${BUILD}
+zfs snapshot ${ZPOOL}${POUDRIERE}/ports/${BUILD}@clean
+/usr/local/bin/poudriere jail -c -j ${BUILD} -a ${ARCH} ${OPTIONS}
+
+if [ -f "${POUDRIERE}/jails/${BUILD}/.svnrev.txt" ]
+then
+    tmp=`mktemp -u`
+    echo `cat /usr/local/etc/poudriere.d/jails/${BUILD}/version`@`cat ${POUDRIERE}/jails/${BUILD}/.svnrev.txt`> $tmp
+    mv $tmp /usr/local/etc/poudriere.d/jails/${BUILD}/version
 fi
-
-if [ `uname -m` != "${ARCH}" ]; then
-    echo "export ARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
-    echo "export MACHINE_ARCH=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
-    echo "export UNAME_m=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
-    echo "export UNAME_p=${ARCH}" >> ${TINDERBOX}/scripts/etc/env/build.${BUILD}
-fi
-
-${TINDERBOX}/scripts/tc createPortsTree -p ${BUILD} -u SVN -H ${SVNHOST} -P ${SVNPROTO} -D ports/head -d "FreeBSD Portstree" || exit 1
-chown -R ${TBUSER} ${TINDERBOX}/portstrees/${BUILD} || exit 1
-${TINDERBOX}/scripts/tc createJail -j ${BUILD} ${OPTIONS} -d "FreeBSD ${VERSION}/${ARCH}" -a ${ARCH} || exit 1
-${TINDERBOX}/scripts/tc createBuild -b ${BUILD} -j ${BUILD} -p ${BUILD} -d "FreeBSD ${VERSION}/${ARCH} for redports" || exit 1
 
 exit 0
