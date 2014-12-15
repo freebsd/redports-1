@@ -1,5 +1,5 @@
 #!/bin/sh
-
+# ex:sw=4 sts=4
 # RedPorts poudriere backend helper
 #
 # $Id$
@@ -7,6 +7,7 @@
 
 POUDRIERE=/poudriere
 ZFSROOT=zroot
+WRKBASE=/tmp/rppoudriere
 
 poudriere_checkout()
 {
@@ -15,8 +16,103 @@ poudriere_checkout()
     REVISION=$3
     BUILD=$4
 
-    echo "do checkout for ${BUILD}"
+    PORTSTREE=${POUDRIERE}/ports/${BUILD}
+
+    if [ -z "${BUILD}" ]; then
+        echo "Build not specified."
+        return 1
+    fi
+
+    if [ ! -f ${PORTSTREE} ]; then
+        echo "Portstree does not exist."
+        return 1
+    fi
+
+    if [ "${TYPE}" != "svn" -a "${TYPE}" != "svn-full" -a "${TYPE}" != "git" ]; then
+        echo "Unknown repository type"
+        return 1
+    fi
+
+    LOCK=${WRKBASE}/${BUILD}/.lock
+
+    if [ -f "${LOCK}" ]; then
+        echo "Lock ${LOCK} exists."
+        return 1
+    fi
+
+    if [ ! -d "${WRKBASE}/${BUILD}" ]; then
+        mkdir -p ${WRKBASE}/${BUILD} || return 1
+    fi
+
+    # create build lock
+    touch ${LOCK} || return 1
+
+    # populate lock
+    echo "TYPE=\"${TYPE}\"" >> ${LOCK}
+    echo "REPOSITORY=\"${REPOSITORY}\"" >> ${LOCK}
+    echo "BUILD=\"${BUILD}\"" >> ${LOCK}
+    echo "PORTSTREE=\"${PORTSTREE}\"" >> ${LOCK}
+    echo "LOCK=\"${LOCK}\"" >> ${LOCK}
+
+    ZFSVOLUME="${ZFSROOT}${PORTSTREE}"
+    echo "ZFSVOLUME=\"${ZFSVOLUME}@work\"" >> ${LOCK}
+
+    # Before doing anything, make a snapshot
+    zfs snapshot ${ZFSVOLUME}@work || return 3
+
+
+    # checkout overlay ports
+    if [ "${TYPE}" = "svn" ]; then
+        PARAMS="--non-interactive"
+        if [ -n "${REVISION}" ]; then
+            PARAMS="${PARAMS} --revision ${REVISION}"
+        fi
+
+        svn checkout ${PARAMS} ${REPOSITORY} ${WRKBASE}/${BUILD}/ports >/dev/null || return 2
+
+        # apply overlay ports
+        # Find ports
+        find ${WRKBASE}/${BUILD}/ports -type d -d 2 | grep -v ".svn" | grep -v "${WRKBASE}/${BUILDS}/ports/Mk/" | sed -e "s|^${WRKBASE}/${BUILD}/ports/|${PORTSTREE}/|" | xargs rm -Rf || return 1
+
+        cp -pr ${WRKBASE}/${BUILD}/ports/* ${PORTSTREE}/
+
+    elif [ "${TYPE}" = "svn-full" ]; then
+        PARAMS="--non-interactive"
+        if [ -n "${REVISION}" ]; then
+            PARAMS="${PARAMS} --revision ${REVISION}"
+        fi
+
+        ln -s ${PORTSTREE} ${WRKBASE}/${BUILD}/ports || return 3
+
+        cd ${TINDERBOX}/portstrees/${PORTSTREE}/ports && svn update ${PARAMS} >/dev/null || return 2
+
+    elif [ "${TYPE}" = "git" ]; then
+        git clone ${REPOSITORY}.git ${WRKBASE}/${BUILD}/ports >/dev/null || return 2
+        if [ -n "${REVISION}" ]; then
+            cd ${WRKBASE}/${BUILD}/ports && git checkout ${REVISION} >/dev/null || return 2
+        fi
+
+        # apply overlay ports
+        find ${WRKBASE}/${BUILD}/ports -type d -d 2 | grep -v ".git" | grep -v "${WRKBASE}/${BUILDS}/ports/Mk/" | sed -e "s|^${WRKBASE}/${BUILD}/ports/|${PORTSTREE}/|" | xargs rm -Rf || return 1
+
+        cp -pr ${WRKBASE}/${BUILD}/ports/* ${PORTSTREE}/
+
+    fi
+
+    if [ -z "${REVISION}" ]; then
+        if [ "${TYPE}" = "git" ]; then
+            REVISION=`cd ${WRKBASE}/${BUILD}/ports && git rev-parse HEAD`
+        else
+            REVISION=`svn info --xml ${PORTSTREE} | xml sel -t -m "/info/entry" -v "@revision"`
+        fi
+        echo "REVISION=${REVISION}"
+    fi
+
+    echo "REVISION=\"${REVISION}\"" >> ${LOCK}
   
+    # checkout finished
+    touch ${WRKBASE}/${BUILD}/.checkout || return 1
+
     return 0
 }
 
@@ -55,22 +151,22 @@ poudriere_status()
     logs=${13}
 
     case $status in
-	"done")
-	    STATUS="finished" ;;
-	"balancing_pool"|"build_port_done"|"building"|"clean_pool"|"clean_restricted"|"cleaning"|"committing"|"computingdeps"|"computingrdeps"|"index"|"loading_moved"|"parallel_build"|"pkgrepo"|"sanity"|"starting_builders"|"starting_jobs"|"stopping_jobs"|"updating_stats"|"stage-qa"|"check-plist"|"leftovers")
-	    STATUS="building" ;;
-	"idle")
-	    STATUS="idle"
-	    PORTSTREE=${POUDRIERE}/ports/${BUILD}
-	    # XXX
-	    PORTSTREELASTBUILT=some timestamp I have to figure out the format of
+        "done")
+            STATUS="finished" ;;
+        "balancing_pool"|"build_port_done"|"building"|"clean_pool"|"clean_restricted"|"cleaning"|"committing"|"computingdeps"|"computingrdeps"|"index"|"loading_moved"|"parallel_build"|"pkgrepo"|"sanity"|"starting_builders"|"starting_jobs"|"stopping_jobs"|"updating_stats"|"stage-qa"|"check-plist"|"leftovers")
+            STATUS="building" ;;
+        "idle")
+            STATUS="idle"
+            PORTSTREE=${POUDRIERE}/ports/${BUILD}
+            # XXX
+            PORTSTREELASTBUILT=some timestamp I have to figure out the format of
 
-	    echo "PORTSTREELASTBUILT=${PORTSTREELASTBUILT}"
-	    ;;
-	*)
-	    STATUS="finished"
-	    BUILDSTATUS=$status
-	    ;;
+            echo "PORTSTREELASTBUILT=${PORTSTREELASTBUILT}"
+            ;;
+        *)
+            STATUS="finished"
+            BUILDSTATUS=$status
+            ;;
     esac
 
     # XXX
@@ -129,13 +225,13 @@ poudriere_update()
 
     if svn update -q ${PORTSTREE}
     then
-	zfs snapshot ${ZFSROOT}${PORTSTREE}@clean2
-	zfs destroy ${ZFSROOT}${PORTSTREE}@clean
-	zfs rename ${ZFSROOT}${PORTSTREE}@clean2 ${ZFSROOT}${PORTSTREE}@clean
+        zfs snapshot ${ZFSROOT}${PORTSTREE}@clean2
+        zfs destroy ${ZFSROOT}${PORTSTREE}@clean
+        zfs rename ${ZFSROOT}${PORTSTREE}@clean2 ${ZFSROOT}${PORTSTREE}@clean
     else
-	zfs rollback ${ZFSROOT}${PORTSTREE}@clean
-	echo "svn update failed for ${PORTSTREE}"
-	return 1
+        zfs rollback ${ZFSROOT}${PORTSTREE}@clean
+        echo "svn update failed for ${PORTSTREE}"
+        return 1
     fi
 
     return 0
