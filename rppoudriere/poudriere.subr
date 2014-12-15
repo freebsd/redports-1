@@ -23,7 +23,7 @@ poudriere_checkout()
         return 1
     fi
 
-    if [ ! -f ${PORTSTREE} ]; then
+    if [ ! -d ${PORTSTREE} ]; then
         echo "Portstree does not exist."
         return 1
     fi
@@ -123,7 +123,66 @@ poudriere_build()
     PRIORITY=$3
     FINISHURL=$4
 
-    echo "do build for ${BUILD}"
+    LOCK=${WRKBASE}/${BUILD}/.lock
+
+    if [ ! -f "${LOCK}" ]; then
+        echo "No lock for build ${BUILD}"
+        return 1
+    fi
+
+    . ${LOCK}
+
+    if [ ! -f "${WRKBASE}/${BUILD}/.checkout" ]; then
+        echo "No checkout for build ${BUILD}"
+        return 1
+    fi
+
+    if [ -f "${WRKBASE}/${BUILD}/.build" ]; then
+        echo "Build already running"
+        return 1
+    fi
+
+    if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
+        echo "Build already finished"
+        return 1
+    fi
+
+    PORTSTREE=${POUDRIERE}/ports/${BUILD}
+
+    if [ ! -d "${PORTSTREE}" ]; then
+        echo "Unknown portstree for build ${BUILD}"
+        return 1
+    fi
+
+    # for svn-full repositories we do not delete packages
+    if [ -L "${WRKBASE}/${BUILD}/ports" ]; then
+        LASTPACKAGEDATE=""
+    else
+        LASTPACKAGEDATE=`date "+%Y-%m-%d %H:%M:%S"`
+    fi
+
+    echo "PORT=\"${PORT}\"" >> ${LOCK}
+    echo "PRIORITY=\"${PRIORITY}\"" >> ${LOCK}
+    echo "FINISHURL=\"${FINISHURL}\"" >> ${LOCK}
+    echo "LASTPACKAGEDATE=\"${LASTPACKAGEDATE}\"" >> ${LOCK}
+
+    if [ -f "${PORTSTREE}/${PORT}/Makefile" ]; then
+        PKGVERSION=`make -C ${PORTSTREE}/${PORT} -V PKGVERSION`
+        if [ -n "${PKGVERSION}" ]; then
+            echo "PKGVERSION=\"${PKGVERSION}\"" >> ${LOCK}
+            echo "PKGVERSION=${PKGVERSION}"
+        fi
+
+        # XXX Enqueue to the poudriere redports daemon.
+    else
+        touch ${WRKBASE}/${BUILD}/.finished
+        echo "BUILDSTATUS=\"FAIL\"" >> ${WRKBASE}/${BUILD}/.finished
+        echo "FAIL_REASON=\"Port does not exist\"" >> ${WRKBASE}/${BUILD}/.finished
+        echo "STATUS=\"finished\"" >> ${WRKBASE}/${BUILD}/.finished
+    fi
+
+    touch ${WRKBASE}/${BUILD}/.build || return 1
+
 
     return 0
 }
@@ -169,9 +228,6 @@ poudriere_status()
             ;;
     esac
 
-    # XXX
-    # Do some archeology on what's in there, where it comes from, and how rppd
-    # uses those.
     if [ -f "${WRKBASE}/${BUILD}/.finished" ]; then
         . ${WRKBASE}/${BUILD}/.finished
 
@@ -200,9 +256,18 @@ poudriere_status()
 poudriere_clean()
 {
     BUILD=$1
+    LOCK=${WRKBASE}/${BUILD}/.lock
     PORTSTREE=${POUDRIERE}/ports/${BUILD}
 
     zfs rollback ${ZFSROOT}${PORTSTREE}@clean
+
+    . ${LOCK}
+
+    # Remove packages that have been built during the run and may be
+    # customized.
+    if [ -f "${WRKBASE}/${BUILD}/.build" -a -n "${LASTPACKAGEDATE}" ]; then
+        find ${POUDRIERE}/data/packages/${BUILD}-${BUILD}/All -type f -newermt "${LASTPACKAGEDATE}" -delete
+    fi
 
     # There possibly is more cleanup to do here.
     # Also, this "more" may be needed in recover after.
